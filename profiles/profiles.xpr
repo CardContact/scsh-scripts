@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+    <meta>
+        <lastOpenedFiles>
+            <file name="ap_test.xml"/>
+            <file name="ap_sample.xml"/>
+            <file name="file:/C:/workspace/scdp4j/gp/ap_jcop_cardmanager.xml"/>
+            <file name="cp_jcop41.xml"/>
+            <file focused="true" name="file:/C:/workspace/scdp4j/mytest/mb/kp_jcop_mb_s-mac.xml"/>
+            <file name="file:/C:/workspace/scdp4j/mytest/mb/kp_jcop_mb_s-enc.xml"/>
+        </lastOpenedFiles>
+    </meta>
+    <projectTree name="profiles.xpr">
+        <file name="file:/C:/workspace/scdp4j/gp/ap_jcop_cardmanager.xml"/>
+        <file name="ap_sample.xml"/>
+        <file name="ap_test.xml"/>
+        <file name="cp_jcop41.xml"/>
+        <file name="key.xml"/>
+        <file name="kp_double_des.xml"/>
+        <file name="file:/C:/workspace/scdp4j/gp/kp_jcop_default_s-enc.xml"/>
+        <file name="kp_rsa_private.xml"/>
+        <file name="kp_rsa_private_crt.xml"/>
+        <file name="kp_rsa_public.xml"/>
+        <file name="kp_single_des_1.xml"/>
+        <file name="kp_triple_des.xml"/>
+    </projectTree>
+</project>

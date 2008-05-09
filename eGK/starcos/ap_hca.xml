@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gp:ApplicationProfile xmlns="http://namespaces.globalplatform.org/systems-profiles/1.1.0"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:gp="http://namespaces.globalplatform.org/systems-profiles/1.1.0"
+    xmlns:scdp="http://www.openscdp.org/namespaces/gp/systems-profiles/1.0.0"
+    UniqueID="2B0601040181C31F10030201" ProfileVersion="1.0.0">
+    <gp:Description>Health Care Application Application Profile (DF.HCA)</gp:Description>
+    <gp:Revisions arrayElement="Revision" arrayIndex="#">
+        <gp:Revision Version="1.0.0" Date="2006-02-20" Time="12:00:00" By="www.CardContact.de" Digest=""></gp:Revision>
+    </gp:Revisions>
+    <gp:ConflictRules arrayElement="" arrayIndex=""></gp:ConflictRules>
+    <gp:ApplicationInfo Version="1.0.0" Type="OTHER" Subtype="APP" Owner="Gematik" Developer="CardContact" Provider="KV" Domain="EGK" VolatileDataSpaceMin="1000" NonVolatileDataSpaceMin="2000">
+        <gp:Privileges/>
+        <gp:LifeCycles arrayElement="LifeCycle" arrayIndex="#">
+            <gp:LifeCycle Name=""/>
+            <gp:LifeCycle Name=""/>
+            <gp:LifeCycle Name=""/>
+        </gp:LifeCycles>
+    </gp:ApplicationInfo>
+    <scdp:DataStructure>
+        <scdp:FileStructure arrayElement="EF" arrayIndex="#">
+            <scdp:EF fid="0030" type="LV" format="tlvlist.arr" name="EF.ARR" />
+            <scdp:EF fid="D001" type="T" name="EF.PD" />
+            <scdp:EF fid="D002" type="T" name="EF.VD" />
+            <scdp:EF fid="D003" type="T" name="EF.GVD" />
+            <scdp:EF fid="D004" type="T" format="asn1" name="EF.DM" />
+            <scdp:EF fid="D005" type="T" format="asn1" name="EF.Einwilligung" />
+            <scdp:EF fid="D006" type="C" format="asn1" name="EF.Logging" />
+            <scdp:EF fid="D007" type="LV" format="asn1" name="EF.eRezept_Tickets" />
+            <scdp:EF fid="D008" type="T" format="asn1" name="EF.eRezept_Container" />
+            <scdp:EF fid="D009" type="LV" format="asn1" name="EF.eAMDok_Tickets" />
+            <scdp:EF fid="D00A" type="LV" format="asn1" name="EF.ePA_Tickets" />
+            <scdp:EF fid="D00B" type="T" format="asn1" name="EF.eNotfalldaten" />
+        </scdp:FileStructure>    
+    </scdp:DataStructure>   
+</gp:ApplicationProfile>
+

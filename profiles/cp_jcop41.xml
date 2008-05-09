@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gp:CardProfile xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://namespaces.globalplatform.org/systems-profiles/1.1.0 http://namespaces.globalplatform.org/systems-profiles/1.1.0/GP.systems.profiles.1.1.0.CardProfile.xsd"
+    xmlns:gp="http://namespaces.globalplatform.org/systems-profiles/1.1.0"
+    UniqueID="2B0601040181C31F10010401" ProfileVersion="1.1.0" ErrataVersion="0">
+    <gp:Description>JCOP 4.1</gp:Description>
+    <gp:Revisions arrayElement="Revision" arrayIndex="#">
+        <gp:Revision ProfileID="2B0601040181C31F1000" Date="2005-12-16" Time="12:00:00"
+            By="www.openscdp.org" Digest="000000" Version="1.0.0"/>
+    </gp:Revisions>
+    <gp:CardManufacturerProduct Name="JCOP" Version="4.1.0">
+        <gp:Description>JCOP 4.1 on Philips SmartMX P5CT072</gp:Description>
+        <gp:CardManufacturer Name=""/>
+        <gp:Chip Name="SmartMX" Model="P5CT072" Version="4.1.0" ChipManufacturer="Philips">
+            <gp:Description/>
+            <gp:Resources Unit="byte" ROM="176000" RAM="4096" EEPROM="72000" Flash="0"/>
+            <gp:Powers arrayElement="Power" arrayIndex="#">
+                <gp:Power Unit="volt" Value="5.0"/>
+            </gp:Powers>
+            <gp:Clock Unit="mhz" Min="1.0" Max="10.0"/>
+            <gp:Communication>
+                <gp:Contact PPS="true" BaudRateMin="9600" BaudRateMax="115200">
+                    <gp:Protocols arrayElement="Protocol" arrayIndex="Type">
+                        <gp:Protocol Type="T1" MaxApduLen="256"/>
+                    </gp:Protocols>
+                </gp:Contact>
+                <gp:Contactless>
+                    <gp:Protocols arrayElement="Protocol" arrayIndex="Type">
+                        <gp:Protocol Type="TYPEA" MaxApduLen="256"/>
+                    </gp:Protocols>
+                </gp:Contactless>
+            </gp:Communication>
+            <gp:CryptoEngine arrayElement="Algorithm" arrayIndex="Name">
+                <gp:KeyTypes arrayElement="KeyType" arrayIndex="#">
+                    <gp:KeyType Name="Platform key" MaxLength="128"/>
+                </gp:KeyTypes>
+                <gp:Algorithm Name="DES3_ECB"/>
+            </gp:CryptoEngine>
+        </gp:Chip>
+        <gp:Platform Type="GENERIC" Version="1.0.0" OSPlatform="GENERIC" OSVersion="3.0.0"
+            Implementor="IBM"/>
+    </gp:CardManufacturerProduct>
+    <gp:ConflictRules arrayElement="ConflictRule" arrayIndex="#">
+        <gp:ConflictRule Source="CardProfile.ProfileVersion"
+            Target="ApplicationProfile.ProfileVersion" Rule="=="/>
+    </gp:ConflictRules>
+    <gp:LoadFileInstances arrayElement="LoadFileInstance" arrayIndex="ProfileID"/>
+    <gp:ApplicationInstances arrayElement="ApplicationInstance" arrayIndex="AID">
+        <gp:ApplicationInstance AID="A000000003000000" ProfileID="2B0601040181C31F10050201"
+            Label="JCOP 4.1 Card Manager" LifeCycle="INITIALIZED" LoadFileID="00"/>
+    </gp:ApplicationInstances>
+    <gp:CardInfo>
+        <!-- Max. EEPROM available is 73728 - 192 (reserved) -->
+        <gp:ResourcesAvailable Unit="byte" RAM="1850" EEPROM="73536" Flash="0"/>
+    </gp:CardInfo>
+</gp:CardProfile>

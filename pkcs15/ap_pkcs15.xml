@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gp:ApplicationProfile xmlns="http://namespaces.globalplatform.org/systems-profiles/1.1.0"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://namespaces.globalplatform.org/systems-profiles/1.1.0 http://namespaces.globalplatform.org/systems-profiles/1.1.0/GP.systems.profiles.1.1.0.ApplicationProfile.xsd" 
+    xmlns:gp="http://namespaces.globalplatform.org/systems-profiles/1.1.0"
+    xmlns:scdp="http://www.openscdp.org/namespaces/gp/systems-profiles/1.0.0"
+    UniqueID="2B0601040181C31F100A0201" ProfileVersion="1.0.0">
+    <gp:Description>PKCS#15 Application Profile</gp:Description>
+    <gp:Revisions arrayElement="Revision" arrayIndex="#">
+        <gp:Revision Version="1.0.0" Date="2006-12-13" Time="12:00:00" By="www.CardContact.de" Digest=""></gp:Revision>
+    </gp:Revisions>
+    <gp:ConflictRules arrayElement="" arrayIndex=""></gp:ConflictRules>
+    <gp:ApplicationInfo Version="1.0.0" Type="OTHER" Subtype="APP" Owner="CardContact" Developer="CardContact" Provider="CardContact" Domain="PKCS15" VolatileDataSpaceMin="1000" NonVolatileDataSpaceMin="2000">
+        <gp:Privileges/>
+        <gp:LifeCycles arrayElement="LifeCycle" arrayIndex="#">
+            <gp:LifeCycle Name=""/>
+            <gp:LifeCycle Name=""/>
+            <gp:LifeCycle Name=""/>
+        </gp:LifeCycles>
+    </gp:ApplicationInfo>
+    <scdp:DataStructure>
+        <scdp:FileStructure arrayElement="EF" arrayIndex="#">
+            <scdp:EF fid="5031" type="T" format="tlvlist" name="EF.ODF" />
+            <scdp:EF fid="5032" type="T" format="asn1" name="EF.TokenInfo" />
+            <scdp:EF fid="4408" type="LV" format="asn1.striprecordheader" name="EF.AODF" />
+            <scdp:EF fid="4400" type="LV" format="asn1.striprecordheader" name="EF.PrKDF" />
+            <scdp:EF fid="4401" type="LV" format="asn1.striprecordheader" name="EF.PuKDF" />
+            <scdp:EF fid="4404" type="LV" format="asn1.striprecordheader" name="EF.CDF" />
+            <scdp:EF fid="4405" type="LV" format="asn1.striprecordheader" name="EF.TCDF" />
+        </scdp:FileStructure>    
+    </scdp:DataStructure>   
+</gp:ApplicationProfile>
+

@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<gp:KeyProfile xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://namespaces.globalplatform.org/systems-profiles/1.1.0 http://namespaces.globalplatform.org/systems-profiles/1.1.0/GP.systems.profiles.1.1.0.KeyProfile.xsd"
+    xmlns:gp="http://namespaces.globalplatform.org/systems-profiles/1.1.0"
+    UniqueID="2B0601040181C31F100006" ProfileVersion="1.1.0" ErrataVersion="0">
+    <gp:Description>RSA Private Test Key in CRT Format</gp:Description>
+    <gp:Revisions arrayElement="Revision" arrayIndex="#">
+        <gp:Revision Version="1.0.0" Date="2005-12-09" Time="00:00:00" By="www.openscdp.org"
+            Digest="00000000"/>
+    </gp:Revisions>
+    <gp:KeyInfo Name="RSAPrivateCRT" Type="PRIVATE" SubType="RSA" Size="512" Mode="TEST"/>
+    <gp:Attribute Sensitive="false" Importable="true" Exportable="true"/>
+    <gp:Usage Encrypt="true" Decrypt="true" DecryptEncrypt="true" Sign="true" Verify="true"
+        Wrap="true" Unwrap="true" UnwrapWrap="true" Derive="true"/>
+    <gp:Value Format="CRT" arrayElement="Component" arrayIndex="#">
+        <gp:Component Name="CRT_P" Encoding="HEX" Value="c0a0758cdf14256f78d4708c86becdead1b50ad4ad6c5c703e2168fbf37884cb"></gp:Component>
+        <gp:Component Name="CRT_Q" Encoding="HEX" Value="f01734d7960ea60070f1b06f2bb81bfac48ff192ae18451d5e56c734a5aab8a5"></gp:Component>
+        <gp:Component Name="CRT_DP1" Encoding="HEX" Value="b54bb9edff22051d9ee60f9351a48591b6500a319429c069a3e335a1d6171391"></gp:Component>
+        <gp:Component Name="CRT_DQ1" Encoding="HEX" Value="d3d83daf2a0cecd3367ae6f8ae1aeb82e9ac2f816c6fc483533d8297dd7884cd"></gp:Component>
+        <gp:Component Name="CRT_PQ" Encoding="HEX" Value="b8f52fc6f38593dabb661d3f50f8897f8106eee68b1bce78a95b132b4e5b5d19"></gp:Component>
+    </gp:Value>
+</gp:KeyProfile>

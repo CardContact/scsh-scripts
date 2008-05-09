@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FileStructure arrayElement="EF" arrayIndex="#">
+    <EF fid="0030" type="LV" format="tlvlist.arr" name="EF.ARR" />
+    <EF fid="C500" type="T" format="asn1.x509" name="EF.C.HP.AUT" />
+    <EF fid="C200" type="T" format="asn1.x509" name="EF.C.HP.ENC" />
+    <EF fid="D004" type="T" format="asn1" name="EF.DM" />
+</FileStructure>    

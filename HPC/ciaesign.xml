@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FileStructure arrayElement="EF" arrayIndex="#">
+    <EF fid="0030" type="LV" format="tlvlist.arr" name="EF.ARR" />
+    <EF fid="5032" type="T" format="asn1.ciainfo" name="EF.CIAInfo" />
+    <EF fid="5031" type="T" format="asn1.od" name="EF.OD" />
+    <EF fid="5034" type="T" format="asn1.aod" name="EF.AOD" />
+    <EF fid="5035" type="T" format="asn1.prkd" name="EF.PrKD" />
+    <EF fid="5038" type="T" format="asn1.cd" name="EF.CD" />
+</FileStructure>    

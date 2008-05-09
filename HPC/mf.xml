@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FileStructure arrayElement="EF" arrayIndex="#">
+    <EF fid="0030" type="LV" format="tlvlist.arr" name="EF.ARR" />
+    <EF fid="2F01" type="T" format="asn1" name="EF.ATR" />
+    <EF fid="2F00" type="LV" format="asn1.efdir" name="EF.DIR" />
+    <EF fid="2F02" type="T" format="asn1" name="EF.GDO" />
+    <EF fid="2F03" type="T" format="asn1.cvc" name="EF.CVC.CA_HPC.CS" />
+    <EF fid="2F04" type="T" format="asn1.cvc" name="EF.CVC.HPC.AUT" />
+</FileStructure>    

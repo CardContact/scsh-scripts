@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FileStructure arrayElement="EF" arrayIndex="#">
+    <EF fid="0030" type="LV" format="tlvlist.arr" name="EF.ARR" />
+    <EF fid="D001" type="T" format="asn1" name="EF.HPD" />
+</FileStructure>    

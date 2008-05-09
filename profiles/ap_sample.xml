@@ -1,0 +1,611 @@
+<ApplicationProfile xmlns="http://namespaces.globalplatform.org/systems-profiles/1.1.0" 
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+    xsi:schemaLocation="http://namespaces.globalplatform.org/systems-profiles/1.1.0 http://namespaces.globalplatform.org/systems-profiles/1.1.0/GP.systems.profiles.1.1.0.ApplicationProfile.xsd" 
+    UniqueID="2B0601040181C31F0000" ProfileVersion="1.1.0">
+        <Revisions arrayElement="Revision" arrayIndex="#">
+                <Revision Version="1.0.0" Date="2003-08-12" Time="13:40:00" By="Visa International" Digest=""/>
+        </Revisions>
+        <ConflictRules arrayElement="ConflictRule" arrayIndex="Name"/>
+        <ApplicationInfo Version="1.0.0" Type="GP" Subtype="APP" Owner="" Developer="" Provider="" Domain="" VolatileDataSpaceMin="0" NonVolatileDataSpaceMin="0" NonVolatileDataSpaceMax="100" VolatileDataSpaceMax="111">
+                <Privileges DAPVerification="true"/>
+                <LifeCycles arrayElement="LifeCycle" arrayIndex="Name">
+                        <LifeCycle Name="One" Value="01"/>
+                        <LifeCycle Name="SELECTABLE" Value="1111"/>
+                        <LifeCycle Name="Two" Value="02"/>
+                        <LifeCycle Name="Three" Value="03"/>
+                </LifeCycles>
+        </ApplicationInfo>
+        <Key Name="One" ProfileID="01" External="true"/>
+        <Key Name="Two" ProfileID="02" External="true"/>
+        <Key Name="Three" ProfileID="03" External="true"/>
+        <!-- below two  4, 5 -->
+        <Key Name="Four" ProfileID="04" External="true"/>
+        <Key Name="Five" ProfileID="05" External="true"/>
+        <Key Name="cardKekKey" ProfileID="0101" External="false"/>
+        <Key Name="emptySymmetricKey" ProfileID="0101" External="false"/>
+        <!-- below adde  -->
+        <Key Name="emptyAsymmetricKey" ProfileID="0404" External="false"/>
+        <Key Name="completelyEmptySymmetricKey" ProfileID="010101" External="false"/>
+        <Key Name="symmetricKey" ProfileID="0202" External="false"/>
+        <Key Name="asymmetricKey" ProfileID="0303" External="false"/>
+        <Key Name="completelyEmptyAsymmetricKey" ProfileID="040402" External="false"/>
+        <Key Name="anotherEmptyAsymmetricKey" ProfileID="040403" External="false"/>
+        <DataElement Name="tlv16Data" External="false" Type="ByteString" Value="0102030405060708090A0B0C0D0E0F" Encoding="HEX" Tag="BE01" TagEncoding="L16"/>
+        <DataElement Name="moreTLV16Data" External="true" Type="ByteString" Tag="BE02" TagEncoding="L16"/>
+        <ScriptFragment Name="Get Status" StartLifeCycle="one" EndLifeCycle="two">
+                <Script><![CDATA[
+
+                GPSystem.trace("Inside get status");
+                // Perform a WARM_RESET
+                this.card.reset(Card.RESET_WARM);
+
+                // Select the Card Manager
+                this.select();
+                
+                // Begin Secure Channel operation
+                SCLevel = 1; // C_MAC;
+                this.securityDomain.openSecureChannel(new ByteString("01", HEX));
+
+                // Get Status
+                // 84 F2 80 00 08 xx xx xx xx xx xx xx xx 00
+                criteria = new ByteString("4F00", ByteString.HEX);
+                sw = [0x6A88, 0x9000, 0x0000, 0x6985];
+                GPSystem.trace("Start get status commands");
+                GPSystem.trace("Get Status:  CardManager"); 
+                //below  FIRST_OR_ALL_OCCURENCES -> false
+                status = this.getStatus(CM_ONLY, criteria, false, sw);
+                GPSystem.trace("Status = "+status);
+                GPSystem.trace("Get Status: Apps"); 
+                status = this.getStatus(APPS_ONLY, criteria, false, sw);
+                GPSystem.trace("Status = "+status);
+                GPSystem.trace("Get Status: LoadFiles"); 
+                status = this.getStatus(LF_ONLY, criteria, false, sw);
+                GPSystem.trace("Status = "+status);
+
+                ]]></Script>
+        </ScriptFragment>
+        <!-- Start of Unit Tests -->
+        <ScriptFragment Name="UnitA1 GPError" Active="true" StartLifeCycle="post_Load" EndLifeCycle="post_INSTALL">
+                <Description/>
+                <Script><![CDATA[
+                //tests whether GPError object is constructed successfully - 
+                
+                testError = new GPError("ByteString", 1,3,"An error with the ByteString!");
+                GPSystem.trace("GPError.testError.className = "+testError.className );
+                GPSystem.trace("GPError.testError.error = "+testError.error);
+                GPSystem.trace("GPError.testError.message = "+testError.message );
+                GPSystem.trace("GPError.testError.name = "+testError.name );
+                GPSystem.trace("GPError.testError.reason = "+testError.reason );
+        
+                ]]></Script>
+        </ScriptFragment>
+        <ScriptFragment Name="UnitA2 GPSystem getVersion" Active="true" StartLifeCycle="post_Load" EndLifeCycle="post_INSTALL">
+                <Description/>
+                <Script><![CDATA[
+                //tests whether correct version of interpreter is returned successfully - 
+                
+                valueOfVersion = GPSystem.getVersion();
+                GPSystem.trace("Version of this interpreter is  "+valueOfVersion );
+                ]]></Script>
+        </ScriptFragment>
+        <ScriptFragment Name="UnitA3 ByteString constructor fuction" Active="true" StartLifeCycle="post_Load" EndLifeCycle="post_INSTALL">
+                <Description/>
+                <Script><![CDATA[
+                //tests whether the ByteString constructor is created successfully - 
+                
+                testByteString = new ByteString("HELLO", ASCII);
+                GPSystem.trace("ByteString.testByteString.length = "+ testByteString.length);
+                
+                
+                ]]></Script>
+        </ScriptFragment>
+        <ScriptFragment Name="UnitA4 ByteString byteAt() method" Active="true" StartLifeCycle="post_Load" EndLifeCycle="post_INSTALL">
+                <Description/>
+                <Script><![CDATA[
+                //tests the method byteAt() of ByteString - 
+                
+                testByteString = new ByteString("A1034532", HEX);
+                GPSystem.trace("Byte at this given offset 0 = "+ testByteString.byteAt(0));
+                GPSystem.trace("Byte at this given offset 1= "+ testByteString.byteAt(1));
+
+                ]]></Script>
+        </ScriptFragment>
+        <ScriptFragment Name="UnitA5 ByteString pad() method" Active="true" StartLifeCycle="post_Load" EndLifeCycle="post_INSTALL">
+                <Description/>
+                <Script><![CDATA[
+                //tests the method pad() of ByteString - 
+                
+                testByteString = new ByteString("A1034532", HEX);
+                paddedTestByteString =  testByteString.pad(Crypto.ISO9797_METHOD_1)
+                GPSystem.trace("ByteString.paddedTestByteString = "+ paddedTestByteString);
+                paddedTestByteString2 =         testByteString.pad(Crypto.ISO9797_METHOD_2)
+                GPSystem.trace("ByteString.paddedTestByteString = "+ paddedTestByteString2);
+
+                ]]></Script>
+        </ScriptFragment>
+        <ScriptFragment Name="UnitA6 ByteString toString() method" Active="true" StartLifeCycle="post_Load" EndLifeCycle="post_INSTALL">
+                <Description/>
+                <Script><![CDATA[
+                //tests the method pad() of ByteString - 
+                
+                testByteString = new ByteString("A1034532", HEX);
+                testByteString2 = new ByteString("HELLO", ASCII);
+                GPSystem.trace("hex value = "+ testByteString.toString(HEX));
+                GPSystem.trace("ASCII value = "+ testByteString2.toString(ASCII));
+
+                ]]></Script>
+        </ScriptFragment>
+        <!-- Start of Integration Tests -->
+        <ScriptFragment Name="IntegrationB4 GPApplication Properties" StartLifeCycle="one" EndLifeCycle="two">
+                <Script><![CDATA[
+
+                // Ensure that Type="GP" and SubType="APP" in ApplicationInfo element
+
+                // Check whether new properties are populated
+                GPSystem.trace("GPApplication.aid = "+this.aid);
+                GPSystem.trace("GPApplication.appSpecificInstallParams = "+this.appSpecificInstallParams);
+                
+                // SPR 1.1.3 - VISA3
+                // Need to use lifeCycle instead of lifecycle until problem fixed
+                GPSystem.trace("GPApplication.lifecycle.name = "+this.lifecycle.name);
+                //var stringName;
+                stringName = this.lifecycle.name.toString(ASCII);
+                
+                //actualName = this.card.profile.ApplicationInstances.ApplicationInstance[this.lifecycle.name].LifeCycle.Name;
+                // First actualName shows lifecycle of first application (in our case, card manager)
+                // Second actualName shows lifecycle of second application (in our case, VSDC)
+                actualName = this.card.profile.ApplicationInstances.ApplicationInstance[0].LifeCycle;
+                GPSystem.trace("actualName = "+actualName);
+                actualName = this.card.profile.ApplicationInstances.ApplicationInstance[1].LifeCycle;
+                GPSystem.trace("actualName = "+actualName);
+                GPSystem.trace("GPApplication.lifecycle.name = "+stringName);
+                GPSystem.trace("GPApplication.lifecycle.value = "+this.lifecycle.value);
+
+                // All these properties should be data type of Number
+                // if typeof() returns "object", then it isn't a Number
+                GPSystem.trace("GPApplication.nonVolatileDataSpaceLimit = "+this.nonVolatileDataSpaceLimit);
+                GPSystem.trace("is object of type "+typeof(this.nonVolatileDataSpaceLimit));
+                GPSystem.trace("GPApplication.privilege = "+this.privilege);
+                GPSystem.trace("is object of type "+typeof(this.privilege));
+                GPSystem.trace("GPApplication.volatileDataSpaceLimit = "+this.volatileDataSpaceLimit);
+                GPSystem.trace("is object of type "+typeof(this.volatileDataSpaceLimit));
+                ]]></Script>
+        </ScriptFragment>
+        <ScriptFragment Name="IntegrationB5 DES Key get Methods" Active="true" StartLifeCycle="one" EndLifeCycle="two">
+                <Description/>
+                <KeyDeclaration Name="cardKekKey" External="false"/>
+                <KeyDeclaration Name="symmetricKey" External="false"/>
+                <!--below three added by  -->
+                <!--<KeyDeclaration Name="One" External="true"/>-->
+                <KeyDeclaration Name="Two" External="true"/>
+                <KeyDeclaration Name="Three" External="true"/>
+                <Script><![CDATA[
+
+                symmetricKey = this.key.symmetricKey;
+                
+                GPSystem.trace("symmetricKey Tests");
+                GPSystem.trace("symmetricKey.getAttribute() = "+symmetricKey.getAttribute());
+                //below returns The value of key cannot be determined error
+                GPSystem.trace("symmetricKey.getComponent(Key.DES) = "+symmetricKey.getComponent(Key.DES));
+                GPSystem.trace("symmetricKey.getEnd() = "+symmetricKey.getEnd());
+                //below returns The value of key cannot be determined error
+                GPSystem.trace("symmetricKey.getKcv(Key.EIGHTZEROS) = "+symmetricKey.getKcv(Key.EIGHTZEROS));
+                GPSystem.trace("symmetricKey.getOwner() = "+symmetricKey.getOwner());
+                GPSystem.trace("symmetricKey.getProfileID() = "+symmetricKey.getProfileID());
+                GPSystem.trace("symmetricKey.getSize() = "+symmetricKey.getSize());
+                GPSystem.trace("symmetricKey.getStart() = "+symmetricKey.getStart());
+                GPSystem.trace("symmetricKey.getType() = "+symmetricKey.getType());
+                GPSystem.trace("symmetricKey.getUsage() = "+symmetricKey.getUsage());
+                GPSystem.trace("symmetricKey.getVersion() = "+symmetricKey.getVersion());
+                
+                //Below was added 
+                //initialKey = this.key.One;
+                //GPSystem.trace(initialKey.getComponent(Key.DES));
+                
+                wrapKey = this.key.Two;
+                GPSystem.trace(wrapKey.getComponent(Key.DES));
+                
+                wrappedKey = this.key.Three;
+                GPSystem.trace(wrappedKey.getComponent(Key.DES));
+                //below was just testing another wrap.
+                //this.crypto.wrap(wrapKey, Crypto.DES_ECB, initialKey, wrappedKey);
+                
+                //Here is real wrap.
+                this.crypto.wrap(wrapKey, Crypto.DES_ECB, symmetricKey, this.key.cardKekKey)
+                GPSystem.trace("Wrap successful ");
+                GPSystem.trace(this.key.cardKekKey.getComponent(Key.DES));
+                
+                //symmetricKey.getWrapKey(this.key.cardKekKey);
+                //wrap key inside () has to be empty key.
+                this.key.cardKekKey.getWrapKey(wrappedKey);
+                //wrappedKey.getWrapKey(wrapKey);
+                
+                GPSystem.trace("this.key.cardKekKey.getComponent(Key.DES) = "+this.key.cardKekKey.getComponent(Key.DES));
+                ]]></Script>
+        </ScriptFragment>
+        <ScriptFragment Name="IntegrationB6 RSA Key get Methods" Active="true" StartLifeCycle="one" EndLifeCycle="two">
+                <Description/>
+                <!--<KeyDeclaration Name="cardKekKey" External="false"/>-->
+                <KeyDeclaration Name="asymmetricKey" External="false"/>
+                <!--below three added  -->
+                <KeyDeclaration Name="Two" External="true"/>
+                <KeyDeclaration Name="emptyAsymmetricKey" External="false"/>
+                <KeyDeclaration Name="anotherEmptyAsymmetricKey" External="false"/>
+                <!--<KeyDeclaration Name="symmetricKey" External="false"/>-->
+                <Script><![CDATA[
+
+                asymmetricKey = this.key.asymmetricKey;
+                
+                GPSystem.trace("asymmetricKey Tests");
+                GPSystem.trace("asymmetricKey.getAttribute() = "+asymmetricKey.getAttribute());
+                GPSystem.trace("asymmetricKey.getComponent(Key.CRT_P) = "+asymmetricKey.getComponent(Key.CRT_P));
+                GPSystem.trace("asymmetricKey.getComponent(Key.CRT_Q) = "+asymmetricKey.getComponent(Key.CRT_Q));
+                GPSystem.trace("asymmetricKey.getComponent(Key.CRT_DP1) = "+asymmetricKey.getComponent(Key.CRT_DP1));
+                GPSystem.trace("asymmetricKey.getComponent(Key.CRT_DQ1) = "+asymmetricKey.getComponent(Key.CRT_DQ1));
+                GPSystem.trace("asymmetricKey.getComponent(Key.CRT_PQ) = "+asymmetricKey.getComponent(Key.CRT_PQ));
+                GPSystem.trace("asymmetricKey.getEnd() = "+asymmetricKey.getEnd());
+
+                // getKcv() may fail for a RSA key
+                // GPSystem.trace("asymmetricKey.getKcv(Key.EIGHTZEROS) = "+asymmetricKey.getKcv(Key.EIGHTZEROS));
+
+                GPSystem.trace("asymmetricKey.getOwner() = "+asymmetricKey.getOwner());
+                GPSystem.trace("asymmetricKey.getProfileID() = "+asymmetricKey.getProfileID());
+                GPSystem.trace("asymmetricKey.getSize() = "+asymmetricKey.getSize());
+                GPSystem.trace("asymmetricKey.getStart() = "+asymmetricKey.getStart());
+                GPSystem.trace("asymmetricKey.getType() = "+asymmetricKey.getType());
+                GPSystem.trace("asymmetricKey.getUsage() = "+asymmetricKey.getUsage());
+                GPSystem.trace("asymmetricKey.getVersion() = "+asymmetricKey.getVersion());
+                
+                //Below was added 
+
+                wrapKey = this.key.Two;
+                GPSystem.trace(wrapKey.getComponent(Key.DES));
+
+                GPSystem.trace("before getWrap ");
+
+                //Here is real wrap.
+                this.crypto.wrap(wrapKey, Crypto.DES_ECB_LP, asymmetricKey, this.key.emptyAsymmetricKey);
+                
+                // This last operation may fail if the key that was used to wrap asymmetricKey is not a DES key
+                GPSystem.trace("Wrap successful ");
+                GPSystem.trace("emptyAsymmetricKey.getComponent(Key.CRT_Q) = " +this.key.emptyAsymmetricKey.getComponent(Key.CRT_P));
+                GPSystem.trace("emptyAsymmetricKey.getComponent(Key.CRT_Q) = "+this.key.emptyAsymmetricKey.getComponent(Key.CRT_Q));
+                GPSystem.trace("emptyAsymmetricKey.getComponent(Key.CRT_DP1) = "+this.key.emptyAsymmetricKey.getComponent(Key.CRT_DP1));
+                GPSystem.trace("emptyAsymmetricKey.getComponent(Key.CRT_DQ1) = "+this.key.emptyAsymmetricKey.getComponent(Key.CRT_DQ1));
+                GPSystem.trace("emptyAsymmetricKey.getComponent(Key.CRT_PQ) = "+this.key.emptyAsymmetricKey.getComponent(Key.CRT_PQ));
+                GPSystem.trace("emptyAsymmetricKey.getComponent(Key.EXPONENT) = " +this.key.emptyAsymmetricKey.getComponent(Key.EXPONENT));
+                
+                //asymmetricKey.getWrapKey(this.key.cardKekKey);
+                //asymmetricKey.getWrapKey(this.key.emptyAsymmetricKey);
+                
+                wrapKey2 = this.key.anotherEmptyAsymmetricKey;
+                GPSystem.trace("before printout of getComponent ");
+                //GPSystem.trace("anotherEmptyAsymmetricKey.getComponent(Key.EXPONENT) = " +this.key.anotherEmptyAsymmetricKey.getComponent(Key.EXPONENT));
+                this.key.emptyAsymmetricKey.getWrapKey(wrapKey2);
+                
+                GPSystem.trace("emptyAsymmetricKey.getComponent(Key.EXPONENT) = " +this.key.emptyAsymmetricKey.getComponent(Key.EXPONENT));
+                //GPSystem.trace("asymmetricKey.getWrapKey(this.key.emptyAsymmetricKey) = "+this.key.emptyAsymmetricKey.getComponent(Key.DES));
+
+                ]]></Script>
+        </ScriptFragment>
+        <ScriptFragment Name="IntegrationB7 GPApplication Key Profile Creation" Active="true" StartLifeCycle="post_Load" EndLifeCycle="post_INSTALL">
+                <Description/>
+                <KeyDeclaration Name="cardKekKey" External="false"/>
+                <Script><![CDATA[
+
+                // Select the "Save Application Keys..." checkbox in the user interface
+
+                // Ensure that the Key Profile associated with cardKekKey has no value in it as the
+                // purpose of this script is to confirm that a Key Profile is updated correctly.
+
+                // Select this application
+                this.select();
+
+                // Establish Secure Channel with MAC
+                scLevel = new ByteString ("01", HEX);
+                this.securityDomain.openSecureChannel(scLevel);
+                GPSystem.trace("Secure channel opened with level "+scLevel);
+
+                // Retrieve card kek key
+                this.securityDomain.secureChannel.getDekKey(this.key.cardKekKey);
+                
+                // Confirm whether cardKekKey key profile has been populated with the value of the KEK key
+                // Ensure that the correct Key Profile format is utilized
+                
+                // If the key profile is generated correctly, remove value to restore Key Profile to original state
+                // for future tests
+                ]]></Script>
+        </ScriptFragment>
+        <ScriptFragment Name="IntegrationB9 Crypto Method Changes" StartLifeCycle="one" EndLifeCycle="two">
+                <KeyDeclaration Name="One" External="true"/>
+                <KeyDeclaration Name="Two" External="true"/>
+                <KeyDeclaration Name="Three" External="true"/>
+                <KeyDeclaration Name="Four" External="true"/>
+                <KeyDeclaration Name="Five" External="true"/>
+                <Script><![CDATA[
+
+                // Prepare the test
+                initialKey = this.key.One;
+                GPSystem.trace(initialKey.getComponent(Key.DES));
+                wrapKey = this.key.Two;
+                GPSystem.trace(wrapKey.getComponent(Key.DES));
+                wrappedKey = this.key.Three;
+                unwrappedKey = this.key.Four;
+                rewrappedKey = this.key.Five;
+                GPSystem.trace("The keys have been mapped to local variables.");
+                
+                // Wrap the key
+                this.crypto.wrap(wrapKey, Crypto.DES_ECB, initialKey, wrappedKey);
+                GPSystem.trace("The key "+initialKey+" has been wrapped using "+wrapKey+" in DES ECB mode to produce "+wrappedKey);
+                
+                // Test of unwrap invocation
+                this.crypto.unwrap(wrappedKey, unwrappedKey);
+                GPSystem.trace("The wrapped key "+wrappedKey+" has been unwrapped to produce "+unwrappedKey);
+                
+                // Test of unwrapWrap invocation
+                this.crypto.unwrapWrap(wrapKey, Crypto.DES_ECB, wrappedKey, rewrappedKey, null);
+                GPSystem.trace("The wrapped key "+wrappedKey+" has been rewrapped with "+wrapKey+" using DES CBC mode to produce "+rewrappedKey);
+
+                ]]></Script>
+        </ScriptFragment>
+        <ScriptFragment Name="IntegrationB22 GPApplication putKey" StartLifeCycle="one" EndLifeCycle="two">
+                <KeyDeclaration Name="asymmetricKey" External="false"/>
+                <Script><![CDATA[
+                
+                // Make sure the Key Profile with the CRT representation of asymmetric key is provided
+
+                // Select this application
+                GPSystem.trace("test");
+                this.select();
+                GPSystem.trace("test2");
+                // Establish Secure Channel with MAC
+                scLevel = new ByteString ("01", HEX);
+                
+                this.openSecureChannel(scLevel);
+                GPSystem.trace("Secure channel opened with level "+scLevel);
+                
+                key1 = [0xA4, this.key.asymmetricKey, Key.CRT_P];
+                key2 = [0xA5, this.key.asymmetricKey, Key.CRT_Q];
+                key3 = [0xA6, this.key.asymmetricKey, Key.CRT_PQ];
+                //below changed  to DP1 from DP
+                key4 = [0xA7, this.key.asymmetricKey, Key.CRT_DP];
+                key5 = [0xA8, this.key.asymmetricKey, Key.CRT_DQ1];
+                //below reduced to two keys to accomodate 255 character limit
+                //keys = [key1, key2, key3, key4, key5];
+                keys = [key1, key2];
+                GPSystem.trace("test");
+                
+                //All three cases below fai.
+                //response = putKey(0,1,1,keys);
+                //response = putKey(1,2,1,keys);
+                response = putKey(1,2,1,keys);
+                
+                //this.putKey(0, 1, 1, 0xA4, this.key.asymmetricKey, Key.CRT_P, 0xA5, this.key.asymmetricKey, Key.CRT_Q, 0xA6, //this.key.asymmetricKey, Key.CRT_PQ, 0xA7, this.key.asymmetricKey, Key.CRT_DP1, 0xA8, this.key.asymmetricKey, Key.CRT_DQ1);             
+                ]]></Script>
+        </ScriptFragment>
+        <ScriptFragment Name="IntegrationB24 GPApplication select" StartLifeCycle="one" EndLifeCycle="two">
+                <KeyDeclaration Name="symmetricKey" External="false"/>
+                <Script><![CDATA[
+                
+                // Check the log to see if APDU is constructed with the data field of the command omitted
+                // For successfull completion of this test, the select command should NOT succeed since
+                // no data in the APDU command only works if you're selecting the Card Manager application.
+                this.select();
+                
+                this.select(false, true);
+                
+                ]]></Script>
+        </ScriptFragment>
+        <ScriptFragment Name="IntegrationB30 DES Key set Methods" StartLifeCycle="one" EndLifeCycle="two">
+                <KeyDeclaration Name="symmetricKey" External="false"/>
+                <KeyDeclaration Name="completelyEmptySymmetricKey" External="false"/>
+                <!--<KeyDeclaration Name="emptySymmetricKey" External="false"/>-->
+                <Script><![CDATA[
+
+                // Attempt this with update key profile feature on to see if everything is set correctly
+                // Most of B30 was modified 
+                symmetricKey = this.key.symmetricKey;
+                newKey = this.key.completelyEmptySymmetricKey;
+                //testKey = this.key.emptySymmetricKey;
+                                
+                GPSystem.trace("symmetricKey Tests");
+                
+                GPSystem.trace("get attiribute is " + symmetricKey.getAttribute());
+                
+                newKey.setAttribute(symmetricKey.getAttribute());
+                GPSystem.trace("newKey.getAttribute() = "+newKey.getAttribute());
+                
+                GPSystem.trace("getcomponent= "+ symmetricKey.getComponent(Key.DES));
+                GPSystem.trace("getcomponent= "+ newKey.getComponent(Key.DES));
+                newKey.setComponent(Key.DES, symmetricKey.getComponent(Key.DES));
+                GPSystem.trace("getcomponent= "+ newKey.getComponent(Key.DES));
+                
+                GPSystem.trace("getEnd= "+ symmetricKey.getEnd(Key.DES));
+                newKey.setEnd(symmetricKey.getEnd());
+                GPSystem.trace("getEnd= "+ newKey.getEnd(Key.DES));
+                                
+                newKey.setOwner(symmetricKey.getOwner());
+                GPSystem.trace("getOwner() = "+newKey.getOwner());
+                
+                newKey.setSize(symmetricKey.getSize());
+                GPSystem.trace("getSize() = "+newKey.getSize());
+                
+                newKey.setStart(symmetricKey.getStart());
+                GPSystem.trace("getStart() = "+newKey.getStart());
+                
+                // The setType() method should be impossible since it is not possible to correctly define a
+                // Key Profile without the Type and SubType attributes
+                newKey.setType(symmetricKey.getType())
+                GPSystem.trace("newKey.getType() = "+newKey.getType(symmetricKey.getType()));
+                
+                newKey.setUsage(symmetricKey.getUsage())
+                GPSystem.trace("newKey.getUsage() = "+newKey.getUsage(symmetricKey.getUsage()));
+                
+                newKey.setVersion(symmetricKey.getVersion())
+                GPSystem.trace("newKey.getVersion() = "+newKey.getVersion(symmetricKey.getVersion()));
+
+                ]]></Script>
+        </ScriptFragment>
+        <ScriptFragment Name="IntegrationB31 RSA Key set Methods" StartLifeCycle="one" EndLifeCycle="two">
+                <KeyDeclaration Name="completelyEmptyAsymmetricKey" External="false"/>
+                <KeyDeclaration Name="asymmetricKey" External="true"/>
+                <!--<KeyDeclaration Name="emptyAsymmetricKey" External="false"/>-->
+                <Script><![CDATA[
+                // Most of B31 was modified 
+                
+                asymmetricKey = this.key.asymmetricKey;
+                newKey = this.key.completelyEmptyAsymmetricKey;
+                //testKey = this.key.emptyAsymmetricKey;
+                
+                GPSystem.trace("asymmetricKey Tests");
+                //below gets READ only error
+                newKey.setAttribute(asymmetricKey.getAttribute());
+                GPSystem.trace("newKey.setAttribute() = "+newKey.getAttribute(asymmetricKey.getAttribute()));
+                
+                //below gets required function not implemented error or value of the key cannot be determined
+                //newKey.setComponent(Key.CRT_P, asymmetricKey.getComponent(Key.CRT_P));
+                //GPSystem.trace("newKey.getComponent(Key.CRT_P) = "+asymmetricKey.getComponent(Key.CRT_P));
+
+                //newKey.setComponent(Key.CRT_Q, asymmetricKey.getComponent(Key.CRT_Q));
+                //GPSystem.trace("newKey.getComponent(Key.CRT_Q) = "+newKey.getComponent(Key.CRT_Q));
+
+                //testKey.setComponent(Key.CRT_DP1, asymmetricKey.getComponent(Key.CRT_DP1))
+                //GPSystem.trace("newKey.getComponent(Key.CRT_DP1) = "+newKey.getComponent(Key.CRT_DP1));
+
+                //testKey.setComponent(Key.CRT_DQ1, asymmetricKey.getComponent(Key.CRT_DQ1));
+                //GPSystem.trace("newKey.getComponent(Key.CRT_DQ1) = "+newKey.getComponent(Key.CRT_DQ1));
+
+                //testKey.setComponent(Key.CRT_PQ, asymmetricKey.getComponent(Key.CRT_PQ));
+                //GPSystem.trace("newKey.getComponent(Key.CRT_PQ) = "+newKey.getComponent(Key.CRT_PQ));
+
+                newKey.setEnd(asymmetricKey.getEnd());
+                GPSystem.trace("newKey.getEnd() = "+newKey.getEnd());
+                
+                newKey.setOwner(asymmetricKey.getOwner());
+                GPSystem.trace("newKey.getOwner() = "+newKey.getOwner());
+                
+                newKey.setSize(asymmetricKey.getSize());
+                GPSystem.trace("newKey.getSize() = "+newKey.getSize());
+                
+                newKey.setStart(asymmetricKey.getStart());
+                GPSystem.trace("newKey.getStart() = "+newKey.getStart());
+
+                // The setType() method should be impossible since it is not possible to correctly define a
+                // Key Profile without the Type and SubType attributes
+                newKey.setType(asymmetricKey.getType());
+                GPSystem.trace("newKey.getType() = "+newKey.getType());
+
+                newKey.setUsage(asymmetricKey.getUsage());
+                GPSystem.trace("newKey.getUsage() = "+newKey.getUsage());
+                
+                newKey.setVersion(asymmetricKey.getVersion());
+                GPSystem.trace("newKey.getVersion() = "+newKey.getVersion());
+
+                ]]></Script>
+        </ScriptFragment>
+        <ScriptFragment Name="IntegrationB32 DataElement TLV L16" StartLifeCycle="one" EndLifeCycle="two">
+                <Declaration Name="tlv16Data" External="false"/>
+                <Declaration Name="moreTLV16Data" External="false" Value="00AABBCCDDEEFF00" Encoding="HEX"/>
+                <Script><![CDATA[
+                //GPSystem.trace("test" );
+                //this.data was added 
+                GPSystem.trace("tlv16Data = "+this.data.tlv16Data );
+                GPSystem.trace("moreTLV16Data = "+this.data.moreTLV16Data);
+
+                //below two adde 
+                GPSystem.trace("tlv16Data encodingMode  = "+this.data.tlv16Data.encodingMode);
+                GPSystem.trace("moreTLV16Data encodingMode  = "+this.data.moreTLV16Data.encodingMode);
+                
+                if (this.data.tlv16Data.encodingMode == TLV.L16) {
+                        GPSystem.trace("tlv16Data is encoded correctly as TLV.L16");
+                        } else GPSystem.trace("tlv16Data isn't encoded correctly!");
+
+                if (this.data.moreTLV16Data.encodingMode == TLV.L16) {
+                        GPSystem.trace("moreTLV16Data is encoded correctly as TLV.L16");
+                        } else GPSystem.trace("moreTLV16Data isn't encoded correctly!");
+                ]]></Script>
+        </ScriptFragment>
+        <ScriptFragment Name="IntegrationB33 TLV L16 constructor" StartLifeCycle="one" EndLifeCycle="two">
+                <Script><![CDATA[
+                //below modified 
+                tlv16Data = new TLV(0xA1, new ByteString("0001020304", HEX), TLV.L16);
+                
+                //GPSystem.trace("tlv16Data = "+tlv16Data);
+                //below lines modified 
+                //GPSystem.trace("tlv16Data.find(0xBE00) = "+tlv16Data.find(0xBE00).getTLV());
+                //GPSystem.trace("tlv16Data.find(0xBE01) = "+tlv16Data.find(0xBE01).getTLV());
+                //GPSystem.trace("tlv16Data.find(0xBE02) = "+tlv16Data.find(0xBE02).getTLV());
+                
+                GPSystem.trace("tlv16Data = "+tlv16Data);
+                GPSystem.trace("tlv16Data.getL = "+tlv16Data.getL(TLV.L16));
+                GPSystem.trace("tlv16Data.getLV = "+tlv16Data.getLV());
+                GPSystem.trace("tlv16Data.getTag = "+tlv16Data.getTag());
+                GPSystem.trace("tlv16Data.getTLV = "+tlv16Data.getTLV());
+                GPSystem.trace("tlv16Data.getTV = "+tlv16Data.getTV());
+                GPSystem.trace("tlv16Data.getValue = "+tlv16Data.getValue());
+                
+                ]]></Script>
+        </ScriptFragment>
+        <ScriptFragment Name="IntegrationB34 TLVList L16 constructor" StartLifeCycle="one" EndLifeCycle="two">
+                <Script><![CDATA[
+                
+                tlv16Data = new TLVList(new ByteString("BE000002FFFFBE010003EEEEEEBE020004DDDDDDDD", HEX), TLV.L16);
+                GPSystem.trace("tlv16Data.find(0xBE00) = "+tlv16Data.find(0xBE00).getTLV());
+                GPSystem.trace("tlv16Data.find(0xBE01) = "+tlv16Data.find(0xBE01).getTLV());
+                GPSystem.trace("tlv16Data.find(0xBE02) = "+tlv16Data.find(0xBE02).getTLV());
+
+                
+                ]]></Script>
+        </ScriptFragment>
+        <ScriptFragment Name="IntegrationB35 GPApplication APDU Wrap" StartLifeCycle="one" EndLifeCycle="two">
+                <Script><![CDATA[
+
+                // Ensure that Type="GP" and SubType="APP" in ApplicationInfo element
+
+                // You will need to run this test script with a card profile where the secure channel is neither
+                // SCP01 or SCP02, and the secure channel script in the associated card manager application
+                // includes a wrap script.
+                
+                GPSystem.trace("test35" );
+                // See what happens to select() APDU - nothing should happen - the wrap script shouldn't
+                // be called
+                this.select();
+                GPSystem.trace("after select" );
+                // Open the secure channel
+                this.securityDomain.openSecureChannel(new ByteString("01", HEX));
+                
+                GPSystem.trace("after openSecureChannel" );
+                // Verify in the trace that this getStatus() APDU is modified as per the Wrap script
+                //below modified 
+                // Get Status
+                // 84 F2 80 00 08 xx xx xx xx xx xx xx xx 00
+                criteria = new ByteString("4F00", ByteString.HEX);
+                sw = [0x6A88, 0x9000, 0x0000, 0x6985, 0x6D00];
+                GPSystem.trace("Start get status commands");
+                GPSystem.trace("Get Status:  CardManager"); 
+                GPSystem.trace("test" );
+                status = this.getStatus(CM_ONLY, criteria, false,sw );
+                GPSystem.trace("Status = "+status);
+                GPSystem.trace("Get Status: Apps")
+                GPSystem.trace("test" );; 
+                status = this.getStatus(APPS_ONLY, criteria, false, sw);
+                GPSystem.trace("Status = "+status);
+                GPSystem.trace("Get Status: LoadFiles"); 
+                GPSystem.trace("test" );
+                status = this.getStatus(LF_ONLY, criteria, false, sw);
+                GPSystem.trace("Status = "+status);
+                
+                ]]></Script>
+        </ScriptFragment>
+        <ScriptFragment Name="Select only" StartLifeCycle="one" EndLifeCycle="two">
+                <Script><![CDATA[
+                this.select();
+                ]]></Script>
+        </ScriptFragment>
+        <!--below is implemented in another application profile
+        <ScriptFragment Name="IntegrationB37 GPScp02" StartLifeCycle="one" EndLifeCycle="two">
+                <KeyDeclaration Name="symmetricKey" External="false"/>
+                <Script><![CDATA[
+                ]]></Script>
+        </ScriptFragment>-->
+</ApplicationProfile>

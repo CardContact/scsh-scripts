@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CardProfile xmlns="http://namespaces.globalplatform.org/systems-profiles/1.1.0"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://namespaces.globalplatform.org/systems-profiles/1.1.0 http://namespaces.globalplatform.org/systems-profiles/1.1.0/GP.systems.profiles.1.1.0.CardProfile.xsd"
+    UniqueID="2B0601040181C31F1002" ProfileVersion="1.0.0">
+    <Description>e-card</Description>
+    <Revisions arrayElement="Revision" arrayIndex="#">
+        <Revision Version="1.0.0" Date="2006-02-10" Time="12:00:00" By="CardContact" Digest=""></Revision>
+    </Revisions>
+    <CardManufacturerProduct Name="ec-card" Version="2.0.0">
+        <CardManufacturer Name="Unknown"/>
+        <Chip Name="Unknown" Model="Unknown" Version="1.0.0" ChipManufacturer="Unknown">
+            <Resources Unit="byte" ROM="128000" RAM="2048" EEPROM="360000" Flash="0"/>
+            <Powers arrayElement="" arrayIndex=""></Powers>
+            <Communication></Communication>
+        </Chip>
+        <Platform Type="Native" Version="1.0.0" OSPlatform="Seccos" OSVersion="1.0.0"/>
+    </CardManufacturerProduct>
+    <ConflictRules arrayElement="" arrayIndex=""></ConflictRules>
+    <LoadFileInstances arrayElement="" arrayIndex=""></LoadFileInstances>
+    <ApplicationInstances arrayElement="ApplicationInstance" arrayIndex="AID">
+        <ApplicationInstance Label="MF"                                           AID="3F00"                                  ProfileID="2B0601040181C31F1002000001" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
+        <ApplicationInstance Label="GeldKarte"                              AID="D27600002545500200" ProfileID="2B0601040181C31F1002010101" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
+    </ApplicationInstances>
+    <CardInfo>
+        <ResourcesAvailable Unit="byte" RAM="2048" EEPROM="10000" Flash="0"/>
+    </CardInfo>
+</CardProfile>
+

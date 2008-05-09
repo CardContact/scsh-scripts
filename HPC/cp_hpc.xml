@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CardProfile xmlns="http://namespaces.globalplatform.org/systems-profiles/1.1.0"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://namespaces.globalplatform.org/systems-profiles/1.1.0 http://namespaces.globalplatform.org/systems-profiles/1.1.0/GP.systems.profiles.1.1.0.CardProfile.xsd"
+    UniqueID="2B0601040181C31F100400" ProfileVersion="1.0.0">
+    <Description>Health Professional Card (eGK) Card Profile</Description>
+    <Revisions arrayElement="Revision" arrayIndex="#">
+        <Revision Version="1.0.0" Date="2006-02-20" Time="12:00:00" By="www.CardContact.de" Digest=""></Revision>
+    </Revisions>
+    <CardManufacturerProduct Name="eGK" Version="2.0.0">
+        <CardManufacturer Name="Unknown"/>
+        <Chip Name="Unknown" Model="Unknown" Version="1.0.0" ChipManufacturer="Unknown">
+            <Resources Unit="byte" ROM="128000" RAM="2048" EEPROM="360000" Flash="0"/>
+            <Powers arrayElement="" arrayIndex=""></Powers>
+            <Communication></Communication>
+        </Chip>
+        <Platform Type="Native" Version="1.0.0" OSPlatform="eGK" OSVersion="1..1.0"/>
+    </CardManufacturerProduct>
+    <ConflictRules arrayElement="" arrayIndex=""></ConflictRules>
+    <LoadFileInstances arrayElement="" arrayIndex=""></LoadFileInstances>
+    <ApplicationInstances arrayElement="ApplicationInstance" arrayIndex="AID">
+        <ApplicationInstance Label="MF"                         AID="3F00"                                                                  ProfileID="2B0601040181C31F10040101" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
+        <ApplicationInstance Label="DF.HPA"                AID="D27600004002"                                              ProfileID="2B0601040181C31F10040201" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
+        <ApplicationInstance Label="DF.QES"                AID="D27600006601"                                              ProfileID="2B0601040181C31F10040301" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
+        <ApplicationInstance Label="DF.ESIGN"            AID="A000000167455349474E"                            ProfileID="2B0601040181C31F10040401" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
+        <ApplicationInstance Label="DF.CIA.ESIGN"    AID="E828BD080FA000000167455349474E"    ProfileID="2B0601040181C31F10040501" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
+    </ApplicationInstances>
+    <CardInfo>
+        <ResourcesAvailable Unit="byte" RAM="2048" EEPROM="10000" Flash="0"/>
+    </CardInfo>
+</CardProfile>

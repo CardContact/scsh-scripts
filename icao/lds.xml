@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FileStructure arrayElement="EF" arrayIndex="#">
+    <EF fid="1E" type="T" format="asn1" name="EF_COM" />
+    <EF fid="01" type="T" format="asn1" name="EF_DG1" />
+    <EF fid="02" type="T" format="asn1" name="EF_DG2" />
+    <EF fid="1D" type="T" format="asn1" name="EF_SOD" />
+</FileStructure>    

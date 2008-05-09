@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FileStructure arrayElement="EF" arrayIndex="#">
+    <EF fid="0030" type="LV" format="tlvlist.arr" name="EF.ARR" />
+    <EF fid="C000" type="T" format="asn1.x509" name="EF.C.HP.QES" />
+    <EF fid="C001" type="T" format="asn1.x509" name="EF.C.CH.QES-AC1" />
+    <EF fid="C002" type="T" format="asn1.x509" name="EF.C.CH.QES-AC2" />
+    <EF fid="C003" type="T" format="asn1.x509" name="EF.C.CH.QES-AC3" />
+    <EF fid="D004" type="T" format="asn1" name="EF.DM" />
+</FileStructure>    

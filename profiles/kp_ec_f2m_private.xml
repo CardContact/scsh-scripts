@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<gp:KeyProfile xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://namespaces.globalplatform.org/systems-profiles/1.1.0 http://namespaces.globalplatform.org/systems-profiles/1.1.0/GP.systems.profiles.1.1.0.KeyProfile.xsd"
+    xmlns:gp="http://namespaces.globalplatform.org/systems-profiles/1.1.0"
+    UniqueID="2B0601040181C31F10000B" ProfileVersion="1.1.0" ErrataVersion="0">
+    <gp:Description>EC Private Test Key</gp:Description>
+    <gp:Revisions arrayElement="Revision" arrayIndex="#">
+        <gp:Revision Version="1.0.0" Date="2005-12-09" Time="00:00:00" By="www.openscdp.org"
+            Digest="00000000"/>
+    </gp:Revisions>
+    <gp:KeyInfo Name="ECPrivate" Type="PRIVATE" SubType="EC" Size="239" Mode="TEST"/>
+    <gp:Attribute Sensitive="false" Importable="true" Exportable="true"/>
+    <gp:Usage Encrypt="true" Decrypt="true" DecryptEncrypt="true" Sign="true" Verify="true"
+        Wrap="true" Unwrap="true" UnwrapWrap="true" Derive="true"/>
+    <gp:Value Format="ECPRIVATE" arrayElement="Component" arrayIndex="#">
+<!-- Use curve parameter directly instead of curve OID -->
+        <gp:Component Name="ECC_A"  Encoding="HEX" Value="32010857077C5431123A46B808906756F543423E8D27877578125778AC76"></gp:Component>
+        <gp:Component Name="ECC_B"  Encoding="HEX" Value="790408F2EEDAF392B012EDEFB3392F30F4327C0CA3F31FC383C422AA8C16"></gp:Component>
+        <gp:Component Name="ECC_GX" Encoding="HEX" Value="57927098FA932E7C0A96D3FD5B706EF7E5F5C156E16B7E7C86038552E91D"></gp:Component>
+        <gp:Component Name="ECC_GY" Encoding="HEX" Value="61D8EE5077C33FECF6F1A16B268DE469C3C7744EA9A971649FC7A9616305"></gp:Component>
+        <gp:Component Name="ECC_N"  Encoding="HEX" Value="2000000000000000000000000000000F4D42FFE1492A4993F1CAD666E447"></gp:Component>
+        <gp:Component Name="ECC_H"  Encoding="HEX" Value="04"></gp:Component>
+        <gp:Component Name="ECC_M"  Encoding="HEX" Value="EF"></gp:Component>
+        <gp:Component Name="ECC_K1" Encoding="HEX" Value="24"></gp:Component>
+        
+<!--        <gp:Component Name="ECC_CURVE_OID" Encoding="HEX" Value="2A8648CE3D03000B"></gp:Component> -->
+        <gp:Component Name="ECC_D" Encoding="HEX" Value="151A30A6D843DB3B25063C5108255CC4448EC0F4D426D4EC884502229C96"></gp:Component>
+    </gp:Value>
+</gp:KeyProfile>

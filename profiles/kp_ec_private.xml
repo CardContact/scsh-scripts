@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<gp:KeyProfile xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://namespaces.globalplatform.org/systems-profiles/1.1.0 http://namespaces.globalplatform.org/systems-profiles/1.1.0/GP.systems.profiles.1.1.0.KeyProfile.xsd"
+    xmlns:gp="http://namespaces.globalplatform.org/systems-profiles/1.1.0"
+    UniqueID="2B0601040181C31F10000A" ProfileVersion="1.1.0" ErrataVersion="0">
+    <gp:Description>EC Private Test Key</gp:Description>
+    <gp:Revisions arrayElement="Revision" arrayIndex="#">
+        <gp:Revision Version="1.0.0" Date="2005-12-09" Time="00:00:00" By="www.openscdp.org"
+            Digest="00000000"/>
+    </gp:Revisions>
+    <gp:KeyInfo Name="ECPrivate" Type="PRIVATE" SubType="EC" Size="192" Mode="TEST"/>
+    <gp:Attribute Sensitive="false" Importable="true" Exportable="true"/>
+    <gp:Usage Encrypt="true" Decrypt="true" DecryptEncrypt="true" Sign="true" Verify="true"
+        Wrap="true" Unwrap="true" UnwrapWrap="true" Derive="true"/>
+    <gp:Value Format="ECPRIVATE" arrayElement="Component" arrayIndex="#">
+<!-- Use curve parameter directly instead of curve OID -->
+        <gp:Component Name="ECC_A" Encoding="HEX" Value="FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFC"></gp:Component>
+        <gp:Component Name="ECC_B" Encoding="HEX" Value="64210519E59C80E70FA7E9AB72243049FEB8DEECC146B9B1"></gp:Component>
+        <gp:Component Name="ECC_P" Encoding="HEX" Value="FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFF"></gp:Component>
+        <gp:Component Name="ECC_GX" Encoding="HEX" Value="188DA80EB03090F67CBF20EB43A18800F4FF0AFD82FF1012"></gp:Component>
+        <gp:Component Name="ECC_GY" Encoding="HEX" Value="07192B95FFC8DA78631011ED6B24CDD573F977A11E794811"></gp:Component>
+        <gp:Component Name="ECC_N" Encoding="HEX" Value="FFFFFFFFFFFFFFFFFFFFFFFF99DEF836146BC9B1B4D22831"></gp:Component>
+        <gp:Component Name="ECC_H" Encoding="HEX" Value="01"></gp:Component>
+        <gp:Component Name="ECC_D" Encoding="HEX" Value="C2C7ACAB793AF41C242456CE64D5B61054629AC23B27A0E0"></gp:Component>
+    </gp:Value>
+</gp:KeyProfile>

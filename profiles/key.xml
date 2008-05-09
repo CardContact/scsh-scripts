@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- UniqueID corresponds to OID {globalplatform 100 1 12} -->
+<gp:KeyProfile UniqueID="2B0601040181C31F0000" ProfileVersion="1.1.0" ErrataVersion="0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:gp="http://namespaces.globalplatform.org/systems-profiles/1.1.0" xsi:schemaLocation="http://namespaces.globalplatform.org/systems-profiles/1.1.0 GP.systems.profiles.1.1.0.KeyProfile.xsd">
+	<gp:Description>Demo Application Key</gp:Description>
+	<gp:Revisions arrayElement="Revision" arrayIndex="#">
+		<gp:Revision ProfileID="2A864886FC6B64030C" Version="1.0.0" Date="2002-08-26" Time="10:16:00" By="GlobalPlatform" Digest="654321"/>
+	</gp:Revisions>
+	<gp:KeyInfo Type="SECRET" Size="128" Owner="0011223344" Version="1" StartDate="2002-01-01" EndDate="2003-01-01" SubType="DES"/>
+	<gp:Attribute/>
+	<gp:Usage Encrypt="true" Decrypt="true" DecryptEncrypt="true" Sign="true" Verify="true" Wrap="true" Unwrap="true" UnwrapWrap="true" Derive="true"/>
+	<gp:Value Format="DES" arrayElement="Component" arrayIndex="#">
+		<gp:Component Name="MODULUS" Encoding="HEX" Value="33443344334433443344334433443344"/>
+	</gp:Value>
+</gp:KeyProfile>

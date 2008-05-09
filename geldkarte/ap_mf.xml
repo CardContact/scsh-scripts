@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gp:ApplicationProfile xmlns="http://namespaces.globalplatform.org/systems-profiles/1.1.0"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:gp="http://namespaces.globalplatform.org/systems-profiles/1.1.0"
+    xmlns:scdp="http://www.openscdp.org/namespaces/gp/systems-profiles/1.0.0"
+    UniqueID="2B0601040181C31F1002000001" ProfileVersion="1.0.0">
+    <gp:Description>Seccos MF</gp:Description>
+    <gp:Revisions arrayElement="Revision" arrayIndex="#">
+        <gp:Revision Version="1.0.0" Date="2006-02-10" Time="12:00:00" By="CardContact" Digest=""></gp:Revision>
+    </gp:Revisions>
+    <gp:ConflictRules arrayElement="" arrayIndex=""></gp:ConflictRules>
+    <gp:ApplicationInfo Version="1.0.0" Type="OTHER" Subtype="APP" Owner="EC" Developer="CardContact" Provider="EC" Domain="EC" VolatileDataSpaceMin="1000" NonVolatileDataSpaceMin="2000">
+        <gp:Privileges/>
+        <gp:LifeCycles arrayElement="LifeCycle" arrayIndex="#">
+            <gp:LifeCycle Name=""/>
+            <gp:LifeCycle Name=""/>
+            <gp:LifeCycle Name=""/>
+        </gp:LifeCycles>
+    </gp:ApplicationInfo>
+    <scdp:DataStructure>
+        <scdp:FileStructure arrayElement="EF" arrayIndex="#">
+            <scdp:EF fid="0030" type="LV" format="tlvlist.arr" name="EF_ARR" />
+            <scdp:EF fid="0010" name="EF_KEY" />
+            <scdp:EF fid="0013" type="LV" format="tlvlist" name="EF_KEYD" />
+            <scdp:EF fid="0012" name="EF_PWD0" />
+            <scdp:EF fid="0015" type="LV" format="tlvlist" name="EF_PWDD0" />
+            <scdp:EF fid="0016" type="LV" name="EF_FBZ" />
+            <scdp:EF fid="0003" type="LV" name="EF_ID" />
+            <scdp:EF fid="0100" type="LV" name="EF_INFO" />
+        </scdp:FileStructure>    
+    </scdp:DataStructure>   
+</gp:ApplicationProfile>
+
