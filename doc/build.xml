@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="doc" basedir="." default="applyTemplate2">
+	<taskdef resource="net/sf/antcontrib/antlib.xml" />
+
+	<property name="rootdir" location="../"/>
+
+	<target name="applyTemplate">
+		<for param="f">
+			<path>
+				<fileset dir="." includes="*.html"/>
+			</path>
+			<sequential>
+				<exec executable="perl">
+					<arg value="stt.pl" />
+					<arg file="@{f}" />
+				</exec>
+			</sequential>
+		</for>
+		<delete>
+			<fileset dir="." includes="*.html~" defaultexcludes="false"/>
+		</delete>
+	</target>
+
+	<target name="applyTemplate2" depends="convertJS">
+		<apply executable="perl" dir="${basedir}">
+			<arg value="stt.pl" />
+			<fileset dir="." includes="**/*.html"/>
+		</apply>
+			
+		<delete>
+			<fileset dir="." includes="**/*.html~" defaultexcludes="false"/>
+		</delete>
+	</target>
+
+	<target name="convertJS">
+		<apply executable="perl" addsourcefile="false" dir="${rootdir}">
+			<arg value="doc/js2html.pl" />
+		    <!-- Collect the JS-files -->
+		    <fileset dir="${rootdir}" includes="**/*.js"/>
+
+		    <redirector>
+		        <!-- redirect STDIN; fileset collects relative to its dir, but we need -->
+		        <!-- relative to basedir -->
+		    	<inputmapper type="glob" from="*" to="${rootdir}/*"/>
+		        <!-- redirect STDOUT to file in dest-dir -->
+		        <outputmapper id="out" type="glob" from="*.js" to="*.html"/>
+		    </redirector>
+		</apply>
+	</target>
+
+</project>

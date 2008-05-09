@@ -1,0 +1,59 @@
+body {
+    background-color: white;
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size: 10pt;
+}
+
+p,a,td {
+    font-size: 10pt;
+}
+
+h1 {
+    font-size: 16pt;
+}
+
+h2 {
+    width: 100%;
+    font-size: 14pt;
+    margin-top: 1cm;
+    background-color: #e8e8e8;
+}
+
+h3 {
+    font-size: 12pt;
+}
+
+pre {
+    font-size: 9pt;
+    background: #f8f8f8;
+    border: 1px solid #d8d8d8;
+    overflow: auto;
+}
+
+p.signature {
+    width: 100%;
+    font-family: "Courier New", monospaced;
+    font-size: 9pt;
+    background: #f8f8f8;
+    border: 1px solid #d8d8d8;
+}
+
+table.content {
+    width: 100%;
+    table-layout: fixed;
+    border: 1px solid #d8d8d8;
+    border-collapse: collapse;
+    border-spacing: 0px;
+}
+
+table.content td {
+    border: 1px solid #d8d8d8;
+}
+
+
+table.content th {
+    border: 1px solid #d8d8d8;
+    text-align: left;
+}
+
+#navigator { position:fixed; top:100px; left:0px; width:130px; height:500px; background-color:#afa; }

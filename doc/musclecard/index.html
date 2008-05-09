@@ -1,0 +1,394 @@
+<!-- #BeginTemplate "templatesubdir.dwt" -->
+<!doctype html public "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<!-- #BeginEditable "TITLE" -->
+<title>Script Collection - MuscleCard</title>
+<!-- #EndEditable -->
+<link rel=stylesheet type="text/css" href="../style.css">
+<meta name="author" content="Andreas Schwier">
+</head>
+<body>
+<table border="0" cellpadding="0" cellspacing="0" width="750" align="center">
+  <tr>
+    <td height="80" colspan="5" class="pb"><div align="left"><a href="http://www.cardcontact.de"><img src="../banner.jpg" width="750" height="80" border="0"></a></div></td>
+  </tr>
+  <tr height="20">
+  </tr>
+  <tr>
+    <td width="130" valign="top" align="left">
+    <br>
+    <p><b>Script Collection</b></p>
+    <a href="../index.html">Home</a><br><br>
+    <br>
+    <a href="../eGK/index.html">German eGK</a><br>
+    <a href="../HPC/index.html">German HPC</a><br>
+    <a href="../kvk/index.html">German KVK</a><br><br>
+    <a href="../icao/index.html">ICAO MRTD</a><br>
+    <a href="../gp/index.html">GP Card</a><br>
+    <a href="../musclecard/index.html">MuscleCard</a><br>
+    <a href="../pkcs15/index.html">PKCS#15 Card</a><br>
+    <a href="../emv/index.html">EMV</a><br>
+    <br>
+    <a href="http://www.openscdp.org">OpenSCDP</a><br>
+    <a href="http://www.cardcontact.de/company/contact.html">Contact</a><br>
+    </td>
+    <td width="630" align="left">
+    <br/>
+<!-- #BeginEditable "BODY" -->
+<h1>MuscleCard</h1>
+<p><a href="http://www.musclecard.com/musclecard/index.html">MuscleCard</a> is an open source project hosted
+at the <a href="http://www.linuxnet.com">M.U.S.C.L.E</a> website. It aims to develop a JavaCard applet
+and supporting middleware to perform cryptographic operations like signing and encryption in a smart card.</p>
+<p>The project is still work in progress and the
+<a href="http://web.inf.tu-dresden.de/~ko189283/MuscleCard/MuscleCardArticle.html">article from Karsten Ohme</a>
+gives a good overview of the current architecture.</p>
+<p>The Smart Card Shell contains a set of scripts to load the MuscleCard applet into a JavaCard,
+to create cryptographic keys and examples how to use them. The scripts can be used without any further tools
+installed, a working Global Platform compliant JavaCard should be sufficient.</p>
+
+
+<h2>Getting started</h2>
+<p>First thing you need is a working JavaCard.  The scripts have been tested with
+<a href="http://www.usasmartcard.com">JCOP 3.1, JCOP 4.1</a> and
+<a href="http://store.gemplus.com">Cyberflex 64K cards</a>.</p>
+<p>The scripts are included in the Smart Card Shell download starting with version 3.5.308. Scripts
+included in previous versions might not work as described here. Please see the
+<a href="http://www.openscdp.org/scsh3/download.html">download page</a>
+for a recent version.</p>
+<p>Before you start, make sure that the card manager applet in the JavaCard has been initialised with
+the Global Platform sample keys. Maybe you want to try the "gp/explore.js" script first and authenticate
+against the card (Expand the "Card Manager" node and right click on "Authenticate"). If that works, then the proper
+keys have been set.</p>
+<pre>
+&gt;load("gp/explore.js");
+Exception selecting EF_DIR. Assuming no EF_DIR...
+Function (CARD_COMM_ERROR/27270) - SELECT failed with SW1/SW2 = 6A86 "Checking error: Incorrect P1-P2"
+Issuer Identification Number(42)
+Card Image Number(45)
+Card Data(66)
+Key Information Template(e0)
+Sequence Counter of the default Key Version Number(c1)
+Confirmation Counter(c2)
+Sending INIT-UPDATE with host challenge...
+Using SCP01...
+Input to session key derivation: 1D 68 94 96 E2 DE CC 35 08 FB 07 53 DF A7 EC EB
+Input to card cryptogram verification: E2 DE CC 35 DF A7 EC EB 08 FB 07 53 1D 68 94 96 80 00 00 00 00 00 00 00
+Input to host cryptogram calculation: 08 FB 07 53 1D 68 94 96 E2 DE CC 35 DF A7 EC EB 80 00 00 00 00 00 00 00
+Host cryptogram: 90 B7 93 60 0F 31 20 14
+Performing external authentication...
+Done...
+</pre>
+<p>Don't be confused by the error message. This is just because JavaCards do not have an EF_DIR file and the
+explorer code is somewhat generic for all cards.</p>
+
+
+<h2 id="load">Loading the Applet</h2>
+<p>You will first need to load the MuscleCard applet into your JavaCard. You can use the Smart Card Shell
+to do that.</p>
+<p>Two scripts are provided to load the MuscleCard applet:</p>
+<ul>
+<li><a href="loadintojcop.html">loadintojcop.js</a> - loads the applet into a JCOP JavaCard</li>
+<li><a href="loadintocyberflex64.html">loadintocyberflex64.js</a> - loads the applet into a Cyberflex 64K card</li>
+</ul>
+<p>If you are using a different JavaCard, it is probably best to try the <a href="loadintojcop.html">loadintojcop.js</a>
+script first. If your card is based on the JTOP runtime, then the
+<a href="loadintocyberflex64.html">loadintocyberflex64.js</a> might be the right choice.</p>
+<pre>
+&gt;load("musclecard/loadintocyberflex64.js");
+Selecting card manager application...
+0000  6F 19 84 08 A0 00 00 00 03 00 00 00 A5 0D 9F 6E  o...........¥..n
+0010  06 20 91 01 03 42 75 9F 65 01 FF                 . ...Bu.e.ÿ
+
+Sending INIT-UPDATE with host challenge...
+Using SCP01...
+Input to session key derivation: DD E3 A9 53 90 87 1F 17 28 89 21 B8 B2 10 A0 77
+Input to card cryptogram verification: 90 87 1F 17 B2 10 A0 77 28 89 21 B8 DD E3 A9 53 80 00 00 00 00 00 00 00
+Input to host cryptogram calculation: 28 89 21 B8 DD E3 A9 53 90 87 1F 17 B2 10 A0 77 80 00 00 00 00 00 00 00
+Host cryptogram: 34 AB DE 13 89 C6 B9 E4
+Performing external authentication...
+Done...
+Delete old applet instance...
+Delete old load file...
+InstallForLoad...
+Loading applet...
+Instantiating applet...
+&gt;
+</pre>
+<p>Loading the applet will take approx. 35 seconds. Maybe you want to switch to the "Trace" tab in the shell
+to see the progress.</p>
+<p>The musclecard directory contains two .CAP files with the
+<a href="https://alioth.debian.org/projects/muscleplugins/">0.9.11</a> version of the MuscleCard applet:</p>
+<ul>
+<li>CardEdge.cap - has been compiled and converted for JCOP cards (used by loadintojcop.js)</li>
+<li>CardEdgeCF.cap - has been compiled and converted for JTOP cards (used by loadintocyberflex64.js)</li>
+</ul>
+<p>Note: There seems to be a rather big confusion about versions and forks of the original code.
+It seems, that the <a href="http://directory.fedoraproject.org/wiki/CoolKey">Redhat Coolkey Applet</a>
+is a fork of the 0.9.10 version of the orginal code. Coolkey has extended the original code and added new functions,
+but it seems to be very much tailored towards Cyberflex.</p>
+<p>Karsten Ohme also maintains a <a href="http://web.inf.tu-dresden.de/~ko189283/MuscleCard/">fork</a>
+ of the 0.9.11 version, but this version seems to have a
+<a href="http://web.inf.tu-dresden.de/~ko189283/MuscleCard/MCardAppletChanges.html">quite different APDU interface</a>.</p>
+
+<h2 id="init">Applet Initialisation</h2>
+<p>After loading, the MuscleCard applet must be initialised. This is an undocumented function, normally provided
+by the MuscleTool. The required initialisation is done by the <a href="init.html">init.js</a> script.</p>
+<p>The script sets default value "12345678" for PIN0, Unblocking-PIN0, PIN1 and Unblocking-PIN1.</p>
+<p>The initialisation is only done once. Without initialisation, the applet will always respond with
+SW1/SW2=9C05 to any APDU received.</p>
+<pre>
+&gt;load("musclecard/init.js");
+Applet not initialized
+08 4D 75 73 63 6C 65 30 30 10 10 08 31 32 33 34 35 36 37 38 08 31 32 33 34 35 36 37 38 10 10 08 31 32 33 34 35 36 37 38 08 31 32 33 34 35 36 37 38 00 00 10 00 00 00 00
+9000
+Response to MSCGetStatus command APDU: 00 01 00 06 00 00 10 00 00 00 0F FE 02 00 00 00
+Card Edge Major Version        : 0
+Card Edge Minor Version        : 1
+Software Major Version         : 0
+Software Minor Version         : 6
+Total Object memory            : 4096
+Free Object Memory             : 4094
+Number of used PINs            : 2
+Number of used Keys            : 0
+Currently Logged in Identities : none
+&gt;
+</pre>
+
+
+<h2>Query the Applet Status</h2>
+<p>At any time, you can query the status of the MuscleCard applet, display information about the
+loaded PINs, objects and keys using the <a href="status.html">status.js</a> script.</p>
+
+<pre>
+&gt;load("musclecard/status.js");
+Response to MSCGetStatus command APDU: 00 01 00 06 00 00 10 00 00 00 0F 63 02 02 00 00
+Card Edge Major Version        : 0
+Card Edge Minor Version        : 1
+Software Major Version         : 0
+Software Minor Version         : 6
+Total Object memory            : 4096
+Free Object Memory             : 3939
+Number of used PINs            : 2
+Number of used Keys            : 2
+Currently Logged in Identities : none
+List PINs: PIN0,PIN1 (3)
+-- List Objects ------------------------------------------------
+  Object Id     : FF FF FF FF
+  Size          : 139
+  Read Access   : Always (0)
+  Write Access  : Always (0)
+  Delete Access : Always (0)
+0000  00 01 04 00 00 80 8F 00 7E DF 85 C7 4A 8A 31 16  ........~ß.ÇJ.1.
+0010  60 8C 4D 35 A5 FA 76 38 9A D5 BB 46 8F 09 72 51  `.M5¥úv8.Õ»F..rQ
+0020  54 B0 16 64 A9 14 9D D8 2C 05 F6 2D FF 12 7F B1  T°.d©..Ø,.ö-ÿ..±
+0030  59 F7 23 7B 3E 55 EF E9 DA D7 D1 DF 1B FA FD E6  Y÷#{>UïéÚ×Ñß.úýæ
+0040  D9 B5 EC E9 BB 03 3D A4 F5 32 62 27 B0 7D C7 52  Ùµìé».=¤õ2b'°}ÇR
+0050  06 4E 79 D4 77 F7 F1 73 C9 18 6D FE 13 90 DA BA  .NyÔw÷ñsÉ.mþ..Úº
+0060  16 8D 93 B8 C2 A8 C3 65 C5 85 90 A6 E3 F1 90 FC  ...¸Â¨ÃeÅ..¦ãñ.ü
+0070  0E 2C 6B 89 67 6A FD 87 1E F3 D8 5E 26 5A 81 AB  .,k.gjý..óØ^&Z.«
+0080  CB 14 A1 E6 BC F7 00 03 01 00 01                 Ë.¡æ¼÷.....
+
+-- List Keys ---------------------------------------------------
+  Key Number    : 0
+  Key Type      : RSA_PRIVATE_CRT (3)
+  Key Partner   : 255
+  Key Size      : 1024
+  Read Access   : Never (ffff)
+  Write Access  : Never (ffff)
+  Use Access    : PIN0 (1)
+  Key Number    : 1
+  Key Type      : RSA_PUBLIC (1)
+  Key Partner   : 255
+  Key Size      : 1024
+  Read Access   : Always (0)
+  Write Access  : Never (ffff)
+  Use Access    : Never (ffff)
+&gt;
+</pre>
+
+
+<h2>Generating Keys</h2>
+<p>Once the applet is loaded and initialised, you can start generating key pairs.</p>
+<p>If you want to do this directly, then you can try one the the genrsa scripts provided:</p>
+<ul>
+<li><a href="genrsa1024.html">genrsa1024.js</a> - Generates a 1024 bit RSA key pair with key id 0 and 1</li>
+<li><a href="genrsa2048.html">genrsa2048.js</a> - Generates a 2048 bit RSA key pair with key id 2 and 3</li>
+</ul>
+<pre>
+&gt;load("musclecard/genrsa1024.js");
+Generating key...
+0000  00 01 04 00                                      ....
+
+Modulus : 8F 00 7E DF 85 C7 4A 8A 31 16 60 8C 4D 35 A5 FA 76 38 9A D5 BB 46 8F 09 72 51 54 B0 16 64 A9 14 9D D8 2C 05 F6 2D FF 12 7F B1 59 F7 23 7B 3E 55 EF E9 DA D7 D1 DF 1B FA FD E6 D9 B5 EC E9 BB 03 3D A4 F5 32 62 27 B0 7D C7 52 06 4E 79 D4 77 F7 F1 73 C9 18 6D FE 13 90 DA BA 16 8D 93 B8 C2 A8 C3 65 C5 85 90 A6 E3 F1 90 FC 0E 2C 6B 89 67 6A FD 87 1E F3 D8 5E 26 5A 81 AB CB 14 A1 E6 BC F7
+Exponent: 01 00 01
+&gt;
+</pre>
+<p>As you may have noticed, all scripts load <a href="tools.html">tools.js</a>, which provides
+some generic functions used by the scripts. Feel free to use or extend this for your own purpose.</p>
+
+
+<h2>Signing with the Applet</h2>
+<p>The newly generated key pair can be used to sign some data. Hashing must be done externally, the MuscleCard
+applet only performs the RSA encrypt operation. The sample scripts use the CM_RSA_NOPAD option and
+provide a full size input buffer.</p>
+
+<p>Two scripts, one for each key size, are available:</p>
+
+<ul>
+<li><a href="signrsa1024.html">signrsa1024.js</a> - Sign using the 1024 bit RSA key</li>
+<li><a href="signrsa2048.html">signrsa2048.js</a> - Sign using the 2048 bit RSA key</li>
+</ul>
+<p>The script will read the public key from the applet and triggers the signature operation.
+The resulting block is then decrypted using the public key an verified against the plain
+value.</p>
+
+<pre>
+&gt;load("musclecard/signrsa2048.js");
+Reading public key...
+0000  00 01 08 00                                      ....
+
+Modulus : 87 26 18 14 08 23 9E 16 B4 CE D5 74 92 2E 41 C7 03 C6 2A 8D 62 00 74 61 2E A9 CF 8D 2A 19 A1 73 E8 61 44 D2 07 66 7E F1 B7 41 82 42 F6 CC 0B FA F3 B1 9F 00 2E 2E 12 42 DF 75 AA BB 82 B0 E4 D7 A3 06 0C C7 ED 1B EC E1 99 68 D8 50 C0 30 F7 68 60 0B CB 8F CE 41 ED 3C 0C 66 64 1D 96 3A 8F 8A 9F EE 4C 14 48 78 E4 4F 74 86 21 F9 14 9F 1C 1B F3 00 B6 A1 BA 4C 8B DC 14 51 4F 66 D9 FA CA EE 29 1B C3 88 51 11 09 BE B5 58 F8 A1 45 99 E5 A9 0E 92 F7 18 6E 8D 96 B2 63 DA 4F F8 04 0A 56 85 E5 1A 2B F7 86 0A 57 C0 53 D7 92 6A E3 8F 63 65 97 1D F3 FA 4F FA 72 2E C2 62 61 6B CA 1A 29 8F 6B F7 07 13 FD 17 5D EC 52 81 05 D9 2E 42 BC 7B 02 5A 7A 89 69 36 C2 3E 5B 01 0A 44 F9 44 76 02 A0 6C 6F 94 32 87 1C 56 F8 CD 66 1B E4 D6 37 2B FA 55 18 24 B0 50 CE 90 21 47 C4 F2 D0 5F 61 6B
+Exponent: 01 00 01
+Signing data...
+0000  49 89 E1 73 C0 4A FD 17 EB 32 8A 40 EE 1C 3A DE  I.ásÀJý.ë2.@î.:Þ
+0010  F7 EC E8 3F 2C 78 19 0E 0A 88 09 E5 0A 40 AD D3  ÷ìè?,x.....å.@­Ó
+0020  D6 16 10 48 A5 B7 5A 43 81 B1 EA 05 AF D0 91 D8  Ö..H¥·ZC.±ê.¯Ð.Ø
+0030  97 B1 5B 85 0A 5C 1B 7E 93 B5 6D FC 63 CE FC 07  .±[..\.~.µmücÎü.
+0040  FB A1 F9 7A 2B 56 AD 12 7F E1 34 29 CA 6D 9B C7  û¡ùz+V­..á4)Êm.Ç
+0050  B9 66 CD 7F D2 8A AE 20 8E 1A 58 02 7B 9C 4A 27  ¹fÍ.Ò.® ..X.{.J'
+0060  24 DA AB 2E F7 FE EC 5C 25 33 8E EE 5A 34 9D 62  $Ú«.÷þì\%3.îZ4.b
+0070  70 5B 6F 24 27 75 E4 B9 5C 96 E7 64 CC 07 5F 7A  p[o$'uä¹\.çdÌ._z
+0080  3C 50 62 CC 28 A8 AB 34 49 E7 7B D0 A2 7A 01 25  &gt;PbÌ(¨«4Iç{Ð¢z.%
+0090  46 F8 47 D8 D1 01 A7 7B 7A 96 18 18 4E 11 EB C8  FøGØÑ.§{z...N.ëÈ
+00A0  A6 FF 32 54 BD 80 E9 5E 01 5F 86 6E 9E CC 41 7C  ¦ÿ2T½.é^._.n.ÌA|
+00B0  CE 1C FB 16 CA 9C 33 30 3F 79 39 58 36 47 42 7A  Î.û.Ê.30?y9X6GBz
+00C0  B1 58 D3 BA 36 4F 70 72 5C 19 28 1F 2C 87 3F 59  ±XÓº6Opr\.(.,.?Y
+00D0  8D 29 9D B3 9D D9 20 58 88 B3 A9 C5 CB 99 87 91  .).³.Ù X.³©ÅË...
+00E0  01 6D 7E F5 6C FF 54 78 21 58 6D D1 A7 E3 75 7A  .m~õlÿTx!XmÑ§ãuz
+00F0  54 30 00 26 EC FA 8C EA 8A 6E B8 C0 61 99 57 63  T0.&ìú.ê.n¸Àa.Wc
+
+0000  01 02 03 04 05 06 07 08 01 02 03 04 05 06 07 08  ................
+0010  01 02 03 04 05 06 07 08 01 02 03 04 05 06 07 08  ................
+0020  01 02 03 04 05 06 07 08 01 02 03 04 05 06 07 08  ................
+0030  01 02 03 04 05 06 07 08 01 02 03 04 05 06 07 08  ................
+0040  01 02 03 04 05 06 07 08 01 02 03 04 05 06 07 08  ................
+0050  01 02 03 04 05 06 07 08 01 02 03 04 05 06 07 08  ................
+0060  01 02 03 04 05 06 07 08 01 02 03 04 05 06 07 08  ................
+0070  01 02 03 04 05 06 07 08 01 02 03 04 05 06 07 08  ................
+0080  01 02 03 04 05 06 07 08 01 02 03 04 05 06 07 08  ................
+0090  01 02 03 04 05 06 07 08 01 02 03 04 05 06 07 08  ................
+00A0  01 02 03 04 05 06 07 08 01 02 03 04 05 06 07 08  ................
+00B0  01 02 03 04 05 06 07 08 01 02 03 04 05 06 07 08  ................
+00C0  01 02 03 04 05 06 07 08 01 02 03 04 05 06 07 08  ................
+00D0  01 02 03 04 05 06 07 08 01 02 03 04 05 06 07 08  ................
+00E0  01 02 03 04 05 06 07 08 01 02 03 04 05 06 07 08  ................
+00F0  01 02 03 04 05 06 07 08 01 02 03 04 05 06 07 08  ................
+
+&gt;
+</pre>
+<h2>Using OpenSC with the MuscleCard Applet</h2>
+<p>Recent versions of the <a href="http://www.opensc-project.org/">OpenSC</a>
+tools have support for the MuscleCard applet. We've tested the functionality on Debian
+with the latest trunk version from SVN. Unfortunately, the latest Smart Card Bundle (0.9)
+for Windows failed during the pkcs15-init command.</p>
+<p>Support for the applet has been build using a file system emulation that
+maps 2 byte file identifier to 4 byte object identifier in the applet. Using this
+method, a single level directory and file structure is provided. The file structure
+emulation is used to store the PKCS#15 meta-data required by OpenSC.</p>
+<p>To initialise the PKCS#15 structure on the applet, you will first need
+to <a href="#load">load</a> and <a href="#init">initialise</a> the applet itself.</p>
+<p>The PKCS#15 structure can be created using the following command (at a command shell,
+not from within the Smart Card Shell !):</p>
+<pre>
+C:\Programme\Smart card bundle>pkcs15-init -C
+</pre>
+<p>The program will ask you for a new user PIN first. Please make sure, that
+you use the default PIN "12345678" from the init.js script. Defining a different
+PIN will lead to a failure later in the pkcs15-init tool.</p>
+<p>The program will also ask for an "Unspecified PIN [reference 1]". This is the
+same PIN as the user PIN and again the default PIN "12345678" must be entered.</p>
+<p>Once the applet is initialised with a PKCS#15 structure, you can display it using:</p>
+<pre>
+C:\Programme\Smart card bundle>pkcs15-tool --dump
+PKCS#15 Card [MUSCLE]:
+        Version        : 1
+        Serial number  : 0000
+        Manufacturer ID: Identity Alliance
+        Last update    : 20070831085533Z
+        Flags          : EID compliant
+
+PIN [User PIN]
+        Com. Flags: 0x3
+        ID        : ff
+        Flags     : [0x18], unblock-disabled, initialized
+        Length    : min_len:6, max_len:8, stored_len:8
+        Pad char  : 0x00
+        Reference : 1
+        Type      : ascii-numeric
+        Path      : 3f005015
+</pre>
+<p>The next step is to load a private key and certificate into the applet. This can be done
+using the following command:</p>
+<pre>
+C:\Programme\Smart card bundle>pkcs15-init -S cert.p12 -f PKCS12 -a FF -i 10
+</pre>
+<p>Again you will need to provide the user PIN, which should still be the default value "12345678".</p>
+<p>The card is fully now initialised. Using pkcs15-tool -dump you can take a look:</p>
+<pre>
+C:\Programme\Smart card bundle>pkcs15-tool --dump
+PKCS#15 Card [MUSCLE]:
+        Version        : 1
+        Serial number  : 0000
+        Manufacturer ID: Identity Alliance
+        Last update    : 20070831092136Z
+        Flags          : EID compliant
+
+PIN [User PIN]
+        Com. Flags: 0x3
+        ID        : ff
+        Flags     : [0x18], unblock-disabled, initialized
+        Length    : min_len:6, max_len:8, stored_len:8
+        Pad char  : 0x00
+        Reference : 1
+        Type      : ascii-numeric
+        Path      : 3f005015
+
+Private RSA Key [Private Key]
+        Com. Flags  : 3
+        Usage       : [0x22C], sign, signRecover, unwrap, nonRepudiation
+        Access Flags: [0x1D], sensitive, alwaysSensitive, neverExtract, local
+        ModLength   : 1024
+        Key ref     : 0
+        Native      : yes
+        Path        : 3f005015
+        Auth ID     : ff
+        ID          : 10
+
+X.509 Certificate [/C=DE/O=CardContact/CN=Andreas Schwier/emailAddress=andreas.s
+chwier@cardcontact.de]
+        Flags    : 2
+        Authority: no
+        Path     : 3f0050153110
+        ID       : 10
+
+X.509 Certificate [/C=DE/O=CardContact/CN=CardContact CA]
+        Flags    : 2
+        Authority: yes
+        Path     : 3f0050153145
+        ID       : 45
+</pre>
+<h2>Deleting the Applet</h2>
+<p>If you would like to delete the applet, then you can use the provided
+<a href="deleteapplet.html">deleteapplet.js</a> script.</p>
+<p>If you only want to remove the PKCS#15 information, then issuing "pkcs15-init -E" is
+sufficient.</p>
+<!-- #EndEditable -->
+<br>
+<p class="copyright">&copy; Copyright 2003 - 2008 <a href="http://www.cardcontact.de">CardContact</a>
+Software & System Consulting, Minden, Germany</p>
+    </td>
+  </tr>
+</table>
+</body>
+</html><!-- #EndTemplate -->
