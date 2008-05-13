@@ -1,27 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project name="doc" basedir="." default="applyTemplate2">
-	<taskdef resource="net/sf/antcontrib/antlib.xml" />
+<project name="doc" basedir="." default="applyTemplate">
 
 	<property name="rootdir" location="../"/>
 
-	<target name="applyTemplate">
-		<for param="f">
-			<path>
-				<fileset dir="." includes="*.html"/>
-			</path>
-			<sequential>
-				<exec executable="perl">
-					<arg value="stt.pl" />
-					<arg file="@{f}" />
-				</exec>
-			</sequential>
-		</for>
-		<delete>
-			<fileset dir="." includes="*.html~" defaultexcludes="false"/>
-		</delete>
-	</target>
-
-	<target name="applyTemplate2" depends="convertJS">
+	<target name="applyTemplate" depends="convertJS">
 		<apply executable="perl" dir="${basedir}">
 			<arg value="stt.pl" />
 			<fileset dir="." includes="**/*.html"/>
@@ -48,4 +30,21 @@
 		</apply>
 	</target>
 
+	<target name="publish">
+		<mkdir dir="bundle"/>
+		<copy todir="bundle">
+			<fileset dir="${basedir}">
+				<include name="**/*.html"/>
+				<include name="**/style.css"/>
+				<include name="**/*.jpg"/>
+				<include name="**/*.png"/>
+				<exclude name="bundle/"/>
+			</fileset> 
+		</copy>
+		<exec executable="pscp" dir="bundle">
+			<arg line="-r * asc@diavolo:/var/www/openscdp.org/scripts" />
+		</exec>
+		<delete dir="bundle"/>
+	</target>
+	
 </project>
