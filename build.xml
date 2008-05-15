@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="doc" basedir="." default="applyTemplate">
+
+	<property name="doc" location="doc"/>
+
+	
+	<target name="init">
+		<tstamp />
+	</target>
+
+
+	<target name="applyTemplate" depends="convertJS">
+		<apply executable="perl" dir="${doc}" force="true">
+			<arg value="stt.pl" />
+			<fileset dir="." includes="**/*.html"/>
+		</apply>
+			
+		<delete>
+			<fileset dir="." includes="**/*.html~" defaultexcludes="false"/>
+		</delete>
+	</target>
+
+
+	<target name="convertJS">
+		<apply executable="perl" addsourcefile="false" dir="${basedir}">
+			<arg value="${doc}/js2html.pl" />
+		    <!-- Collect the JS-files -->
+		    <fileset dir="${basedir}" includes="**/*.js"/>
+
+		    <redirector>
+		        <!-- redirect STDIN; fileset collects relative to its dir, but we need -->
+		        <!-- relative to basedir -->
+		    	<inputmapper type="identity"/>
+		        <!-- redirect STDOUT to file in dest-dir -->
+		        <outputmapper type="glob" from="*.js" to="${doc}/*.html"/>
+		    </redirector>
+		</apply>
+	</target>
+
+
+	<target name="publish" depends="init, applyTemplate">
+		<property name="build" location="build"/>
+		<property name="bundlename" value="scripts-${DSTAMP}.zip"/>
+		<property name="bundle" location="released/${bundlename}"/>
+		<filter token="bundlename" value="${bundlename}"/>
+
+		<mkdir dir="${build}"/>
+			
+		<copy todir="${build}">
+			<fileset dir="${basedir}">
+				<exclude name="doc/"/>
+				<exclude name="**/.svn"/>
+				<exclude name="build.xml"/>
+				<exclude name="build/"/>
+				<exclude name="released/"/>
+			</fileset> 
+		</copy>
+						
+		<copy todir="${build}/doc" filtering="true">
+			<fileset dir="${doc}">
+				<include name="**/*.html"/>
+			</fileset> 
+		</copy>
+
+		<copy todir="${build}/doc">
+			<fileset dir="${doc}">
+				<include name="**/style.css"/>
+				<include name="**/*.jpg"/>
+				<include name="**/*.png"/>
+			</fileset> 
+		</copy>
+
+		<zip destfile="${bundle}" includes="*">
+			<zipfileset dir="${build}" prefix="scripts"/>
+		</zip>
+
+		<exec executable="pscp" dir="${build}/doc">
+			<arg line="-r * asc@diavolo:/var/www/openscdp.org/scripts" />
+		</exec>
+		<exec executable="pscp" dir="${basedir}">
+			<arg line="${bundle} asc@diavolo:/var/www/openscdp.org/scripts" />
+		</exec>
+		<delete dir="${build}"/>
+	</target>
+	
+</project>
