@@ -14,7 +14,7 @@
             <Powers arrayElement="" arrayIndex=""></Powers>
             <Communication></Communication>
         </Chip>
-        <Platform Type="Native" Version="1.0.0" OSPlatform="eGK" OSVersion="1..1.0"/>
+        <Platform Type="Native" Version="1.0.0" OSPlatform="eGK" OSVersion="1.1.0"/>
     </CardManufacturerProduct>
     <ConflictRules arrayElement="" arrayIndex=""></ConflictRules>
     <LoadFileInstances arrayElement="" arrayIndex=""></LoadFileInstances>
