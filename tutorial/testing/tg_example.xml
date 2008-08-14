@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="doctg.xsl" ?>
+<testgroup id="TG_EXAMPLES" arrayElement="testcase" arrayIndex="id">
+    <name>Examples on using the test framework</name>
+    <description>
+        This is an example that explains how to write test cases using an XML structure.
+    </description>
+    <reference>
+        No reference defined.
+    </reference>
+
+<!-- Initializing the test group environment -->
+    <constructor Param="parameter">
+        <Script><![CDATA[
+    
+    // Call constructor of super class TestGroup and define name of test group
+	TestGroup.call(this, "Example-Group");
+	
+	// Save test parameter as part of the object
+	this.parameter = parameter;
+            
+        ]]></Script>
+    </constructor>
+
+
+    
+<!-- Setup method called before each test case is executed -->
+    <setup>
+        <Script><![CDATA[
+
+	print("setup() called.");            
+            
+        ]]></Script>
+    </setup>
+
+
+    
+<!-- Teardown method called after each test case is executed -->
+    <teardown>
+        <Script><![CDATA[
+        
+	print("teardown() called.");            
+
+        ]]></Script>
+    </teardown>
+
+
+
+<!-- Each test case must be declared with an id that starts with a 3 digit number -->
+    <testcase id="001FirstTestCase">
+        <name>First example Test Case</name>
+        <description>
+            This is the first test case of the example test group
+        </description>
+        <requirement>
+            The requirement tests with this test case is ...
+        </requirement>
+        <reference>
+            The requirement is defined in ...
+        </reference>
+        <Script><![CDATA[
+                
+	print("testcase 001FirstTestCase called");
+	for (i in this.parameter) {
+		print(i + "=" + this.parameter[i]);	
+	}
+                
+	this.log("testcase 001FirstTestCase called");
+	for (i in this.parameter) {
+		this.log(i + "=" + this.parameter[i]);	
+	}
+	
+	this.assertTrue(true, "Condition must be true !");
+	
+        ]]></Script>
+    </testcase>
+
+
+
+<!-- Each test case must be declared with an id that starts with a 3 digit number -->
+    <testcase id="002BadTestCase">
+        <name>Second example Test Case</name>
+        <description>
+            This is the first test case of the example test group
+        </description>
+        <requirement>
+            The requirement tested with this test case is ...
+        </requirement>
+        <reference>
+            The requirement is defined in ...
+        </reference>
+        <Script><![CDATA[
+                
+	print("testcase 002FirstTestCase called");
+	this.assertTrue(false, "Test case failed because condition is false");
+	
+        ]]></Script>
+    </testcase>
+
+</testgroup>
