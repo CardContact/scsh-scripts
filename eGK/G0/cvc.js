@@ -32,7 +32,6 @@
 //
 function CVC(value) {
 	this.value = new ASN1(value);
-//	print(this.value);
 }
 
 
@@ -55,21 +54,6 @@ CVC.prototype.Profiles[4][3] = { name:"CHA", length:7 };
 CVC.prototype.Profiles[4][4] = { name:"OID", length:6 };
 CVC.prototype.Profiles[4][5] = { name:"MOD", length:128 };
 CVC.prototype.Profiles[4][6] = { name:"EXP", length:4 };
-CVC.prototype.Profiles[33] = new Array();
-CVC.prototype.Profiles[33][0] = { name:"CPI", length:1 };
-CVC.prototype.Profiles[33][1] = { name:"MOD", length:256 };
-CVC.prototype.Profiles[33][2] = { name:"EXP", length:4 };
-CVC.prototype.Profiles[33][3] = { name:"OID", length:7 };
-CVC.prototype.Profiles[33][4] = { name:"CHR", length:8 };
-CVC.prototype.Profiles[33][5] = { name:"CAR", length:8 };
-CVC.prototype.Profiles[34] = new Array();
-CVC.prototype.Profiles[34][0] = { name:"CPI", length:1 };
-CVC.prototype.Profiles[34][1] = { name:"MOD", length:256 };
-CVC.prototype.Profiles[34][2] = { name:"EXP", length:4 };
-CVC.prototype.Profiles[34][3] = { name:"OID", length:6 };
-CVC.prototype.Profiles[34][4] = { name:"CHA", length:7 };
-CVC.prototype.Profiles[34][5] = { name:"CHR", length:12 };
-CVC.prototype.Profiles[34][6] = { name:"CAR", length:8 };
 
 
 
@@ -77,40 +61,28 @@ CVC.prototype.Profiles[34][6] = { name:"CAR", length:8 };
 // Verify CVC certificate with public key
 //
 CVC.prototype.verifyWith = function(puk) {
-
 	// Get signed content
 	var signedContent = this.value.get(0).value;
 
 	// Decrypt with public key
 	var crypto = new Crypto();
-	var plain = crypto.decrypt(puk, Crypto.RSA_ISO9796_2, signedContent);
+	var plain = crypto.decrypt(puk, Crypto.RSA, signedContent);
 	
-//	print("Plain value:");
-//	print(plain);
-
 	// Check prefix and postfix byte
 	if ((plain.byteAt(0) != 0x6A) || (plain.byteAt(plain.length - 1) != 0xBC)) {
 		throw new GPError("CVC", GPError.CRYPTO_FAILED, 0, "Decrypted CVC shows invalid padding. Probably wrong public key.");
 	}
 	this.plainContent = plain;
 	
-	var cpi = plain.byteAt(1);
-	var hashlen = (cpi >= 0x20 ? 32 : 20);	// Starting with G2 SHA-256 is used
-	
 	// Extract hash
-	this.hash = plain.bytes(plain.length - (hashlen + 1), hashlen);
+	this.hash = plain.bytes(plain.length - 21, 20);
 
 	var publicKeyRemainder = this.getPublicKeyRemainder();
 
 	// Input to hash is everything in the signed area plus the data in the public key remainder	
-	var certdata = plain.bytes(1, plain.length - (hashlen + 2));
+	var certdata = plain.bytes(1, plain.length - 22);
 	certdata = certdata.concat(publicKeyRemainder);
-	
-	if (cpi >= 0x20) {
-		var refhash = crypto.digest(Crypto.SHA_256, certdata);
-	} else {
-		var refhash = crypto.digest(Crypto.SHA_1, certdata);
-	}
+	var refhash = crypto.digest(Crypto.SHA_1, certdata);
 
 	if (!refhash.equals(this.hash)) {
 		print("   Hash = " + this.hash);
@@ -131,11 +103,9 @@ CVC.prototype.verifyWith = function(puk) {
 		this[name] = val;
 	}
 	this.certificateData = certdata;
-
-	if (cpi < 0x20) {	
-		if (!this.CAR.equals(this.value.get(2).value)) {
-			print("Warning: CAR in signed area does not match outer CAR");
-		}
+	
+	if (!this.CAR.equals(this.value.get(2).value)) {
+		print("Warning: CAR in signed area does not match outer CAR");
 	}
 }
 
@@ -172,26 +142,7 @@ CVC.prototype.getPublicKeyRemainder = function() {
 // Return the certification authority reference (CAR)
 //
 CVC.prototype.getCertificationAuthorityReference = function() {
-	if (this.value.elements > 2) {
-		return (this.value.get(2).value);
-	} else {
-		if (!this.CAR) {
-			throw new GPError("CVC", GPError.INVALID_USAGE, 0, "Must verify certificate before extracting CAR");
-		}
-		return this.CAR;
-	}
-}
-
-
-
-//
-// Return the certificate holder reference (CHR)
-//
-CVC.prototype.getCertificateHolderReference = function() {
-	if (!this.CHR) {
-		throw new GPError("CVC", GPError.INVALID_USAGE, 0, "Must verify certificate before extracting CHR");
-	}
-	return this.CHR;
+	return (this.value.get(2).value);
 }
 
 

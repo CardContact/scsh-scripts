@@ -24,8 +24,8 @@
  *  eGK explorer with card to card authentication
  */
 
-var reader_hic = "OMNIKEY CardMan 5x21 0";
-var reader_hpc = "OMNIKEY CardMan 5x21 1";
+var reader_hic = null;
+var reader_hpc = null;
 
 // Uncomment the following, if you have two PC/SC reader rather than a terminal
 // with multiple slots. Fill in the card reader names as they are shown in the
@@ -118,23 +118,20 @@ if (!ok) {
 
 
 // Activate explorer
-//try     {
-	var egk = new OutlineCard(of, card_HIC, af, aidlist);
-	egk.view.setContextMenu(["Verify PIN.CH", "Verify PIN.home"]);
-	egk.actionListener = OutlineCardActionListener;
-	
-//	var rootPuk = readRootCVC("degxx_2048_pk.cer");
-	var rootPuk = new Key("kp_cvc_root_test.xml");
-	
+try     {
+        var egk = new OutlineCard(of, card_HIC, af, aidlist);
+        egk.view.setContextMenu(["Verify PIN.CH", "Verify PIN.home"]);
+        egk.actionListener = OutlineCardActionListener;
+        var rootPuk = new Key("kp_cvc_root_test.xml");
 	Card2CardAuthentication(card_HIC, card_HPC, rootPuk);
 
 	print("");
 	print("Right click on the eGK node to select PIN verification");
 	print("before you select any DF or EF.");
 
-	egk.view.show();
-//}
+        egk.view.show();
+}
 
-//catch(e) {
-//	print("Problem accessing the card : " + e);
-//}
+catch(e) {
+        print("Problem accessing the card : " + e);
+}

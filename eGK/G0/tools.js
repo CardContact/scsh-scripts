@@ -244,37 +244,3 @@ eGKCardOutlineFactory.prototype.newDataOutline = function(data, format) {
 	return new eGKDataOutline(this, data, format);
 }
 
-
-
-function readRootCVC(filename) {
-
-	filename = GPSystem.mapFilename(filename);
-	// Open stream
-	var f = new java.io.FileInputStream(filename);
-	
-	// Determine file size
-	var flen = f.available();
-
-	// Allocate native byte array
-	var bs = java.lang.reflect.Array.newInstance(java.lang.Byte.TYPE, flen);
-	
-	// Read into byte array
-	var len = f.read(bs);
-
-	// Allocate JavaScript ByteBuffer from native/wrapped byte array
-	var bb = new ByteBuffer(bs);
-	
-	// Convert to JavaScript ByteString
-	var data = bb.toByteString();
-
-	print(data);
-	var tlv = new ASN1(data);
-	print(tlv);
-	
-	var b = tlv.get(1).value.bytes(1);
-	var tlv = new ASN1(b);
-	print(tlv);
-	print("PUK = " + tlv.get(0).value.toString(HEX));
-	
-	return data;
-}

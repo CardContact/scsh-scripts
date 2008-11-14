@@ -3,9 +3,9 @@
     xsi:schemaLocation="http://namespaces.globalplatform.org/systems-profiles/1.1.0 http://namespaces.globalplatform.org/systems-profiles/1.1.0/GP.systems.profiles.1.1.0.KeyProfile.xsd"
     xmlns:gp="http://namespaces.globalplatform.org/systems-profiles/1.1.0"
     UniqueID="2B0601040181C31F10031001" ProfileVersion="1.1.0" ErrataVersion="0">
-    <gp:Description>eGK CVC Root Key G1 (Official Test)</gp:Description>
+    <gp:Description>eGK CVC Root Key (Official Test)</gp:Description>
     <gp:Revisions arrayElement="Revision" arrayIndex="#">
-        <gp:Revision Version="1.0.0" Date="2008-07-01" Time="00:00:00" By="www.openscdp.org"
+        <gp:Revision Version="1.0.0" Date="2006-08-02" Time="00:00:00" By="www.openscdp.org"
             Digest="00000000"/>
     </gp:Revisions>
     <gp:KeyInfo Name="RSAPublic" Type="PUBLIC" SubType="RSA" Size="1024" Mode="TEST"/>
@@ -13,7 +13,7 @@
     <gp:Usage Encrypt="true" Decrypt="true" DecryptEncrypt="true" Sign="true" Verify="true"
         Wrap="true" Unwrap="true" UnwrapWrap="true" Derive="true"/>
     <gp:Value Format="MOD_EXP" arrayElement="Component" arrayIndex="#">
-        <gp:Component Name="MODULUS" Encoding="HEX" Value="00CFE9446C39F92546A9202F7A8DB781C8382A95A3E9442671C28E32D7CADE3A81A2C9BADBF6113456F1F70352962DD28BC476B925504E9C7C90B9CDC354349F38C98E86F41E985C93F055DC82049945C7B7E16BA073DC0C500101CC82E58DFA67DECEFB2D5162F186A7167F9E803E15C7F81CA764C4FA0CAA50FF7C8AD023CCE5389487FD78A5DE71A2EF239B78516E965E5F76F82CE27103EB78E264F7F395EA413AB3E7F18EB5D0BB838C2C8D5D41EA0044587FC98A7E9C536724ED9FB36D6D94FF5E375ED2951714BB7C88231A49E1779DC365583FDB0818897E6339AF1B51E18ACBDED7FD19BCB0FCBB11283361A4387BECA95AE5C320AD5C16EDD63146F5"></gp:Component>
+        <gp:Component Name="MODULUS" Encoding="HEX" Value="D02F58ACA761A015E5083C884B4E95783F888D8FF8D6463344EEECA0C81B9E37D9F138ABA1AB5D3C5CB948B5C69038454F8AD0093A93F41D8DD7FE4173B4C9C6AC0952455E68919B5498573F906B703F050D704FDB4B3F4363065557DF71E1D62FB1B879D298AD3677E2A9A8D113288379E2B83E4346B4F3F095EA38914924BF"></gp:Component>
         <gp:Component Name="EXPONENT" Encoding="HEX" Value="010001"></gp:Component>
     </gp:Value>
 </gp:KeyProfile>

@@ -19,7 +19,7 @@
     <ConflictRules arrayElement="" arrayIndex=""></ConflictRules>
     <LoadFileInstances arrayElement="" arrayIndex=""></LoadFileInstances>
     <ApplicationInstances arrayElement="ApplicationInstance" arrayIndex="AID">
-        <ApplicationInstance Label="MF"                         AID="D2760001448000"                                                                  ProfileID="2B0601040181C31F10030101" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
+        <ApplicationInstance Label="MF"                         AID="3F00"                                                                  ProfileID="2B0601040181C31F10030101" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
         <ApplicationInstance Label="DF.HCA"                AID="D27600000102"                                              ProfileID="2B0601040181C31F10030201" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
         <ApplicationInstance Label="DF.ESIGN"            AID="A000000167455349474E"                            ProfileID="2B0601040181C31F10030301" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
         <ApplicationInstance Label="DF.CIA.ESIGN"    AID="E828BD080FA000000167455349474E"    ProfileID="2B0601040181C31F10030401" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>

@@ -21,43 +21,11 @@
  *  along with OpenSCDP; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
- *  eGK explorer with card to card authentication
+ *  eGK explorer
  */
 
-var reader_hic = "OMNIKEY CardMan 5x21 0";
-var reader_hpc = "OMNIKEY CardMan 5x21 1";
-
-// Uncomment the following, if you have two PC/SC reader rather than a terminal
-// with multiple slots. Fill in the card reader names as they are shown in the
-// Options/Reader Configuration dialog
-
-// reader_hic = "ORGA CardMouse USB 0";
-// reader_hpc = "SCM Microsystems Inc. SCR33x USB Smart Card Reader 0";
-
-print("eGK Explorer with Card-To-Card Authentication.");
-print("==============================================");
-
-if (!_scsh3.reader) {
-	if (!reader_hic || !reader_hpc) {
-		print("This script will only work, if you configured a card reader with dual-slots");
-		print("from the Options/Reader Configuration menu or set the variables reader_hic");
-		print("and reader_hpc in this script");
-		throw new GPError("explorec2c.js", 0, 0, "Reader not configured");
-	}
-	slot_hic = reader_hic;
-	slot_hpc = reader_hpc;
-} else {
-	if (reader_hic || reader_hpc) {
-		slot_hic = reader_hic;
-		slot_hpc = reader_hpc;
-	} else {
-		slot_hic = _scsh3.reader + "#1";
-		slot_hpc = _scsh3.reader + "#2";
-	}
-}
-
-print("Make sure you have a HIC in " + slot_hic);
-print("               and a HPC in " + slot_hpc);
+print("eGK Explorer");
+print("============");
 
 // Load CardOutlineFactory to display card tree
 load("tools/CardOutlineFactory.js");
@@ -82,6 +50,8 @@ af.addApplicationProfile("ap_esign.xml");
 af.addApplicationProfile("ap_ciaesign.xml");
 af.addApplicationProfile("ap_qes.xml");
         
+// Create ec-card card object
+var card = new Card(_scsh3.reader, "cp_egk.xml");
 
 // Create card outline factory
 var of = new eGKCardOutlineFactory();
@@ -99,42 +69,19 @@ aidlist.push(new ByteString("E828BD080FA000000167455349474E", HEX));
 aidlist.push(new ByteString("D27600006601", HEX));
 */
 
-var card_HIC = new Card(slot_hic, "cp_egk.xml"); 	// Reader with eGK in slot#1
-var card_HPC = new Card(slot_hpc); 			// Reader with HPC in slot#2
-
-card_HPC.reset(Card.RESET_COLD);
-
-// Select application on HPC
-var mf_hpc = new CardFile(card_HPC, ":3F00");
-
-print("Please enter PIN for HPC");
-// Verify PIN for HPC
-ok = mf_hpc.performCHV(true, 1);
-
-if (!ok) {
-	print("PIN Verification failed");
-	exit;
-}
-
-
-// Activate explorer
-//try     {
-	var egk = new OutlineCard(of, card_HIC, af, aidlist);
-	egk.view.setContextMenu(["Verify PIN.CH", "Verify PIN.home"]);
-	egk.actionListener = OutlineCardActionListener;
-	
-//	var rootPuk = readRootCVC("degxx_2048_pk.cer");
-	var rootPuk = new Key("kp_cvc_root_test.xml");
-	
-	Card2CardAuthentication(card_HIC, card_HPC, rootPuk);
+// and go...
+try     {
+        var egk = new OutlineCard(of, card, af, aidlist);
+        egk.view.setContextMenu(["Verify PIN.CH", "Verify PIN.home"]);
+        egk.actionListener = OutlineCardActionListener;
 
 	print("");
 	print("Right click on the eGK node to select PIN verification");
 	print("before you select any DF or EF.");
 
-	egk.view.show();
-//}
+        egk.view.show();
+}
 
-//catch(e) {
-//	print("Problem accessing the card : " + e);
-//}
+catch(e) {
+        print("Problem accessing the card: " + e);
+}

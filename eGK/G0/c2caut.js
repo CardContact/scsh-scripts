@@ -46,17 +46,20 @@ function Card2CardAuthentication(card_HIC, card_HPC, rootpuk) {
 
 	// Read ICCSN.EGK, construct ASN1 object and extract ICCSN
 
+//	var ef_gdo = new CardFile(card_HIC, ":2F02");
 	var ef_gdo = new CardFile(card_HIC, ":02");
 	var gdo = ef_gdo.readBinary();
 	var gdo_tlv = new ASN1(gdo);
 //	print(gdo_tlv);
 	var iccsn = gdo_tlv.value;
+//	iccsn_egk = iccsn.bytes(3, 10);		// Strange: ORGA stores a 14 byte ICCSN
 	var iccsn_egk = iccsn;
 	print("ICCSN of eGK:");
 	print(iccsn_egk);
 
 	// Read CVC.CA_eGK.CS and construct ASN1 object
 
+//	var ef_cvc_ca_egk = new CardFile(card_HIC, ":2F04");
 	var ef_cvc_ca_egk = new CardFile(card_HIC, ":04");
 	var cvc_ca_egk_bin = ef_cvc_ca_egk.readBinary();
 	
@@ -70,6 +73,7 @@ function Card2CardAuthentication(card_HIC, card_HPC, rootpuk) {
 
 	// Read CVC.eGK.AUT and construct ASN1 object
 
+//	var ef_cvc_egk = new CardFile(card_HIC, ":2F03");
 	var ef_cvc_egk = new CardFile(card_HIC, ":03");
 	var cvc_egk_bin = ef_cvc_egk.readBinary();
 	var cvc_egk_tlv = new ASN1(cvc_egk_bin);
@@ -86,17 +90,20 @@ function Card2CardAuthentication(card_HIC, card_HPC, rootpuk) {
 
 	// Read ICCSN.HPC, construct ASN1 object and extract ICCSN
 
+//	var ef_gdo = new CardFile(card_HPC, ":2F02");
 	var ef_gdo = new CardFile(card_HPC, ":02");
 	var gdo = ef_gdo.readBinary();
 	var gdo_tlv = new ASN1(gdo);
 //	print(gdo_tlv);
 	var iccsn = gdo_tlv.value;
+//	iccsn_hpc = iccsn.bytes(3, 10);		// Strange: ORGA stores a 14 byte ICCSN
 	var iccsn_hpc = iccsn;
 	print("ICCSN of HPC");
 	print(iccsn_hpc);
 
 	// Read CVC.CA_HPC.CS and construct ASN1 object
 
+//	var ef_cvc_ca_hpc = new CardFile(card_HPC, ":2F04");
 	var ef_cvc_ca_hpc = new CardFile(card_HPC, ":04");
 	var cvc_ca_hpc_bin = ef_cvc_ca_hpc.readBinary();
 	var cvc_ca_hpc_tlv = new ASN1(cvc_ca_hpc_bin);
@@ -109,6 +116,7 @@ function Card2CardAuthentication(card_HIC, card_HPC, rootpuk) {
 
 	// Read CVC.HPC.AUT and construct ASN1 object
 
+//	var ef_cvc_hpc = new CardFile(card_HPC, ":2F03");
 	var ef_cvc_hpc = new CardFile(card_HPC, ":03");
 	var cvc_hpc_bin = ef_cvc_hpc.readBinary();
 	var cvc_hpc_tlv = new ASN1(cvc_hpc_bin);
@@ -128,7 +136,7 @@ function Card2CardAuthentication(card_HIC, card_HPC, rootpuk) {
 
 	// Create data body with tag '83' and the Certificate Authority Reference (CAR) from
 	// CVC.CA_eGK.CS
-	var do_tlv = new ASN1(0x83, cvc_ca_egk.getCertificationAuthorityReference());
+	var do_tlv = new ASN1(0x83, cvc_ca_egk_tlv.get(2).value);
 
 	print("Selecting key for certificate verification: " + do_tlv.getBytes());
 	card_HPC.sendApdu(0x00, 0x22, 0x81, 0xB6, do_tlv.getBytes(), [0x9000]);
@@ -150,7 +158,10 @@ function Card2CardAuthentication(card_HIC, card_HPC, rootpuk) {
 
 	// Create data body with tag '83' and the Certificate Authority Reference (CAR) from
 	// CVC.eGK.AUT
-	var do_tlv = new ASN1(0x83, cvc_egk.getCertificationAuthorityReference());
+	var car = cvc_egk_tlv.get(2).value;
+	var prefix = new ByteString("00000000", HEX);	// Siemens ?
+	car = prefix.concat(car);
+	var do_tlv = new ASN1(0x83, car);
 
 	print("Selecting key for certificate verification: " + do_tlv.getBytes());
 	card_HPC.sendApdu(0x00, 0x22, 0x81, 0xB6, do_tlv.getBytes(), [0x9000]);
@@ -177,7 +188,7 @@ function Card2CardAuthentication(card_HIC, card_HPC, rootpuk) {
 
 	// Create data body with tag '83' and the Certificate Authority Reference (CAR) from
 	// CVC.CA_HPC.CS
-	var do_tlv = new ASN1(0x83, cvc_ca_hpc.getCertificationAuthorityReference());
+	var do_tlv = new ASN1(0x83, cvc_ca_hpc_tlv.get(2).value);
 
 	print("Selecting key for certificate verification: " + do_tlv.getBytes());
 	card_HIC.sendApdu(0x00, 0x22, 0x81, 0xB6, do_tlv.getBytes(), [0x9000]);
@@ -199,12 +210,10 @@ function Card2CardAuthentication(card_HIC, card_HPC, rootpuk) {
 
 	// Create data body with tag '83' and the Certificate Authority Reference (CAR) from
 	// CVC.HPC.AUT
-//	var car = cvc_hpc_tlv.get(2).value;
-//	var car = new ByteString("44 45 44 54 58 11 01 08", HEX); // #### tmp !!!! DEDTX
-
-//	var prefix = new ByteString("00000000", HEX);	// Siemens ?
-//	car = prefix.concat(car);
-	var do_tlv = new ASN1(0x83, cvc_hpc.getCertificationAuthorityReference());
+	var car = cvc_hpc_tlv.get(2).value;
+	var prefix = new ByteString("00000000", HEX);	// Siemens ?
+	car = prefix.concat(car);
+	var do_tlv = new ASN1(0x83, car);
 
 	print("Selecting key for certificate verification: " + do_tlv.getBytes());
 	card_HIC.sendApdu(0x00, 0x22, 0x81, 0xB6, do_tlv.getBytes(), [0x9000]);
@@ -226,28 +235,33 @@ function Card2CardAuthentication(card_HIC, card_HPC, rootpuk) {
 
 	// Step 5 - Perform HIC to HPC authentification
 
-	// Send MANAGE_SE to key references for PuK.eGK.AUT
+	// Send MANAGE_SE to key references for PuK.eGK.AUT and PrK.HPC.AUT
 
 	// Create data body with tag '83' and the key identifier
 
 	var data = new ByteBuffer();
-	data.append((new ASN1(0x83, cvc_egk.getCertificateHolderReference())).getBytes());
-	data.append((new ASN1(0x80, new ByteString("00", HEX))).getBytes());
+	var prefix = new ByteString("0000", HEX);
+	data.append((new ASN1(0x83, prefix.concat(iccsn_egk))).getBytes());
+	data.append((new ASN1(0x84, new ByteString("10", HEX))).getBytes());
+
 
 	print("Selecting key in HPC for eGK authentification: " + data.toByteString());
-	card_HPC.sendApdu(0x00, 0x22, 0x81, 0xA4, data.toByteString(), [0x9000]);
+	card_HPC.sendApdu(0x00, 0x22, 0xC1, 0xA4, data.toByteString(), [0x9000]);
 
-	// Send MANAGE_SE to key references for PrK.eGK.AUT
+	// Send MANAGE_SE to key references for PuK.HPC.AUT and PrK.eGK.AUT
 
 	// Create data body with tag '83' and the Certificate Authority Reference (CAR) from
 	// CVC.HPC.AUT
 
 	var data = new ByteBuffer();
+	var prefix = new ByteString("0000", HEX);
+	data.append((new ASN1(0x83, prefix.concat(iccsn_hpc))).getBytes());
 	data.append((new ASN1(0x84, new ByteString("10", HEX))).getBytes());
-	data.append((new ASN1(0x80, new ByteString("00", HEX))).getBytes());
+	data.append((new ASN1(0x80, new ByteString("1E", HEX))).getBytes());
+	
 	
 	print("Selecting key in eGK for HPC authentification: " + data.toByteString());
-	card_HIC.sendApdu(0x00, 0x22, 0x41, 0xA4, data.toByteString(), [0x9000]);
+	card_HIC.sendApdu(0x00, 0x22, 0xC1, 0xA4, data.toByteString(), [0x9000]);
 
 	// GET_CHALLENGE from HPC
 
@@ -267,29 +281,6 @@ function Card2CardAuthentication(card_HIC, card_HPC, rootpuk) {
 
 
 	// Step 6 - Perform HPC to HIC authentification
-
-	// Send MANAGE_SE to key references for PuK.HPC.AUT
-
-	// Create data body with tag '83' and the key identifier
-
-	var data = new ByteBuffer();
-	data.append((new ASN1(0x83, cvc_hpc.getCertificateHolderReference())).getBytes());
-	data.append((new ASN1(0x80, new ByteString("00", HEX))).getBytes());
-
-	print("Selecting key in eGK for HPC authentification: " + data.toByteString());
-	card_HIC.sendApdu(0x00, 0x22, 0x81, 0xA4, data.toByteString(), [0x9000]);
-
-	// Send MANAGE_SE to key references for PrK.HPC.AUT
-
-	// Create data body with tag '83' and the Certificate Authority Reference (CAR) from
-	// CVC.HPC.AUT
-
-	var data = new ByteBuffer();
-	data.append((new ASN1(0x84, new ByteString("10", HEX))).getBytes());
-	data.append((new ASN1(0x80, new ByteString("00", HEX))).getBytes());
-	
-	print("Selecting key in HPC for eGK authentification: " + data.toByteString());
-	card_HPC.sendApdu(0x00, 0x22, 0x41, 0xA4, data.toByteString(), [0x9000]);
 
 	// GET_CHALLENGE from HIC
 
