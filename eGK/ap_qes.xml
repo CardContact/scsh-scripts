@@ -19,8 +19,11 @@
     </gp:ApplicationInfo>
     <scdp:DataStructure>
         <scdp:FileStructure arrayElement="EF" arrayIndex="#">
+            <scdp:EF fid="D00A" type="T" format="asn1" name="EF.ASD" />
+            <scdp:EF fid="D00B" type="T" format="asn1" name="EF.BVD" />
             <scdp:EF fid="C000" type="T" format="asn1.x509" name="EF.C.CH.QES" />
-            <scdp:EF fid="D002" type="T" format="asn1" name="EF.PUK" />
+            <scdp:EF fid="CC02" type="T" format="asn1.cvc" name="EF.CVC.ZDA_eGK.CS" />
+            <scdp:EF fid="CC01" type="T" format="asn1.cvc" name="EF.CVC.ZDA_eGK.AUT" />
         </scdp:FileStructure>    
     </scdp:DataStructure>   
 </gp:ApplicationProfile>

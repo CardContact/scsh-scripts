@@ -65,7 +65,7 @@ function Card2CardAuthentication(card_HIC, card_HPC, rootpuk) {
 //	print(cvc_ca_egk_tlv);
 
 	var cvc_ca_egk = new CVC(cvc_ca_egk_bin);
-	cvc_ca_egk.verifyWith(rootpuk);
+	cvc_ca_egk.verifyWithOneOf(rootpuk);
 	cvc_ca_egk.dump();
 
 	// Read CVC.eGK.AUT and construct ASN1 object
@@ -104,7 +104,7 @@ function Card2CardAuthentication(card_HIC, card_HPC, rootpuk) {
 //	print(cvc_ca_hpc_tlv);
 
 	var cvc_ca_hpc = new CVC(cvc_ca_hpc_bin);
-	cvc_ca_hpc.verifyWith(rootpuk);
+	cvc_ca_hpc.verifyWithOneOf(rootpuk);
 	cvc_ca_hpc.dump();
 
 	// Read CVC.HPC.AUT and construct ASN1 object

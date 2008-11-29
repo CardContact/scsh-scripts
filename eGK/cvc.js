@@ -85,12 +85,12 @@ CVC.prototype.verifyWith = function(puk) {
 	var crypto = new Crypto();
 	var plain = crypto.decrypt(puk, Crypto.RSA_ISO9796_2, signedContent);
 	
-//	print("Plain value:");
-//	print(plain);
+	print("Plain value:");
+	print(plain);
 
 	// Check prefix and postfix byte
 	if ((plain.byteAt(0) != 0x6A) || (plain.byteAt(plain.length - 1) != 0xBC)) {
-		throw new GPError("CVC", GPError.CRYPTO_FAILED, 0, "Decrypted CVC shows invalid padding. Probably wrong public key.");
+		throw new GPError("CVC", GPError.CRYPTO_FAILED, -1, "Decrypted CVC shows invalid padding. Probably wrong public key.");
 	}
 	this.plainContent = plain;
 	
@@ -115,7 +115,7 @@ CVC.prototype.verifyWith = function(puk) {
 	if (!refhash.equals(this.hash)) {
 		print("   Hash = " + this.hash);
 		print("RefHash = " + refhash);
-		throw new GPError("CVC", GPError.CRYPTO_FAILED, 0, "Hash value of certificate failed in verification");
+		throw new GPError("CVC", GPError.CRYPTO_FAILED, -2, "Hash value of certificate failed in verification");
 	}
 
 	// Split certificate data into components according to profile
@@ -136,6 +136,27 @@ CVC.prototype.verifyWith = function(puk) {
 		if (!this.CAR.equals(this.value.get(2).value)) {
 			print("Warning: CAR in signed area does not match outer CAR");
 		}
+	}
+}
+
+
+
+CVC.prototype.verifyWithOneOf = function(puklist) {
+	for (var i = 0; i < puklist.length; i++) {
+		try	{
+			this.verifyWith(puklist[i]);
+			break;
+		}
+		catch(e) {
+			if ((e instanceof GPError) && (e.reason == -1)) {
+				print("Trying next key on the list...");
+			} else {
+				throw e;
+			}		
+		}
+	}
+	if (i >= puklist.length) {
+		throw new GPError("CVC", GPError.CRYPTO_FAILED, -3, "List of possible public keys exhausted. CVC decryption failed.");
 	}
 }
 

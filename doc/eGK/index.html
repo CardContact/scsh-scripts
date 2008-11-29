@@ -38,14 +38,13 @@
     <td width="630" align="left">
     <br/>
 <!-- #BeginEditable "BODY" -->
-<h1>German Patient Data Card (eGK / Gesundheitskarte)</h1>
+<h1>German Patient Data Card (eGK / Gesundheitskarte) Version 2</h1>
 <p>The Smart Card Shell can be used to peek into an eGK and display all publicly available information.
    You can inspect all files, decode their inner structure and verify PIN codes.</p>
 <p>The data viewer supports the GZIP compressed XML encoding in EF.PD, EF.VD and EF.GVD.</p>
 <p>A special version of the explore script is provided, that allows a card to card authentication between
    a health professional card and the eGK.</p>
-<p>Scripts for the Elektronische Gesundheitskarte (eGK) are located in the <code>eGK</code> directory
-   directly underneath the installation directory (usually "c:\Program Files\CardContact\Smart Card Shell 3").</p>
+<p>Scripts for the Elektronische Gesundheitskarte (eGK) are located in the <code>eGK</code> directory.</p>
 <p>The following scripts are provided:</p>
 <ul>
 <li><a href="explore.html">explore.js</a> - Create outline view to explore the eGK file structure</li>
@@ -57,7 +56,7 @@
 &gt; load("eGK/explore.js");
 </pre>
 <p>or by selecting the script in the "File" / "Run Script" dialog.</p>
-<p>Card to Card (C2C) authentification has been tested with test cards supplied by SAGEM-ORGA.</p>
+<p>Card to Card (C2C) authentification has been tested with test cards from Gematik, SAGEM-ORGA and G+D.</p>
 <p>For C2C you will need to manually configure the two card reader channels in the explorec2c.js script.
   Open the script with a text editor and follow the instructions on the top.</p>
 <p>If you want to use a CT-API card reader with multiple slots, then you will need to configure the
@@ -65,8 +64,8 @@
    line. Then enable support for one of the included CT-API card reader by uncommenting the line. You
    will need to restart the shell to apply changes and select the reader from the "Options" / "Reader Configuration"
    menu. See the <a href="http://www.openscdp.org/scsh3/configuration.html">configuration section</a> for more details.</p>
-<p>Special configurations are available for SAGEM-ORGA and G&D test cards. These profiles display the EF.ARR file
-that encodes access conditions.</p>
+<p>Scripts for the previous eGK version are located in the G0 directory.</p>
+<p>For card to card authentication you will need at least version 3.6.513</p>
 <!--
 <p>The most up-to-date set of scripts can be downloaded
    <a href="http://www.cardcontact.de/download/scsh3/eGK-2006-11-28.zip">here</a>. Usually the beta release comes

@@ -71,15 +71,15 @@ aidlist.push(new ByteString("D27600006601", HEX));
 
 // and go...
 try     {
-        var egk = new OutlineCard(of, card, af, aidlist);
-        egk.view.setContextMenu(["Verify PIN.CH", "Verify PIN.home"]);
-        egk.actionListener = OutlineCardActionListener;
+	var egk = new OutlineCard(of, card, af, aidlist);
+	egk.view.setContextMenu(["Verify PIN.CH", "Verify PIN.home"]);
+	egk.actionListener = OutlineCardActionListener;
 
 	print("");
 	print("Right click on the eGK node to select PIN verification");
 	print("before you select any DF or EF.");
 
-        egk.view.show();
+	egk.view.show();
 }
 
 catch(e) {

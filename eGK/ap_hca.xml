@@ -19,20 +19,20 @@
     </gp:ApplicationInfo>
     <scdp:DataStructure>
         <scdp:FileStructure arrayElement="EF" arrayIndex="#">
-            <scdp:EF fid="D001" type="T" format="xml.lz1" name="EF.PD" />
-            <scdp:EF fid="D002" type="T" format="xml.vd1" name="EF.VD" />
-            <scdp:EF fid="D003" type="T" format="xml.lz1" name="EF.GVD" />
-            <scdp:EF fid="D00C" type="T" format="" name="EF.StatusVD" />
             <scdp:EF fid="D004" type="T" format="asn1" name="EF.DM" />
             <scdp:EF fid="D005" type="T" format="asn1" name="EF.Einwilligung" />
+            <scdp:EF fid="D003" type="T" format="xml.lz1" name="EF.GVD" />
             <scdp:EF fid="D006" type="C" format="asn1" name="EF.Logging" />
-            <scdp:EF fid="D007" type="LV" format="asn1" name="EF.eRezept_Tickets" />
-            <scdp:EF fid="D008" type="T" format="asn1" name="EF.eRezept_Container" />
-            <scdp:EF fid="D00D" type="T" format="asn1" name="EF.StatusRezept" />
-            <scdp:EF fid="D009" type="LV" format="asn1" name="EF.eAMDok_Tickets" />
-            <scdp:EF fid="D00A" type="LV" format="asn1" name="EF.ePA_Tickets" />
             <scdp:EF fid="D00B" type="T" format="asn1" name="EF.eNotfalldaten" />
+            <scdp:EF fid="D001" type="T" format="xml.lz1" name="EF.PD" />
             <scdp:EF fid="D00E" type="T" format="asn1" name="EF.Status.Notfalldaten" />
+            <scdp:EF fid="D00D" type="T" format="asn1" name="EF.StatusVerordnungen" />
+            <scdp:EF fid="D00C" type="T" format="" name="EF.StatusVD" />
+            <scdp:EF fid="D00F" type="LF" format="" name="EF.TTN" />
+            <scdp:EF fid="D002" type="T" format="xml.vd1" name="EF.VD" />
+            <scdp:EF fid="D009" type="LF" format="asn1" name="EF.Verweis" />
+            <scdp:EF fid="D008" type="T" format="asn1" name="EF.eVerordnungsContainer" />
+            <scdp:EF fid="D007" type="LV" format="asn1" name="EF.eVerordnungsTickets" />
         </scdp:FileStructure>    
     </scdp:DataStructure>   
 </gp:ApplicationProfile>
