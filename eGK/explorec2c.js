@@ -24,7 +24,7 @@
  *  eGK explorer with card to card authentication
  */
 
-requires("3.6.513");
+requires("3.6.525");
 
 var reader_hic = "";
 var reader_hpc = "";
