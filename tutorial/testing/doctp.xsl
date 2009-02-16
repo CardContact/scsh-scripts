@@ -2,7 +2,7 @@
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="2.0">
 	<xsl:output method="html"/>
 	
-	<xsl:template match="/testgroup">
+	<xsl:template match="/testprocedure">
 		<html>
 			<head>
 			<style type="text/css">
@@ -21,12 +21,12 @@
 				<p><xsl:apply-templates select="reference"/></p>
 
 
-				<h2>Table of test cases</h2>
+				<h2>Table of test steps</h2>
 				<ul>
-					<xsl:apply-templates select="testcase" mode="index"/>
+					<xsl:apply-templates select="teststep" mode="index"/>
 				</ul>
 
-				<xsl:apply-templates select="testcase" mode="full"/>
+				<xsl:apply-templates select="teststep" mode="full"/>
 				
 				<xsl:if test="setup">
 					<h2>Test setup</h2>
@@ -37,19 +37,20 @@
 					<h2>Test teardown</h2>
 					<p><xsl:apply-templates select="teardown"/></p>
 				</xsl:if>
+
 			</body>
 		</html>
 	</xsl:template>
 	
 
 	
-	<xsl:template match="testcase" mode="index">
+	<xsl:template match="teststep" mode="index">
 		<li><a><xsl:attribute name="href">#<xsl:value-of select="@id"/></xsl:attribute><xsl:value-of select="name"/></a></li>
 	</xsl:template>
 
 	
 		
-	<xsl:template match="testcase" mode="full">
+	<xsl:template match="teststep" mode="full">
 
 		<h2><xsl:attribute name="id"><xsl:value-of select="@id"/></xsl:attribute><xsl:value-of select="@id"/> - <xsl:value-of select="name"/></h2>
 
@@ -62,13 +63,6 @@
 		<h3>Reference</h3>
 		<xsl:apply-templates select="reference"/>
 		
-		<xsl:if test="procedures">
-			<h3>Used Procedures</h3>
-			<ul>
-			<xsl:apply-templates select="procedures/procedure"/>
-			</ul>
-		</xsl:if>
-	
 		<h3>Script</h3>
 		<xsl:apply-templates select="Script"/>
 	</xsl:template>
@@ -90,13 +84,6 @@
 	<xsl:template match="requirement" name="requirement">
 		<xsl:apply-templates/>
 	</xsl:template>
-
-
-
-	<xsl:template match="procedure" name="procedure">
-		<li><a><xsl:attribute name="href"><xsl:value-of select="@id" /><xsl:text>.xml</xsl:text></xsl:attribute><xsl:value-of select="@id"/></a></li>
-	</xsl:template>
-
 
 
 	<xsl:template match="p">

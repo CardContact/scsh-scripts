@@ -38,6 +38,7 @@ param["Param1"] = "Value of param1";
 
 var testRunner = new TestRunner("Example Test-Suite");
 
+testRunner.addTestProcedureFromXML("tp_example.xml");
 testRunner.addTestGroupFromXML("tg_example.xml", param);
 
 print("Test-Suite loaded...");

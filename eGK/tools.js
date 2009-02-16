@@ -9,7 +9,7 @@ function OutlineCardActionListener(node, action) {
 	switch(action) {
 	case "Verify PIN.CH":
 		var card = node.userObject.card;
-		var mf = new CardFile(card, ":3F00");
+		var mf = new CardFile(card, "#D2760001448000");
 
 		print("Please enter PIN.CH for HIC");
 		ok = mf.performCHV(true, 1);
@@ -21,7 +21,7 @@ function OutlineCardActionListener(node, action) {
 		break;
 	case "Verify PIN.home":
 		var card = node.userObject.card;
-		var mf = new CardFile(card, ":3F00");
+		var mf = new CardFile(card, "#D2760001448000");
 
 		print("Please enter PIN.home for HIC");
 		ok = mf.performCHV(true, 2);

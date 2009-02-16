@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?xml-stylesheet type="text/xsl" href="doctg.xsl" ?>
-<testgroup id="TG_EXAMPLES" arrayElement="testcase" arrayIndex="id">
+<testgroup id="tg_example" arrayElement="testcase" arrayIndex="id">
     <name>Examples on using the test framework</name>
     <description>
         This is an example that explains how to write test cases using an XML structure.
@@ -10,25 +10,23 @@
     </reference>
 
 <!-- Initializing the test group environment -->
-    <constructor Param="parameter">
+<!-- Enable this if you want your own constructor
+    <constructor Param="name, parameter">
         <Script><![CDATA[
     
     // Call constructor of super class TestGroup and define name of test group
-	TestGroup.call(this, "Example-Group");
+	TestGroup.call(this, name, parameter);
 	
-	// Save test parameter as part of the object
-	this.parameter = parameter;
-            
         ]]></Script>
     </constructor>
-
+-->
 
     
 <!-- Setup method called before each test case is executed -->
     <setup>
         <Script><![CDATA[
 
-	print("setup() called.");            
+	print("TestGroup.setup() called.");            
             
         ]]></Script>
     </setup>
@@ -39,7 +37,7 @@
     <teardown>
         <Script><![CDATA[
         
-	print("teardown() called.");            
+	print("TestGroup.teardown() called.");            
 
         ]]></Script>
     </teardown>
@@ -93,6 +91,43 @@
                 
 	print("testcase 002FirstTestCase called");
 	this.assertTrue(false, "Test case failed because condition is false");
+	
+        ]]></Script>
+    </testcase>
+
+
+<!-- Each test case must be declared with an id that starts with a 3 digit number -->
+    <testcase id="003TestCaseUsingTestProcedure">
+        <name>Third Example Test Case with Test Procedure</name>
+        <description>
+            This is the third test case of the example test group using a test procedure
+        </description>
+        <requirement>
+            The requirement tests with this test case is ...
+        </requirement>
+        <reference>
+            The requirement is defined in ...
+        </reference>
+        <procedures arrayElement="procedure" arrayIndex="#">
+        	<procedure id="tp_example"/>
+        </procedures>
+        <Script><![CDATA[
+                
+	print("testcase 003TestCaseUsingTestProcedure called");
+	for (i in this.parameter) {
+		print(i + "=" + this.parameter[i]);	
+	}
+                
+	this.log("testcase 003TestCaseUsingTestProcedure called");
+	for (i in this.parameter) {
+		this.log(i + "=" + this.parameter[i]);	
+	}
+
+	var param = { param1: "param1", param2: "param2"};
+	
+	var result = this.runTestProcedure("tp_example", param);
+	
+	this.assertTrue(true, "Condition must be true !");
 	
         ]]></Script>
     </testcase>
