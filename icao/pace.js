@@ -368,6 +368,22 @@ PACE.prototype.performKeyAgreement = function(publicKey) {
 
 
 /**
+ * Strips leading zeros of a ByteString
+ *
+ * @param {ByteString} value the ByteString value
+ * @return the stripped ByteString object, may be an empty ByteString
+ * @type ByteString
+ */
+PACE.stripLeadingZeros = function(value) {
+	var i = 0;
+	for (; (i < value.length) && (value.byteAt(i) == 0); i++);
+	
+	return value.right(value.length - i);
+}
+
+
+
+/**
  * Encode an ECC public key in the format defined by the EAC 2.0 specification
  *
  * @param {String} oid the object identifier to encode
@@ -397,9 +413,12 @@ PACE.encodePublicKey = function(oid, key, withDP) {
 
 	if (withDP) {
 		var cofactor = key.getComponent(Key.ECC_H);
-		if (cofactor.right(4).toString(HEX) != "00000001") {
-			t.add(new ASN1("cofactor", 0x87, cofactor));
-		}
+		cofactor = PACE.stripLeadingZeros(cofactor);
+		
+//		if (cofactor.right(4).toString(HEX) != "00000001") {
+//			t.add(new ASN1("cofactor", 0x87, cofactor));
+//		}
+		t.add(new ASN1("cofactor", 0x87, cofactor));
 	}
 	
 	return t;

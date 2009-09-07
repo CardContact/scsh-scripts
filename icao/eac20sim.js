@@ -76,7 +76,7 @@ EAC20Sim.prototype.generalAuthenticate = function(p1, p2, data, le) {
 	if (a.elements == 0) {		// 1st General Authenticate
 		// ToDo use info from SE
 		this.pace = new PACE(PACE.id_PACE_ECDH_GM_AES_CBC_CMAC_128, this.pacedp);
-		this.pace.setPassword(new ByteString("123456", ASCII));
+		this.pace.setPassword(new ByteString("000001", ASCII));
 		var encnonce = this.pace.getEncryptedNonce();
 		response = new ASN1(0x80, encnonce);
 	} else {
