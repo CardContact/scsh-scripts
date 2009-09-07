@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<gp:KeyProfile xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://namespaces.globalplatform.org/systems-profiles/1.1.0 http://namespaces.globalplatform.org/systems-profiles/1.1.0/GP.systems.profiles.1.1.0.KeyProfile.xsd"
+    xmlns:gp="http://namespaces.globalplatform.org/systems-profiles/1.1.0"
+    UniqueID="2B0601040181C31F100009" ProfileVersion="1.1.0" ErrataVersion="0">
+    <gp:Description>EC Public Test Key</gp:Description>
+    <gp:Revisions arrayElement="Revision" arrayIndex="#">
+        <gp:Revision Version="1.0.0" Date="2005-12-09" Time="00:00:00" By="www.openscdp.org"
+            Digest="00000000"/>
+    </gp:Revisions>
+    <gp:KeyInfo Name="ECPublic" Type="PUBLIC" SubType="EC" Size="192" Mode="TEST"/>
+    <gp:Attribute Sensitive="false" Importable="true" Exportable="true"/>
+    <gp:Usage Encrypt="true" Decrypt="true" DecryptEncrypt="true" Sign="true" Verify="true"
+        Wrap="true" Unwrap="true" UnwrapWrap="true" Derive="true"/>
+    <gp:Value Format="ECPUBLIC" arrayElement="Component" arrayIndex="#">
+        <gp:Component Name="ECC_CURVE_OID" Encoding="HEX" Value="2B2403030208010107"></gp:Component>
+        <gp:Component Name="ECC_QX" Encoding="HEX" Value="8B D2 AE B9 CB 7E 57 CB 2C 4B 48 2F FC 81 B7 AF B9 DE 27 E1 E3 BD 23 C2 3A 44 53 BD 9A CE 32 62"></gp:Component>
+        <gp:Component Name="ECC_QY" Encoding="HEX" Value="54 7E F8 35 C3 DA C4 FD 97 F8 46 1A 14 61 1D C9 C2 77 45 13 2D ED 8E 54 5C 1D 54 C7 2F 04 69 97"></gp:Component>
+    </gp:Value>
+</gp:KeyProfile>
