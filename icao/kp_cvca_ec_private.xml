@@ -14,6 +14,7 @@
         Wrap="true" Unwrap="true" UnwrapWrap="true" Derive="true"/>
     <gp:Value Format="ECPRIVATE" arrayElement="Component" arrayIndex="#">
 		<gp:Component Name="ECC_CURVE_OID" Encoding="HEX" Value="2B2403030208010107"></gp:Component>
-        <gp:Component Name="ECC_D" Encoding="HEX" Value="5B 26 05 2C EF 7D 99 CF 20 96 21 BE C0 27 F1 E2 D7 53 2E A8 65 C8 8A 4F 19 CA BD B7 62 CC BE 7B"></gp:Component>
+        <gp:Component Name="ECC_D" Encoding="HEX" Value="1C 6D CD 43 77 07 84 D1 6A 0B 91 40 77 6E B9 2E 10 85 98 99 E9 A0 26 85 41 03 FA DE A5 A9 1F FD"></gp:Component>
     </gp:Value>
 </gp:KeyProfile>
+
