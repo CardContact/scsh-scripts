@@ -30,58 +30,15 @@
  *
  */
 
-/*
- * Write a byte string object to file
+
+/**
+ * Find a tag within the given TLV structure and returns the corresponding TLV object.
  *
- * The filename is mapped to the location of the script
- *
- * name		Name of file
- * content	ByteString content for file
- *
+ * @param {TLV} tlv the TLV structure
+ * @param {Number} tagNumber the number of the tag to search for
+ * @return the TLV object found
+ * @type TLV
  */
-function writeFileToDisk(name, content) {
-
-	// Map filename
-	var filename = GPSystem.mapFilename(name, GPSystem.CWD);
-	print("Writing " + filename);
-
-	var file = new java.io.FileOutputStream(filename);
-	file.write(content);
-	file.close();
-}
-
-
-
-/*
- * Read a byte string object from file
- *
- * The filename is mapped to the location of the script
- *
- * name		Name of file
- *
- */
-function readFileFromDisk(name) {
-
-	// Map filename
-	var filename = GPSystem.mapFilename(name, GPSystem.CWD);
-	print("Reading " + filename);
-
-	var file = new java.io.FileInputStream(filename);
-	
-	var content = new ByteBuffer();
-	var buffer = new ByteString("                                                                                                                                                                                                                                                                ", ASCII);
-	var len;
-	
-	while ((len = file.read(buffer)) >= 0) {
-		content.append(buffer.bytes(0, len));
-	}
-	
-	file.close();
-	return(content.toByteString());
-}
-
-
-
 function findTag(tlv, tagNumber) {
 	
 	for(var i = 0; (i < tlv.elements) && (tlv.get(i).tag != tagNumber); i++) {		
@@ -95,14 +52,15 @@ function findTag(tlv, tagNumber) {
 	return tlv.get(i)
 }
 
-/*
+
+/**
  * Convert x/y coordinates to uncompressed format
  *
- * x/y - coordinates of EC point
- * 
- * return ByteString containing compressed format
- *
- */ 
+ * @param {ByteString} x the x-coordinate of the point
+ * @param {ByteString} y the y-coordinate of the point
+ * @return the point in uncompressed format
+ * @type ByteString
+ */
 function encodeUncompressedECPoint(x,y) {
     
     bb = new ByteBuffer();
@@ -116,23 +74,23 @@ function encodeUncompressedECPoint(x,y) {
 }
 
 
-/*
+/**
  * Decode x/y coordinates from uncompressed format
  *
- * Bytestring containing the compressed point
- * 
- * return X/Y-value
- *
- */ 
-function decodeUncompressedECPoint(compressedPoint) {
+ * @param {ByteString} uncompressedPoint the uncompressed point
+ * @return the x-/y-coordinate of the point
+ * @type ByteString
+ */
+
+function decodeUncompressedECPoint(uncompressedPoint) {
     
     // Determine the size of the coordinates ignoring the indicator byte '04'
-    var length = compressedPoint.length - 1;
+    var length = uncompressedPoint.length - 1;
     
     var sizeOfCoordinate = length / 2;
     
-    var xValue = compressedPoint.bytes(1, sizeOfCoordinate);
-    var yValue = compressedPoint.bytes(1 + sizeOfCoordinate, sizeOfCoordinate);
+    var xValue = uncompressedPoint.bytes(1, sizeOfCoordinate);
+    var yValue = uncompressedPoint.bytes(1 + sizeOfCoordinate, sizeOfCoordinate);
     
     return { x:xValue, y:yValue };
 } 
@@ -142,7 +100,6 @@ function decodeUncompressedECPoint(compressedPoint) {
 /*
  * Define a generator object for CV certificates
  */
-
 // Constructor
 function EAC2CVCertificateGenerator(crypto) {
 	this.crypto = crypto;
@@ -153,56 +110,107 @@ EAC2CVCertificateGenerator.prototype.reset = function() {
 }
 
 
-
+/**
+ * Set the profile identifier
+ *
+ * @param {Number} profileID the profile identifier
+ */
 EAC2CVCertificateGenerator.prototype.setProfileIdentifier = function(profileID) {
 	this.profileIdentifier = profileID;
 }
 
 
-
+/**
+ * Set the certification authority reference
+ *
+ * @param {String} CAR the CAR value
+ */
 EAC2CVCertificateGenerator.prototype.setCAR = function(CAR) {
 	this.CAR = CAR;
 }
 
 
+/**
+ * Set the certificate holder reference
+ *
+ * @param {String} CHR the CHR value
+ */
 EAC2CVCertificateGenerator.prototype.setCHR = function(CHR) {
 	this.CHR = CHR;
 }
 
 
+/**
+ * Set the effective date
+ *
+ * @param {String} effectiveDate the effective date
+ */
 EAC2CVCertificateGenerator.prototype.setEffectiveDate = function(effectiveDate) {
 	this.effectiveDate = effectiveDate;
 }
 
 
+/**
+ * Set the expiry date
+ *
+ * @param {String} expiryDate the expiry date
+ */
 EAC2CVCertificateGenerator.prototype.setExpiryDate = function(expiryDate) {
 	this.expiryDate = expiryDate;
 }
 
 
+/**
+ * Set the object identifier of the authorization template for the generated certificate
+ *
+ * @param {ByteString} oid the object identifier for the chat
+ */
 EAC2CVCertificateGenerator.prototype.setChatOID = function(oid) {
 	this.chatOID = oid;
 }
 
 
+/**
+ * Set the authorization level of the authorization template for the generated certificate
+ *
+ * @param {ByteString} authLevel the encoded authorization level
+ */
 EAC2CVCertificateGenerator.prototype.setChatAuthorizationLevel = function(authLevel) {
 	this.chatAuthorizationLevel = authLevel;
 }
 
 
+/**
+ * Set the algorithm identifier for terminal authentication
+ *
+ * @param {ByteString} oid the object identifier as specified in appendix A.6.4
+ */
 EAC2CVCertificateGenerator.prototype.setTAAlgorithmIdentifier = function(oid) {
 	this.taOID = oid;
 }
 
 
+/**
+ * Set some additional extensions 
+ *
+ * @param {Array of ASN.1 objects} extensions array containing the ASN.1 encoded extensions for the certificate
+ */
 EAC2CVCertificateGenerator.prototype.setExtensions = function(extensions) {
 	this.extensions = extensions;
 }
 
 
+/**
+ * Set whether to include domain parameters in the certificate or not
+ *
+ * @param {Boolean} value the flag indicator
+ */
 EAC2CVCertificateGenerator.prototype.setIncludeDomainParameters = function(value) {
 	this.includeDomainParameters = value;
 }
+
+
+// Internal functions for the generation of a certificate
 
 EAC2CVCertificateGenerator.prototype.getCAR = function() {
     var t = new ASN1("Certification Authority Reference", 0x42, new ByteString(this.CAR, ASCII));
@@ -312,7 +320,9 @@ EAC2CVCertificateGenerator.prototype.getProfileIdentifier = function() {
 
 
 EAC2CVCertificateGenerator.prototype.getExtensions = function() {
-    var t = new ASN1("Certificate Extentions", 0x7F49);
+    var t = new ASN1("Certificate Extentions", 0x65);
+    for (var i = 0; i < this.extensions.length; i++)
+    	t.add(this.extensions[i]);
     return t;
 }
 
@@ -383,7 +393,7 @@ EAC2CVCertificateGenerator.prototype.generateCVCertificate = function(signingKey
     	
 	certificate.add(signatureValue);
 	
-	assert(crypto.verify(this.publicKey, Crypto.ECDSA_SHA256, body.getBytes(), signature));
+	// assert(crypto.verify(this.publicKey, Crypto.ECDSA_SHA256, body.getBytes(), signature));
 		
     return certificate.getBytes();
 }

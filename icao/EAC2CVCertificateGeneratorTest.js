@@ -30,6 +30,58 @@
 
 load("EAC2CVCertificateGenerator.js");
 
+// Some utility functions
+
+/*
+ * Write a byte string object to file
+ *
+ * The filename is mapped to the location of the script
+ *
+ * name		Name of file
+ * content	ByteString content for file
+ *
+ */
+function writeFileToDisk(name, content) {
+
+	// Map filename
+	var filename = GPSystem.mapFilename(name, GPSystem.CWD);
+	print("Writing " + filename);
+
+	var file = new java.io.FileOutputStream(filename);
+	file.write(content);
+	file.close();
+}
+
+
+/*
+ * Read a byte string object from file
+ *
+ * The filename is mapped to the location of the script
+ *
+ * name		Name of file
+ *
+ */
+function readFileFromDisk(name) {
+
+	// Map filename
+	var filename = GPSystem.mapFilename(name, GPSystem.CWD);
+	print("Reading " + filename);
+
+	var file = new java.io.FileInputStream(filename);
+	
+	var content = new ByteBuffer();
+	var buffer = new ByteString("                                                                                                                                                                                                                                                                ", ASCII);
+	var len;
+	
+	while ((len = file.read(buffer)) >= 0) {
+		content.append(buffer.bytes(0, len));
+	}
+	
+	file.close();
+	return(content.toByteString());
+}
+
+
 ///     <constructor>
 ///         <signature>EAC2CVCertificateGenerator(Crypto crypto)</signature>
 ///         <description>Create the certificate generator using the specified crypto object.</description>
@@ -75,11 +127,6 @@ generator.setCHR(CHR);
 ///         <example>
 
 var notBefore = "090210";
-
-d = new Date();
-
-d.setUTCFullYear(2009, 02, 10);
-print(d.toString());
 
 generator.setEffectiveDate(notBefore);
 
@@ -154,6 +201,20 @@ generator.setProfileIdentifier(profileIdentifier);
 var taAlgorithmIdentifier = "0.4.0.127.0.7.2.2.2.2.3"; // ECDSA - SHA 256
 
 generator.setTAAlgorithmIdentifier(new ByteString(taAlgorithmIdentifier, OID));
+
+///         </example>
+///     </method>
+
+///     <method name="setExtensions">
+///         <signature>void setExtensions(ASN1[] extensions)</signature>
+///         <description><p>Set some extensions for a certificate</p></description>
+///         <example>
+
+//var extensions = new Array();
+//extensions[0] = new ASN1("ext1", ASN1.OBJECT_IDENTIFIER, new ByteString("2A1200", HEX));
+//extensions[1] = new ASN1("ext2", ASN1.OBJECT_IDENTIFIER, new ByteString("2A1200", HEX));
+
+//generator.setExtensions(extensions);
 
 ///         </example>
 ///     </method>
