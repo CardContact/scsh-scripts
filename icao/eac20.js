@@ -1,16 +1,30 @@
 /**
+ *  ---------
+ * |.##> <##.|  Open Smart Card Development Platform (www.openscdp.org)
+ * |#       #|  
+ * |#       #|  Copyright (c) 1999-2009 CardContact Software & System Consulting
+ * |'##> <##'|  Andreas Schwier, 32429 Minden, Germany (www.cardcontact.de)
+ *  --------- 
  *
+ *  This file is part of OpenSCDP.
+ *
+ *  OpenSCDP is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License version 2 as
+ *  published by the Free Software Foundation.
+ *
+ *  OpenSCDP is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with OpenSCDP; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
-
+ 
 load("tools/eccutils.js");
 load("eac20sim.js");
 
-/*
-var bsi_de = "0.4.0.127.0.7";
-var id_PACE = bsi_de + ".2.2.4";
-var id_PACE_ECDH_GM = id_PACE + ".2";
-var id_PACE_ECDH_GM_AES_CBC_CMAC_128 = id_PACE_ECDH_GM + ".2";
-*/
 
 
 

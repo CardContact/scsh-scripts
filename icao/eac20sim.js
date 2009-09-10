@@ -1,4 +1,26 @@
 /**
+ *  ---------
+ * |.##> <##.|  Open Smart Card Development Platform (www.openscdp.org)
+ * |#       #|  
+ * |#       #|  Copyright (c) 1999-2009 CardContact Software & System Consulting
+ * |'##> <##'|  Andreas Schwier, 32429 Minden, Germany (www.cardcontact.de)
+ *  --------- 
+ *
+ *  This file is part of OpenSCDP.
+ *
+ *  OpenSCDP is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License version 2 as
+ *  published by the Free Software Foundation.
+ *
+ *  OpenSCDP is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with OpenSCDP; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ *
  * @fileoverview Simulator for EAC 2.0 Protocol
  */
 
@@ -7,6 +29,7 @@ load("pace.js");
 
 /**
  * Create a EAC 2.0 simulation object
+ * @class Class implementing a EAC simulator
  *
  * @constructor
  */
@@ -65,6 +88,16 @@ EAC20Sim.prototype.manageSE = function(p1, p2, data) {
 
 
 
+/**
+ * Performs a GENERAL AUTHENTICATE command in various steps of the EAC protocol
+ *
+ * @param {Number} p1 the P1 parameter from the command APDU
+ * @param {Number} p2 the P2 parameter from the command APDU
+ * @param {ByteString} data the data part from the command APDU
+ * @param {Number} le the Le parameter from the command APDU
+ * @return the response data
+ * @type ByteString 
+ */
 EAC20Sim.prototype.generalAuthenticate = function(p1, p2, data, le) {
 	var a = new ASN1(data);
 	
@@ -203,7 +236,8 @@ EAC20Sim.prototype.toString = function() {
 
 /**
  * Creates a security environment container that collect cryptographic reference templates (CRT)
- *
+ * 
+ * @class Class implementing a security environment for cryptographic operations.
  * @constructor
  */
 function SecurityEnvironment() {
