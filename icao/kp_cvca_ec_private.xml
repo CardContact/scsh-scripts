@@ -8,7 +8,7 @@
         <gp:Revision Version="1.0.0" Date="2005-12-09" Time="00:00:00" By="www.openscdp.org"
             Digest="00000000"/>
     </gp:Revisions>
-    <gp:KeyInfo Name="ECPrivate" Type="PRIVATE" SubType="EC" Size="192" Mode="TEST"/>
+    <gp:KeyInfo Name="ECPrivate" Type="PRIVATE" SubType="EC" Size="256" Mode="TEST"/>
     <gp:Attribute Sensitive="false" Importable="true" Exportable="true"/>
     <gp:Usage Encrypt="true" Decrypt="true" DecryptEncrypt="true" Sign="true" Verify="true"
         Wrap="true" Unwrap="true" UnwrapWrap="true" Derive="true"/>
