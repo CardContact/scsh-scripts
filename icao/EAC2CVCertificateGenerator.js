@@ -299,9 +299,11 @@ EAC2CVCertificateGenerator.prototype.getPublicKey = function() {
     	t.add(new ASN1("Base Point G", 0x84, encodeUncompressedECPoint(key.getComponent(Key.ECC_GX), key.getComponent(Key.ECC_GY))));
     
     	t.add(new ASN1("Order of the base point", 0x85, key.getComponent(Key.ECC_N)));
+    }
     
-    	t.add(new ASN1("Public Point y", 0x86, encodeUncompressedECPoint(this.publicKey.getComponent(Key.ECC_QX), this.publicKey.getComponent(Key.ECC_QY))));
+    t.add(new ASN1("Public Point y", 0x86, encodeUncompressedECPoint(this.publicKey.getComponent(Key.ECC_QX), this.publicKey.getComponent(Key.ECC_QY))));
     
+    if (this.includeDomainParameters == true) {
     	t.add(new ASN1("Cofactor f", 0x87, this.stripLeadingZeros(key.getComponent(Key.ECC_H))));
     }
         
