@@ -30,6 +30,8 @@
  *
  */
 
+load("tools/eccutils.js");
+
 
 /**
  * Find a tag within the given TLV structure and returns the corresponding TLV object.
@@ -322,7 +324,7 @@ EAC2CVCertificateGenerator.prototype.getProfileIdentifier = function() {
 
 
 EAC2CVCertificateGenerator.prototype.getExtensions = function() {
-    var t = new ASN1("Certificate Extentions", 0x65);
+    var t = new ASN1("Certificate Extensions", 0x65);
     for (var i = 0; i < this.extensions.length; i++)
     	t.add(this.extensions[i]);
     return t;
@@ -360,28 +362,6 @@ EAC2CVCertificateGenerator.prototype.setPublicKey = function(publicKey) {
 }
 
 
-/*
-EAC2CVCertificateGenerator.prototype.generateCVCertificate = function(request) {
-	
-	// requestInfos = this.verifyRequest(request);
-	
-	var certificate = new ASN1("CV Certificate", 0x7F21);
-	
-	var body = this.getCertificateBody(requestInfos.publicKey);
-    
-	certificate.add(body);
-	
-	var signature = this.crypto.sign(this.privateKey, Crypto.ECDSA_SHA256, body.getBytes());
-	var signatureValue = new ASN1("Signature", 0x5F37, signature);
-	
-    certificate.add(signatureValue);
-	
-    print(certificate);
-	return certificate.getBytes();
-}
-*/
-
-
 EAC2CVCertificateGenerator.prototype.generateCVCertificate = function(signingKey) {
 	
 	var certificate = new ASN1("CV Certificate", 0x7F21);
@@ -389,7 +369,7 @@ EAC2CVCertificateGenerator.prototype.generateCVCertificate = function(signingKey
 	var body = this.getCertificateBody();
 	
 	var signature = this.crypto.sign(signingKey, Crypto.ECDSA_SHA256, body.getBytes());
-	var signatureValue = new ASN1("Signature", 0x5F37, signature);
+	var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature));
 	
     certificate.add(body);
     	
