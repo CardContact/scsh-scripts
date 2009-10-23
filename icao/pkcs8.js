@@ -229,6 +229,7 @@ PKCS8.decodeKeyFromPKCS8Format = function(encodedKey) {
 	key.setComponent(Key.ECC_GY, coordinates.y);
 	
 	var groupOrder = domainParameter.get(4);
+	
 	key.setComponent(Key.ECC_N, groupOrder.value);
 	
 	return key;	
@@ -249,13 +250,13 @@ PKCS8.test = function() {
     // Create empty public key object
     var pubKey = new Key();
     pubKey.setType(Key.PUBLIC);
-
     pubKey.setComponent(Key.ECC_CURVE_OID, new ByteString(ecCurve, OID)); 
 
     // Create empty private key object
     var priKey = new Key();
     priKey.setType(Key.PRIVATE);
-	
+    priKey.setComponent(Key.ECC_CURVE_OID, new ByteString(ecCurve, OID)); 
+    
     // Generate key pair
     crypto.generateKeyPair(Crypto.EC, pubKey, priKey);
 	       
@@ -264,7 +265,15 @@ PKCS8.test = function() {
     
     // Decode
     var decodedKeyObject = PKCS8.decodeKeyFromPKCS8Format(p8Key);
-	
+    
+    // Compare
+    assert(decodedKeyObject.getComponent(Key.ECC_D).equals(priKey.getComponent(Key.ECC_D)));
+    
+    assert(decodedKeyObject.getComponent(Key.ECC_GX).equals(priKey.getComponent(Key.ECC_GX)));
+    assert(decodedKeyObject.getComponent(Key.ECC_GY).equals(priKey.getComponent(Key.ECC_GY)));
+    assert(decodedKeyObject.getComponent(Key.ECC_A).equals(pubKey.getComponent(Key.ECC_A)));
+    assert(decodedKeyObject.getComponent(Key.ECC_B).equals(pubKey.getComponent(Key.ECC_B)));
+     
     // Encode
     var refp8Key = PKCS8.encodeKeyUsingPKCS8Format(decodedKeyObject);
 	
