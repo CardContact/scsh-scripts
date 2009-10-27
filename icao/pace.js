@@ -91,6 +91,12 @@ PACEInfo.prototype.toTLV = function() {
 
 
 
+PACEInfo.prototype.toString = function() {
+	return "PACEInfo(protocol=" + this.protocol + ", version=" + this.version + ", parameterId=" + this.protocolId + ")";
+}
+
+
+
 /**
  * Create a PACEDomainParameterInfo object
  *
@@ -118,7 +124,7 @@ function PACEDomainParameterInfo(tlv) {
 		
 		var t = tlv.get(i++);
 		assert(t.tag == ASN1.SEQUENCE);
-		this.domainParameter = t.value.toSigned();
+		this.domainParameter = ECCUtils.decodeECParameters(t.get(1));
 		
 		if (i < tlv.elements) {
 			var t = tlv.get(i++);
@@ -154,6 +160,12 @@ PACEDomainParameterInfo.prototype.toTLV = function() {
 
 
 
+PACEDomainParameterInfo.prototype.toString = function() {
+	return "PACEDomainParameterInfo(protocol=" + this.protocol + ", parameterId=" + this.protocolId + ")";
+}
+
+
+
 /**
  * Create a PACE protocol object
  *
@@ -161,12 +173,16 @@ PACEDomainParameterInfo.prototype.toTLV = function() {
  *
  * @constructor
  *
+ * @param {Crypto} crypto the crypto provider
  * @param {String} algo the algorithm OID as String object
  * @param {Key} domainparam the key object holding ECC domain parameter
  */
-function PACE(algo, domparam) {
-	this.algo = algo;
+function PACE(crypto, algo, domparam) {
+	this.crypto = crypto;
+	this.algo = algo.toString(OID);
 	this.domparam = domparam;
+	
+//	print(ECCUtils.ECParametersToString(domparam));
 	
 	if (algo == PACE.id_PACE_ECDH_GM_3DES_CBC_CBC) {
 		this.symalgo = Key.DES;
@@ -175,7 +191,6 @@ function PACE(algo, domparam) {
 	}
 
 	this.sym = Crypto.AES;
-	this.crypto = new Crypto();
 }
 
 
@@ -369,6 +384,7 @@ PACE.prototype.getEphemeralPublicKey = function() {
 /**
  * Performs the mapping operation with mapping data from the other side
  *
+ * @param {ByteString} publicKey the public key in encoded format
  */
 PACE.prototype.performKeyAgreement = function(publicKey) {
 	if (publicKey.byteAt(0) != 0x04) 
@@ -383,7 +399,8 @@ PACE.prototype.performKeyAgreement = function(publicKey) {
 	this.otherPuK.setComponent(Key.ECC_QY, publicKey.bytes(l + 1, l));
 
 	var k = this.crypto.decrypt(this.prk, Crypto.ECDH, publicKey.bytes(1));
-	print(k);
+	GPSystem.trace("Shared Secret K:");
+	GPSystem.trace(k);
 	this.kenc = this.deriveKey(k, 1);
 	this.kmac = this.deriveKey(k, 2);
 	
@@ -439,9 +456,6 @@ PACE.encodePublicKey = function(oid, key, withDP) {
 		var cofactor = key.getComponent(Key.ECC_H);
 		cofactor = PACE.stripLeadingZeros(cofactor);
 		
-//		if (cofactor.right(4).toString(HEX) != "00000001") {
-//			t.add(new ASN1("cofactor", 0x87, cofactor));
-//		}
 		t.add(new ASN1("cofactor", 0x87, cofactor));
 	}
 	
@@ -459,8 +473,8 @@ PACE.encodePublicKey = function(oid, key, withDP) {
  */
 PACE.prototype.calculateAuthenticationToken = function() {
 	var t = PACE.encodePublicKey(this.algo, this.otherPuK, true);
-	print("Authentication Token:");
-	print(t);
+	GPSystem.trace("Authentication Token:");
+	GPSystem.trace(t);
 	
 	var at = this.crypto.sign(this.kmac, Crypto.AES_CMAC, t.getBytes());
 	
@@ -479,8 +493,8 @@ PACE.prototype.calculateAuthenticationToken = function() {
  */
 PACE.prototype.verifyAuthenticationToken = function(authToken) {
 	var t = PACE.encodePublicKey(this.algo, this.puk, true);
-	print("Authentication Token:");
-	print(t);
+	GPSystem.trace("Authentication Token:");
+	GPSystem.trace(t);
 	
 	var at = this.crypto.sign(this.kmac, Crypto.AES_CMAC, t.getBytes());
 	
