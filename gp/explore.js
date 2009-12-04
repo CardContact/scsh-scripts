@@ -28,10 +28,10 @@ load("tools.js");
 load("tools/CardOutlineFactory.js");
 
 if (typeof(masterSENC) == "undefined")
-	masterSENC = new Key("gp/kp_jcop_default_s-enc.xml");
+	masterSENC = new Key("kp_jcop_default_s-enc.xml");
 
 if (typeof(masterSMAC) == "undefined")
-	masterSMAC = new Key("gp/kp_jcop_default_s-mac.xml");
+	masterSMAC = new Key("kp_jcop_default_s-mac.xml");
 
 
 function OutlineCardManager(factory, application) {
@@ -43,13 +43,13 @@ function OutlineCardManager(factory, application) {
 	this.applications = null;
 	this.loadfiles = null;
 	
-        // Create OutlineNode object and register in OutlineCardManager object
-        var view = new OutlineNode("Card Manager (" + application.aid + ")", true);
-        view.setUserObject(this);
-        view.setContextMenu(["Authenticate"]);
-        this.view = view;
-        
-        this.authenticated = false;
+	// Create OutlineNode object and register in OutlineCardManager object
+	var view = new OutlineNode("Card Manager (" + application.aid + ")", true);
+	view.setUserObject(this);
+	view.setContextMenu(["Authenticate"]);
+	this.view = view;
+
+	this.authenticated = false;
 }
 
 
@@ -59,12 +59,12 @@ function OutlineCardManager(factory, application) {
 //
 OutlineCardManager.prototype.expandListener = function() {
 
-        if (this.expanded)
-                return;
+	if (this.expanded)
+		return;
 
-        var view = this.view;
+	var view = this.view;
 
-        try	{
+	try	{
 		var fcp = this.application.select();
 		this.fcp = fcp;
 				
@@ -73,31 +73,31 @@ OutlineCardManager.prototype.expandListener = function() {
 			view.insert(fcpmodel.view);
 		}
 
-	        var d = this.factory.newOutlineDataObject(this, 0x42, "Issuer Identification Number", "");
-	        view.insert(d.view);
+		var d = this.factory.newOutlineDataObject(this, 0x42, "Issuer Identification Number", "");
+		view.insert(d.view);
 
-	        var d = this.factory.newOutlineDataObject(this, 0x45, "Card Image Number", "");
-	        view.insert(d.view);
+		var d = this.factory.newOutlineDataObject(this, 0x45, "Card Image Number", "");
+		view.insert(d.view);
 		
-	        var d = this.factory.newOutlineDataObject(this, 0x66, "Card Data", "asn1");
-	        view.insert(d.view);
+		var d = this.factory.newOutlineDataObject(this, 0x66, "Card Data", "asn1");
+		view.insert(d.view);
 
-	        var d = this.factory.newOutlineDataObject(this, 0xE0, "Key Information Template", "tlvlist");
-	        view.insert(d.view);
+		var d = this.factory.newOutlineDataObject(this, 0xE0, "Key Information Template", "tlvlist");
+		view.insert(d.view);
 
-	        var d = this.factory.newOutlineDataObject(this, 0xC1, "Sequence Counter of the default Key Version Number", "");
-	        view.insert(d.view);
+		var d = this.factory.newOutlineDataObject(this, 0xC1, "Sequence Counter of the default Key Version Number", "");
+		view.insert(d.view);
 
-	        var d = this.factory.newOutlineDataObject(this, 0xC2, "Confirmation Counter", "");
-	        view.insert(d.view);
-	        
+		var d = this.factory.newOutlineDataObject(this, 0xC2, "Confirmation Counter", "");
+		view.insert(d.view);
+		
 	}
 
 	catch(e) {
 		print(e);
 	}
 
-        this.expanded = true;
+	this.expanded = true;
 }
 
 
@@ -112,8 +112,8 @@ OutlineCardManager.prototype.authenticate = function() {
 	
 	GPAuthenticate(this.application.card, this.application.crypto, masterSENC, masterSMAC);
 
-        this.authenticated = true;
-        
+	this.authenticated = true;
+	
 	var filter = new ByteString("4F00", HEX);
 	var view = this.view;
 
@@ -321,7 +321,7 @@ GPCardOutlineFactory.prototype.newOutlineApplet = function(instance) {
 
 
 
-var card = new Card(_scsh3.reader, "profiles/cp_jcop41.xml");
+var card = new Card(_scsh3.reader, "../profiles/cp_jcop41.xml");
 
 var crypto = new Crypto();
 
@@ -335,13 +335,13 @@ af.addApplicationProfile("ap_jcop_cardmanager.xml");
 
 var aidlist = null;
 
-try     {
-        var jcop = new OutlineCard(of, card, af, aidlist);
-        jcop.view.show();
+try {
+	var jcop = new OutlineCard(of, card, af, aidlist);
+	jcop.view.show();
 }
 
 catch(e) {
-        print("No card in reader or problem with reset: " + e);
+	print("No card in reader or problem with reset: " + e);
 }
 
 
