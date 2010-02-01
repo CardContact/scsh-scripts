@@ -65,6 +65,9 @@ EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
 	var id_CA_DH = new ByteString("id-CA-DH", OID);
 	var id_CA_ECDH = new ByteString("id-CA-ECDH", OID);
 	var id_TA = new ByteString("id-TA", OID);
+	var id_RI = new ByteString("id-RI", OID);
+	var id_RI_DH = new ByteString("id-RI-DH", OID);
+	var id_RI_ECDH = new ByteString("id-RI-ECDH", OID);
 	
 	for (var i = 0; i < si.elements; i++) {
 		var o = si.get(i);
@@ -395,6 +398,8 @@ EAC20.prototype.verifyCertificateChain = function(cvcchain) {
 		var pukrefdo = new ASN1(0x83, car);
 		var pukref = pukrefdo.getBytes();
 		
+//		print("PuKref: " + pukref);
+//		print(pukref);
 		this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x22, 0x81, 0xB6, pukref, [0x9000]);
 		
 		// Extract value of 7F21
@@ -402,6 +407,8 @@ EAC20.prototype.verifyCertificateChain = function(cvcchain) {
 		var t = tl.index(0);
 		var v = t.getValue();
 		
+		GPSystem.trace("Certificate: ");
+		GPSystem.trace(new ASN1(v));
 		this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x2A, 0x00, 0xBE, v, [0x9000]);
 	}
 	
@@ -411,6 +418,23 @@ EAC20.prototype.verifyCertificateChain = function(cvcchain) {
 
 
 EAC20.prototype.performTerminalAuthentication = function(termkey, auxdata) {
+	var signatureInput = this.performTerminalAuthenticationSetup(auxdata);
+	
+	var signature = this.crypto.sign(termkey, Crypto.ECDSA_SHA256, signatureInput);
+
+	GPSystem.trace("Signature (Encoded):");
+	GPSystem.trace(signature);
+
+	signature = ECCUtils.unwrapSignature(signature);
+	GPSystem.trace("Signature (Encoded):");
+	GPSystem.trace(signature);
+
+	this.performTerminalAuthenticationFinal(signature);
+}
+
+
+
+EAC20.prototype.performTerminalAuthenticationSetup = function(auxdata) {
 
 	var idIFD = this.ca.getCompressedPublicKey();
 
@@ -437,16 +461,13 @@ EAC20.prototype.performTerminalAuthentication = function(termkey, auxdata) {
 	var signatureInput = bb.toByteString();
 	GPSystem.trace("Signature Input:");
 	GPSystem.trace(signatureInput);
-	var signature = this.crypto.sign(termkey, Crypto.ECDSA_SHA256, signatureInput);
-	GPSystem.trace("Signature (Encoded):");
-	GPSystem.trace(signature);
+	return signatureInput;
+}
 
-	signature = ECCUtils.unwrapSignature(signature);
-	GPSystem.trace("Signature (Encoded):");
-	GPSystem.trace(signature);
 
-	this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x82, 0x00, 0x00, signature, [0x9000]);
 	
+EAC20.prototype.performTerminalAuthenticationFinal = function(signature) {
+	this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x82, 0x00, 0x00, signature, [0x9000]);
 }
 
 
@@ -518,4 +539,37 @@ EAC20.prototype.performChipAuthentication = function() {
 		this.card.setCredential(sm);
 		this.sm = sm;
 	}
+}
+
+
+
+EAC20.prototype.performRestrictedIdentification = function(keyId, sectorPublicKey) {
+	var bb = new ByteBuffer();
+	bb.append(new ASN1(0x80, new ByteString("id-RI-ECDH-SHA-256", OID)).getBytes());
+	
+	bb.append(new ByteString("8401", HEX));
+	bb.append(keyId);
+	
+	var msedata = bb.toByteString();
+	GPSystem.trace("Manage SE data:");
+	GPSystem.trace(msedata);
+	this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x22, 0x41, 0xA4, msedata, [0x9000]);
+	
+	var dado = new ASN1(0x7C, new ASN1(0xA0, sectorPublicKey.bytes(5)));
+
+//	print("GA Input: " + dado.getBytes());
+	
+	var dadobin = card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO|Card.RENC, 0x00, 0x86, 0x00, 0x00, dado.getBytes(), 65535, [0x9000]);
+	
+//	print(dadobin);
+
+	var dado = new ASN1(dadobin);
+	assert(dado.tag == 0x7C);
+	assert(dado.elements == 1);
+	var nonceDO = dado.get(0);
+	assert((nonceDO.tag == 0x81) || (nonceDO.tag == 0x83));
+	var sectorId = nonceDO.value;
+
+//	print("Sector specific identifier: " + sectorId);
+	return sectorId;
 }

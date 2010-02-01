@@ -205,6 +205,28 @@ CVC.prototype.getCHR = function() {
 
 
 
+CVC.prototype.getExtension = function(extoid) {
+	var extdo = this.asn.get(0).find(CVC.TAG_EXTN);
+	
+	if (!extdo) {
+		throw new GPError("CVC", GPError.OBJECT_NOT_FOUND, 0, "Certificate does not contain an extension");
+	}
+
+//	print(extdo);
+	
+	for (var i = 0; i < extdo.length; i++) {
+		var ext = extdo.get(i);
+		var oid = ext.get(0);
+		assert(oid.tag == ASN1.OBJECT_IDENTIFIER);
+		if (oid.value.equals(extoid)) {
+			return ext;
+		}
+	}
+	return null;
+}
+
+
+
 CVC.prototype.getBytes = function() {
 	return this.bin;
 }
@@ -221,6 +243,7 @@ CVC.prototype.toString = function() {
 CVC.TAG_CPI = 0x5F29;
 CVC.TAG_CAR = 0x42;
 CVC.TAG_CHR = 0x5F20;
+CVC.TAG_EXTN = 0x65;
 
 
 

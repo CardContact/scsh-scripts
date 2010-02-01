@@ -32,6 +32,12 @@ var certstorepath = GPSystem.mapFilename("cvc", GPSystem.CWD);
 
 var certstore = new CVCertificateStore(certstorepath);
 
+/*
+print(certstore.getCertificateChainFor(new PublicKeyReference("TPCVCATIS00001")));
+print(certstore.getCertificateChainFor(new PublicKeyReference("TPCVCATAT00001")));
+print(certstore.getCertificateChainFor(new PublicKeyReference("TPCVCATST00001")));
+*/
+
 
 // var card = new EAC20Sim();
 var card = new Card(_scsh3.reader);
@@ -49,7 +55,7 @@ print("Reading EF.CardInfo...");
 eac.readCardInfo();
 
 print("Performing PACE...");
-var pwd = new ByteString("000001", ASCII);
+var pwd = new ByteString("164236", ASCII);
 var sm = eac.performPACE(0, EAC20.ID_CAN, pwd, chat);
 
 print("Performing TA...");
@@ -77,5 +83,18 @@ eac.performChipAuthentication();
 print("Reading using secure messaging...");
 var mf = eac.mf;
 var ef = new CardFile(mf, ":011C");
-ef.readBinary(0, 4);
+var data = ef.readBinary(0);
+print(data);
+
+var data = card.sendSecMsgApdu(Card.ALL, 0x00, 0xB1, 0x00, 0x00, new ByteString("540100", HEX), 239);
+print(data);
+
+
+var df = new CardFile(mf, "#A0000002471001");
+// var df = new CardFile(mf, "#E80704007F00070302");
+
+var ef = new CardFile(df, ":0101");
+
+var data = ef.readBinary(0);
+print(data);
 
