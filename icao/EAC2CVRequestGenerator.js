@@ -31,6 +31,18 @@
 load("tools/eccutils.js");
 
 
+/**
+ * Constructor for request generator
+ *
+ * @param {Crypto} Crypto object to use
+ *
+ * @constructor
+ */
+function EAC2CVRequestGenerator(crypto) {
+	this.crypto = crypto;
+}
+
+
 
 /*
  * Convert x/y coordinates to uncompressed format
@@ -74,22 +86,9 @@ EAC2CVRequestGenerator.stripLeadingZeros = function(value) {
 
 
 /**
- * Constructor for request generator
- *
- * @param {Crypto} Crypto object to use
- *
- * @constructor
- */
-function EAC2CVRequestGenerator(crypto) {
-	this.crypto = crypto;
-}
-
-
-
-/**
  * Set the public key that should be encoded within the request
  *
- * @param {Key} Public Key
+ * @param {Key} publicKey Public Key
  */
 EAC2CVRequestGenerator.prototype.setPublicKey = function(publicKey) {
 	this.publicKey = publicKey;
@@ -100,10 +99,10 @@ EAC2CVRequestGenerator.prototype.setPublicKey = function(publicKey) {
 /**
  * Set the certficate holder reference (CHR) for the request
  *
- * @param {String} CHR for the request
+ * @param {String} chr CHR for the request
  */
-EAC2CVRequestGenerator.prototype.setCHR = function(CHR) {
-	this.CHR = CHR;
+EAC2CVRequestGenerator.prototype.setCHR = function(chr) {
+	this.CHR = chr;
 }
 
 
@@ -121,7 +120,7 @@ EAC2CVRequestGenerator.prototype.reset = function() {
 /**
  * Set the certificate profile identifier (CPI) for the request
  *
- * @param {Number} CPI for the request
+ * @param {Number} profileID CPI for the request
  */
 EAC2CVRequestGenerator.prototype.setProfileIdentifier = function(profileID) {
 	this.profileIdentifier = profileID;
@@ -135,10 +134,10 @@ EAC2CVRequestGenerator.prototype.setProfileIdentifier = function(profileID) {
  * The usage of this method is optional - if no CAR is set, there will be no
  * "inner" CAR included within the certficate request
  *
- * @param {String} CHR for the request
+ * @param {String} car CAR for the request
  */
-EAC2CVRequestGenerator.prototype.setCAR = function(CAR) {
-	this.CAR = CAR;
+EAC2CVRequestGenerator.prototype.setCAR = function(car) {
+	this.CAR = car;
 }
 
 
@@ -146,7 +145,7 @@ EAC2CVRequestGenerator.prototype.setCAR = function(CAR) {
 /**
  * Set the extension values that should be included within the request
  *
- * @param {ByteString[]} Array of DER-encoded extensions
+ * @param {ByteString[]} extensions Array of DER-encoded extensions
  */
 EAC2CVRequestGenerator.prototype.setExtensions = function(extensions) {
 	this.extensions = extensions;
@@ -157,7 +156,7 @@ EAC2CVRequestGenerator.prototype.setExtensions = function(extensions) {
 /**
  * Set the object identifier that should be included in the public key domain parameters
  *
- * @param {ByteString} Object identifier as specified in appendix A.6.4
+ * @param {ByteString} oid Object identifier as specified in appendix A.6.4
  */
 EAC2CVRequestGenerator.prototype.setTAAlgorithmIdentifier = function(oid) {
 	this.taOID = oid;
@@ -276,7 +275,7 @@ EAC2CVRequestGenerator.prototype.getCertificateBody = function() {
 /**
  * Generate initial certificate request using the specified private key for signing
  *
- * @param {Key} Private key for signature creation
+ * @param {Key} privateKey Private key for signature creation
  * @return The DER-encoded CV request
  * @type ASN1
  */
@@ -300,9 +299,9 @@ EAC2CVRequestGenerator.prototype.generateCVRequest = function(privateKey) {
 /**
  * Generate authenticated request
  *
- * @param {Key} Private key for the request signature
- * @param {Key} Private key for used for signing and authenticating the request
- * @param (String) CHR of the authenticating authority 
+ * @param {Key} requestKey Private key for the request signature
+ * @param {Key} authenticationKey Private key for used for signing and authenticating the request
+ * @param {String} authCHR CHR of the authenticating authority 
  *
  * @return The DER-encoded authenticated CV request
  * @type ASN1
