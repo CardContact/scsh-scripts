@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<gp:KeyProfile xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://namespaces.globalplatform.org/systems-profiles/1.1.0 http://namespaces.globalplatform.org/systems-profiles/1.1.0/GP.systems.profiles.1.1.0.KeyProfile.xsd"
+    xmlns:gp="http://namespaces.globalplatform.org/systems-profiles/1.1.0"
+    UniqueID="2B0601040181C31F10000A" ProfileVersion="1.1.0" ErrataVersion="0">
+    <gp:Description>EC Private Test Key</gp:Description>
+    <gp:Revisions arrayElement="Revision" arrayIndex="#">
+        <gp:Revision Version="1.0.0" Date="2005-12-09" Time="00:00:00" By="www.openscdp.org"
+            Digest="00000000"/>
+    </gp:Revisions>
+    <gp:KeyInfo Name="ECPrivate" Type="PRIVATE" SubType="EC" Size="192" Mode="TEST"/>
+    <gp:Attribute Sensitive="false" Importable="true" Exportable="true"/>
+    <gp:Usage Encrypt="true" Decrypt="true" DecryptEncrypt="true" Sign="true" Verify="true"
+        Wrap="true" Unwrap="true" UnwrapWrap="true" Derive="true"/>
+    <gp:Value Format="ECPRIVATE" arrayElement="Component" arrayIndex="#">
+		<gp:Component Name="ECC_CURVE_OID" Encoding="HEX" Value="2B2403030208010107"></gp:Component>
+        <gp:Component Name="ECC_D" Encoding="HEX" Value="27 F9 FE 0B 52 BA 77 02 C8 67 18 A5 F1 64 36 DE CD EC D1 AD 8C CE 15 1D 05 1E F7 58 9F 75 0E 5C"></gp:Component>
+    </gp:Value>
+</gp:KeyProfile>
