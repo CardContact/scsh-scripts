@@ -1,13 +1,12 @@
 load("EAC2CVRequestGenerator.js");
 
-var CAR = "decvca0000";
-var CHR = "dedvca0001";
+var CAR = "decvca00000";
+var CHR = "dedvca00001";
 
 var crypto = new Crypto("BC");
     
 //Create empty private key object
 var priKey = new Key("kp_dvca_ec_private.xml");
-
 var pubKey = new Key("kp_dvca_ec_public.xml");
 
 var reqGenerator = new EAC2CVRequestGenerator(crypto);
@@ -34,7 +33,7 @@ reqGenerator.setExtensions([ext1, ext2]);
 reqGenerator.setCHR(CHR);
 
 // Generate the request
-var req = reqGenerator.generateCVRequest(priKey);
+var req = reqGenerator.generateAuthenticatedCVRequest(priKey, priKey, "dedvca00000");
    
 outline = new OutlineNode("CV-Request");
 outline.insert(req);

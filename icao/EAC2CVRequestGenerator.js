@@ -87,17 +87,6 @@ function EAC2CVRequestGenerator(crypto) {
 
 
 /**
- * Set the certficate holder reference (CHR) for the request
- *
- * @param {String} CHR for the request
- */
-EAC2CVRequestGenerator.prototype.setCAR = function(CAR) {
-	this.CAR = CAR;
-}
-
-
-
-/**
  * Set the public key that should be encoded within the request
  *
  * @param {Key} Public Key
@@ -218,12 +207,12 @@ EAC2CVRequestGenerator.prototype.getPublicKey = function() {
     t.add(new ASN1("Prime Modulus", 0x81, key.getComponent(Key.ECC_P)));
     t.add(new ASN1("First coefficient a", 0x82, key.getComponent(Key.ECC_A)));
     t.add(new ASN1("Second coefficient b", 0x83, key.getComponent(Key.ECC_B)));
-    t.add(new ASN1("Base Point G", 0x84, encodeUncompressedECPoint(key.getComponent(Key.ECC_GX), key.getComponent(Key.ECC_GY))));
+    t.add(new ASN1("Base Point G", 0x84, EAC2CVRequestGenerator.encodeUncompressedECPoint(key.getComponent(Key.ECC_GX), key.getComponent(Key.ECC_GY))));
     t.add(new ASN1("Order of the base point", 0x85, key.getComponent(Key.ECC_N)));
     
-    t.add(new ASN1("Public Point y", 0x86, encodeUncompressedECPoint(this.publicKey.getComponent(Key.ECC_QX), this.publicKey.getComponent(Key.ECC_QY))));
+    t.add(new ASN1("Public Point y", 0x86, EAC2CVRequestGenerator.encodeUncompressedECPoint(this.publicKey.getComponent(Key.ECC_QX), this.publicKey.getComponent(Key.ECC_QY))));
     
-    t.add(new ASN1("Cofactor f", 0x87, stripLeadingZeros(key.getComponent(Key.ECC_H))));
+    t.add(new ASN1("Cofactor f", 0x87, EAC2CVRequestGenerator.stripLeadingZeros(key.getComponent(Key.ECC_H))));
         
     return t;
 }
@@ -285,7 +274,7 @@ EAC2CVRequestGenerator.prototype.getCertificateBody = function() {
 
 
 /**
- * Generate the certificate request using the specified private key for signing
+ * Generate initial certificate request using the specified private key for signing
  *
  * @param {Key} Private key for signature creation
  * @return The DER-encoded CV request
@@ -306,3 +295,34 @@ EAC2CVRequestGenerator.prototype.generateCVRequest = function(privateKey) {
 	return request;
 }
 
+
+
+/**
+ * Generate authenticated request
+ *
+ * @param {Key} Private key for the request signature
+ * @param {Key} Private key for used for signing and authenticating the request
+ * @param (String) CHR of the authenticating authority 
+ *
+ * @return The DER-encoded authenticated CV request
+ * @type ASN1
+ */
+EAC2CVRequestGenerator.prototype.generateAuthenticatedCVRequest = function(requestKey, authenticationKey, authCHR) {
+	var authRequest = new ASN1("Authentication", 0x67);
+	
+	var request = this.generateCVRequest(requestKey);
+    
+    var signature = this.crypto.sign(requestKey, Crypto.ECDSA, request.getBytes());
+	var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature));
+	
+	var chr = new ASN1("Certification Authority Reference", 0x42, new ByteString(authCHR, ASCII));
+	
+	var signature = this.crypto.sign(authenticationKey, Crypto.ECDSA, request.getBytes());
+	var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature));
+	
+    authRequest.add(request);
+    authRequest.add(chr);
+    authRequest.add(signatureValue);
+    
+	return authRequest;
+}
