@@ -123,19 +123,20 @@ generator.setCHR(CHR);
 
 ///     <method name="setEffectiveDate">
 ///         <signature>void setEffectiveDate(String effectiveDate)</signature>
-///         <description><p>Set the effective date for the generated certificate</p></description>
+///         <signature>void setEffectiveDate(Date effectiveDate)</signature>
+///         <description><p>Set the effective date for the generated certificate in the format YYMMDD</p></description>
 ///         <example>
 
-var notBefore = "090210";
+generator.setEffectiveDate(new Date());
 
-generator.setEffectiveDate(notBefore);
 
 ///         </example>
 ///     </method>
 
 ///     <method name="setExpiryDate">
 ///         <signature>void setExpiryDate(String expiryDate)</signature>
-///         <description><p>Set the expiry date for the generated certificate</p></description>
+///         <signature>void setExpiryDate(Date expiryDate)</signature>
+///         <description><p>Set the expiry date for the generated certificate in the format YYMMDD</p></description>
 ///         <example>
 
 var notAfter = "110225";
@@ -230,14 +231,15 @@ generator.setIncludeDomainParameters(true);
 ///     </method>
 
 ///     <method name="generateCVCertificate">
-///         <signature>ByteString generateCVCertificate(Key privateKey)</signature>
+///         <signature>CVC generateCVCertificate(Key privateKey, Number mech)</signature>
 ///         <description><p>Create a CV certificate.</p></description>
 ///         <example>
 
 // Create empty private key object
 var priKey = new Key("kp_cvca_ec_private.xml");
 
-var certificate = generator.generateCVCertificate(priKey);
+var cvc = generator.generateCVCertificate(priKey, Crypto.ECDSA_SHA256);
+var certificate = cvc.getBytes();
 
 ///         </example>
 ///     </method>
@@ -245,5 +247,5 @@ var certificate = generator.generateCVCertificate(priKey);
 writeFileToDisk("cvca-certificate.crt", certificate);
 
 outline = new OutlineNode("CV-Certificate");
-outline.insert(new ASN1(certificate));
+outline.insert(cvc.getASN1());
 outline.show();

@@ -31,28 +31,17 @@
  */
 
 load("tools/eccutils.js");
+load("cvc.js");
 
 
-/**
- * Find a tag within the given TLV structure and returns the corresponding TLV object.
- *
- * @param {TLV} tlv the TLV structure
- * @param {Number} tagNumber the number of the tag to search for
- * @return the TLV object found
- * @type TLV
+/*
+ * Define a generator object for CV certificates
  */
-function findTag(tlv, tagNumber) {
-	
-	for(var i = 0; (i < tlv.elements) && (tlv.get(i).tag != tagNumber); i++) {		
-	}
-	
-	if (i == tlv.elements) {
-		throw new GPError("CVCertificateGenerator", TAG_NOT_FOUND, TAG_NOT_FOUND, "Tag " + tagNumber + "not in structure.");
-
-	}
-	
-	return tlv.get(i)
+// Constructor
+function EAC2CVCertificateGenerator(crypto) {
+	this.crypto = crypto;
 }
+
 
 
 /**
@@ -63,7 +52,7 @@ function findTag(tlv, tagNumber) {
  * @return the point in uncompressed format
  * @type ByteString
  */
-function encodeUncompressedECPoint(x,y) {
+EAC2CVCertificateGenerator.encodeUncompressedECPoint = function(x,y) {
     
     bb = new ByteBuffer();
     
@@ -76,6 +65,43 @@ function encodeUncompressedECPoint(x,y) {
 }
 
 
+
+/**
+ * Convert integer to fixed length string with leading zeros.
+ *
+ * @private
+ * @param {Number} value the value to convert to a string.
+ * @param {Number} digits the number of digits in output string. Must be <= 20.
+ * @return the 0-padded string
+ * @type String
+ */
+EAC2CVCertificateGenerator.itos = function(value, digits) {
+	if (digits > 20) {
+		throw new Error("Digits must be <= 20");
+	}
+	var str = "" + value;
+	str = "0000000000000000000".substr(19 - (digits - str.length)).concat(str);
+	return str;
+}
+
+
+
+/**
+ * Convert date to string with format YYMMDD.
+ *
+ * @param {Date} d the date object.
+ * @return the date/time string.
+ * @type String
+ */
+EAC2CVCertificateGenerator.dtos = function(d) {
+	var s = EAC2CVCertificateGenerator.itos(d.getFullYear() % 100, 2) +
+			EAC2CVCertificateGenerator.itos(d.getMonth() + 1, 2) +
+			EAC2CVCertificateGenerator.itos(d.getDate(), 2);
+	return s;
+}
+
+
+
 /**
  * Decode x/y coordinates from uncompressed format
  *
@@ -84,7 +110,7 @@ function encodeUncompressedECPoint(x,y) {
  * @type ByteString
  */
 
-function decodeUncompressedECPoint(uncompressedPoint) {
+EAC2CVCertificateGenerator.decodeUncompressedECPoint = function(uncompressedPoint) {
     
     // Determine the size of the coordinates ignoring the indicator byte '04'
     var length = uncompressedPoint.length - 1;
@@ -99,19 +125,6 @@ function decodeUncompressedECPoint(uncompressedPoint) {
 
 
 
-/*
- * Define a generator object for CV certificates
- */
-// Constructor
-function EAC2CVCertificateGenerator(crypto) {
-	this.crypto = crypto;
-}
-
-
-EAC2CVCertificateGenerator.prototype.reset = function() {
-}
-
-
 /**
  * Set the profile identifier
  *
@@ -122,44 +135,75 @@ EAC2CVCertificateGenerator.prototype.setProfileIdentifier = function(profileID) 
 }
 
 
+
 /**
  * Set the certification authority reference
  *
  * @param {String} CAR the CAR value
+ * @param {ByteString} CAR the CAR value
+ * @param {PublicKeyReference} CAR the CAR value
  */
 EAC2CVCertificateGenerator.prototype.setCAR = function(CAR) {
-	this.CAR = CAR;
+	if (CAR instanceof ByteString) {
+		this.CAR = CAR;
+	} else if (CAR instanceof PublicKeyReference) {
+		this.CAR = CAR.getBytes();
+	} else {
+		this.CAR = new ByteString(CAR.toString(), ASCII);
+	}
 }
+
 
 
 /**
  * Set the certificate holder reference
  *
  * @param {String} CHR the CHR value
+ * @param {ByteString} CHR the CHR value
+ * @param {PublicKeyReference} CHR the CHR value
  */
 EAC2CVCertificateGenerator.prototype.setCHR = function(CHR) {
-	this.CHR = CHR;
+	if (CHR instanceof ByteString) {
+		this.CHR = CHR;
+	} else if (CHR instanceof PublicKeyReference) {
+		this.CHR = CHR.getBytes();
+	} else {
+		this.CHR = new ByteString(CHR.toString(), ASCII);
+	}
 }
+
 
 
 /**
  * Set the effective date
  *
- * @param {String} effectiveDate the effective date
+ * @param {String} effectiveDate the effective date in the format YYMMDD
+ * @param {Date} effectiveDate the effective date as Date object
  */
 EAC2CVCertificateGenerator.prototype.setEffectiveDate = function(effectiveDate) {
-	this.effectiveDate = effectiveDate;
+	if (effectiveDate instanceof Date) {
+		this.effectiveDate = EAC2CVCertificateGenerator.dtos(effectiveDate);
+	} else {
+		this.effectiveDate = effectiveDate;
+	}
 }
+
 
 
 /**
  * Set the expiry date
  *
- * @param {String} expiryDate the expiry date
+ * @param {String} expiryDate the expiry date in the format YYMMDD
+ * @param {Date} expiryDate the expiry date as Date object
  */
 EAC2CVCertificateGenerator.prototype.setExpiryDate = function(expiryDate) {
-	this.expiryDate = expiryDate;
+	if (expiryDate instanceof Date) {
+		this.effectiveDate = EAC2CVCertificateGenerator.dtos(expiryDate);
+	} else {
+		this.expiryDate = expiryDate;
+	}
 }
+
 
 
 /**
@@ -172,6 +216,7 @@ EAC2CVCertificateGenerator.prototype.setChatOID = function(oid) {
 }
 
 
+
 /**
  * Set the authorization level of the authorization template for the generated certificate
  *
@@ -180,6 +225,7 @@ EAC2CVCertificateGenerator.prototype.setChatOID = function(oid) {
 EAC2CVCertificateGenerator.prototype.setChatAuthorizationLevel = function(authLevel) {
 	this.chatAuthorizationLevel = authLevel;
 }
+
 
 
 /**
@@ -192,6 +238,7 @@ EAC2CVCertificateGenerator.prototype.setTAAlgorithmIdentifier = function(oid) {
 }
 
 
+
 /**
  * Set some additional extensions 
  *
@@ -200,6 +247,18 @@ EAC2CVCertificateGenerator.prototype.setTAAlgorithmIdentifier = function(oid) {
 EAC2CVCertificateGenerator.prototype.setExtensions = function(extensions) {
 	this.extensions = extensions;
 }
+
+
+
+/**
+ * Set the public key to be included in the certificate
+ *
+ * @param {Key} publicKey the public key object to be certified
+ */
+EAC2CVCertificateGenerator.prototype.setPublicKey = function(publicKey) {
+	this.publicKey = publicKey;
+}
+
 
 
 /**
@@ -212,28 +271,40 @@ EAC2CVCertificateGenerator.prototype.setIncludeDomainParameters = function(value
 }
 
 
-// Internal functions for the generation of a certificate
 
+/**
+ * Internal functions for the generation of a certificate
+ * @private
+ */
 EAC2CVCertificateGenerator.prototype.getCAR = function() {
-    var t = new ASN1("Certification Authority Reference", 0x42, new ByteString(this.CAR, ASCII));
-    return t;
-}
-
-
-EAC2CVCertificateGenerator.prototype.getCHR = function() {
-		
-	var t = new ASN1("Certification Holder Reference", 0x5F20, new ByteString(this.CHR, ASCII));
+	var t = new ASN1("Certification Authority Reference", 0x42, this.CAR);
 	return t;
 }
 
 
-function convertDate(date) {
+
+/**
+ * Internal functions for the generation of a certificate
+ * @private
+ */
+EAC2CVCertificateGenerator.prototype.getCHR = function() {
+	var t = new ASN1("Certification Holder Reference", 0x5F20, this.CHR);
+	return t;
+}
+
+
+
+/**
+ * Internal functions for the generation of a certificate
+ * @private
+ */
+EAC2CVCertificateGenerator.convertDate = function(date) {
 
 	var temp = new ByteString(date, ASCII);
 	var bb = new ByteBuffer();
 	var singleByte;
 	
-	for (i=0; i < temp.length; i++) {
+	for (var i = 0; i < temp.length; i++) {
 		bb.append(temp.byteAt(i) - 0x30);
 	}
 	
@@ -241,29 +312,47 @@ function convertDate(date) {
 }
 
 
+
+/**
+ * Internal functions for the generation of a certificate
+ * @private
+ */
 EAC2CVCertificateGenerator.prototype.getEffectiveDate = function() {
-    var t = new ASN1("Certificate Effective Date", 0x5F25, convertDate(this.effectiveDate));
-    return t;
+	var t = new ASN1("Certificate Effective Date", 0x5F25, 
+			EAC2CVCertificateGenerator.convertDate(this.effectiveDate));
+	return t;
 }
 
 
+
+/**
+ * Internal functions for the generation of a certificate
+ * @private
+ */
 EAC2CVCertificateGenerator.prototype.getExpiryDate = function() {
-    var t = new ASN1("Certificate Expiration Date", 0x5F24, convertDate(this.expiryDate));
-    return t;
+	var t = new ASN1("Certificate Expiration Date", 0x5F24, 
+			EAC2CVCertificateGenerator.convertDate(this.expiryDate));
+	return t;
 }
 
 
+
+/**
+ * Internal functions for the generation of a certificate
+ * @private
+ */
 EAC2CVCertificateGenerator.prototype.getCHAT = function() {
-    var t = new ASN1("Certificate Holder Authorization Template", 0x7F4C);
-    
-    var oid = new ASN1("Object Identifier", ASN1.OBJECT_IDENTIFIER, this.chatOID);
-    var authLevel = new ASN1("Authorization Level", 0x53, this.chatAuthorizationLevel);
-    
-    t.add(oid);
-    t.add(authLevel);
-    
-    return t;
+	var t = new ASN1("Certificate Holder Authorization Template", 0x7F4C);
+
+	var oid = new ASN1("Object Identifier", ASN1.OBJECT_IDENTIFIER, this.chatOID);
+	var authLevel = new ASN1("Authorization Level", 0x53, this.chatAuthorizationLevel);
+
+	t.add(oid);
+	t.add(authLevel);
+
+	return t;
 }
+
 
 
 /**
@@ -281,38 +370,48 @@ EAC2CVCertificateGenerator.prototype.stripLeadingZeros = function(value) {
 }
 
 
+
+/**
+ * Internal functions for the generation of a certificate
+ * @private
+ */
 EAC2CVCertificateGenerator.prototype.getPublicKey = function() {
 
 	var t = new ASN1("Public Key", 0x7F49);
-    	
-    // Create empty public key object- this is just used to extract the domain parameters
-    var key = new Key();
-    key.setType(Key.PUBLIC);
+	
+	// Create empty public key object- this is just used to extract the domain parameters
+	var key = new Key();
+	key.setType(Key.PUBLIC);
 	key.setComponent(Key.ECC_CURVE_OID, this.publicKey.getComponent(Key.ECC_CURVE_OID)); 
-    
-    t.add(new ASN1("Object Identifier", 0x06, this.taOID));
-    
-    if (this.includeDomainParameters == true) {
-    
-    	t.add(new ASN1("Prime Modulus", 0x81, key.getComponent(Key.ECC_P)));
-    	t.add(new ASN1("First coefficient a", 0x82, key.getComponent(Key.ECC_A)));
-    	t.add(new ASN1("Second coefficient b", 0x83, key.getComponent(Key.ECC_B)));
-    
-    	t.add(new ASN1("Base Point G", 0x84, encodeUncompressedECPoint(key.getComponent(Key.ECC_GX), key.getComponent(Key.ECC_GY))));
-    
-    	t.add(new ASN1("Order of the base point", 0x85, key.getComponent(Key.ECC_N)));
-    }
-    
-    t.add(new ASN1("Public Point y", 0x86, encodeUncompressedECPoint(this.publicKey.getComponent(Key.ECC_QX), this.publicKey.getComponent(Key.ECC_QY))));
-    
-    if (this.includeDomainParameters == true) {
-    	t.add(new ASN1("Cofactor f", 0x87, this.stripLeadingZeros(key.getComponent(Key.ECC_H))));
-    }
-        
-    return t;
+
+	t.add(new ASN1("Object Identifier", 0x06, this.taOID));
+
+	if (this.includeDomainParameters == true) {
+
+		t.add(new ASN1("Prime Modulus", 0x81, key.getComponent(Key.ECC_P)));
+		t.add(new ASN1("First coefficient a", 0x82, key.getComponent(Key.ECC_A)));
+		t.add(new ASN1("Second coefficient b", 0x83, key.getComponent(Key.ECC_B)));
+
+		t.add(new ASN1("Base Point G", 0x84, EAC2CVCertificateGenerator.encodeUncompressedECPoint(key.getComponent(Key.ECC_GX), key.getComponent(Key.ECC_GY))));
+
+		t.add(new ASN1("Order of the base point", 0x85, key.getComponent(Key.ECC_N)));
+	}
+
+	t.add(new ASN1("Public Point y", 0x86, EAC2CVCertificateGenerator.encodeUncompressedECPoint(this.publicKey.getComponent(Key.ECC_QX), this.publicKey.getComponent(Key.ECC_QY))));
+
+	if (this.includeDomainParameters == true) {
+		t.add(new ASN1("Cofactor f", 0x87, this.stripLeadingZeros(key.getComponent(Key.ECC_H))));
+	}
+
+	return t;
 }
 
 
+
+/**
+ * Internal functions for the generation of a certificate
+ * @private
+ */
 EAC2CVCertificateGenerator.prototype.getProfileIdentifier = function() {
 
 	var bb = new ByteBuffer();
@@ -323,45 +422,59 @@ EAC2CVCertificateGenerator.prototype.getProfileIdentifier = function() {
 }
 
 
+
+/**
+ * Internal functions for the generation of a certificate
+ * @private
+ */
 EAC2CVCertificateGenerator.prototype.getExtensions = function() {
-    var t = new ASN1("Certificate Extensions", 0x65);
-    for (var i = 0; i < this.extensions.length; i++)
-    	t.add(this.extensions[i]);
-    return t;
+	var t = new ASN1("Certificate Extensions", 0x65);
+	for (var i = 0; i < this.extensions.length; i++)
+		t.add(this.extensions[i]);
+	return t;
 }
 
 
+
+/**
+ * Internal functions for the generation of a certificate
+ * @private
+ */
 EAC2CVCertificateGenerator.prototype.getCertificateBody = function() {
 	
-    var t = new ASN1("Certificate Body", 0x7F4E);
-    
-    t.add(this.getProfileIdentifier());
-    
-    t.add(this.getCAR());
-    
-    t.add(this.getPublicKey());
-    
-    t.add(this.getCHR());
-    
-    t.add(this.getCHAT());
-    
-    t.add(this.getEffectiveDate());
-    
-    t.add(this.getExpiryDate());
-    
-    if (this.extensions) {
-        t.add(this.getExtensions());
+	var t = new ASN1("Certificate Body", 0x7F4E);
+
+	t.add(this.getProfileIdentifier());
+
+	t.add(this.getCAR());
+
+	t.add(this.getPublicKey());
+
+	t.add(this.getCHR());
+
+	t.add(this.getCHAT());
+
+	t.add(this.getEffectiveDate());
+
+	t.add(this.getExpiryDate());
+
+	if (this.extensions) {
+		t.add(this.getExtensions());
 	}
 	
-    return t;
+	return t;
 }
 
 
-EAC2CVCertificateGenerator.prototype.setPublicKey = function(publicKey) {
-	this.publicKey = publicKey;
-}
 
-
+/**
+ * Generate a certificate based on the parameter set using the setter methods.
+ *
+ * @param {Key} signingKey the key to be used for signing the certificate
+ * @param {Number} mech the mechanims to be used for signing the certificate (Crypto.ECDSA*)
+ * @return the CVC certificate
+ * @type CVC
+ */
 EAC2CVCertificateGenerator.prototype.generateCVCertificate = function(signingKey) {
 	
 	var certificate = new ASN1("CV Certificate", 0x7F21);
@@ -371,11 +484,9 @@ EAC2CVCertificateGenerator.prototype.generateCVCertificate = function(signingKey
 	var signature = this.crypto.sign(signingKey, Crypto.ECDSA_SHA256, body.getBytes());
 	var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature));
 	
-    certificate.add(body);
-    	
+	certificate.add(body);
+
 	certificate.add(signatureValue);
 	
-	// assert(crypto.verify(this.publicKey, Crypto.ECDSA_SHA256, body.getBytes(), signature));
-		
-    return certificate.getBytes();
+	return new CVC(certificate);
 }

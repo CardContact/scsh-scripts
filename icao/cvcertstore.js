@@ -21,19 +21,23 @@
  *  along with OpenSCDP; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  * 
- * @fileoverview Support for card verifiable certificates according to EAC 2.0
+ * @fileoverview Support for a card verifiable certificates store according to EAC 1.1/2.0
  */
  
 
 
 
 load("pkcs8.js");
+load("cvc.js");
 
 
 
 /**
- * Create a object to access a certificate store
+ * Create an object to access a certificate store.
  *
+ * @class Class that abstracts a certificate and key store for a EAC PKI.
+ *
+ * @constructor
  * @param {String} path the root of the certificate store
  */
 function CVCertificateStore(path) {
@@ -74,6 +78,11 @@ CVCertificateStore.loadBinaryFile = function(filename) {
 
 
 /**
+ * Returns the current terminal certificate for a given CVCA reference.
+ *
+ * @param {PublicKeyReference} cvcaref the public key reference (CHR) of the root CA.
+ * @return the current terminal CVC
+ * @type CVC
  */
 CVCertificateStore.prototype.getTerminalCertificateFor = function(cvcaref) {
 	var fn = this.path + "/" + cvcaref.getHolder() + "/terminal/current.cvcert";
@@ -87,6 +96,14 @@ CVCertificateStore.prototype.getTerminalCertificateFor = function(cvcaref) {
 
 
 
+/**
+ * Returns the document verifier certificate for a given CVCA and DV reference.
+ *
+ * @param {PublicKeyReference} cvcaref the public key reference (CHR) of the CVCA.
+ * @param {PublicKeyReference} dvcaref the public key reference (CHR) of the DV.
+ * @return the document verifier CVC
+ * @type CVC
+ */
 CVCertificateStore.prototype.getDVCACertificateFor = function(cvcaref, dvcaref) {
 	var fn = this.path + "/" + cvcaref.getHolder() + "/" + dvcaref.getHolder() + "/" + dvcaref.toString() + ".cvcert";
 	
@@ -99,6 +116,14 @@ CVCertificateStore.prototype.getDVCACertificateFor = function(cvcaref, dvcaref) 
 
 
 
+/**
+ * Returns the country verifying certification authority's certificate for a given CVCA reference.
+ *
+ * @param {PublicKeyReference} cvcaref the public key reference (CHR) of the CVCA.
+ * @param {PublicKeyReference} dvcaref the public key reference (CHR) of the DV.
+ * @return the country verifying certification authority's certificate
+ * @type CVC
+ */
 CVCertificateStore.prototype.getCVCACertificateFor = function(cvcaref) {
 	var fn = this.path + "/" + cvcaref.getHolder() + "/" + cvcaref.toString() + ".cvcert";
 	
@@ -111,6 +136,15 @@ CVCertificateStore.prototype.getCVCACertificateFor = function(cvcaref) {
 
 
 
+/**
+ * Returns a certificate chain for the current terminal certificate up to, but not including the 
+ * the CVCA certificated referenced.
+ *
+ * @param {PublicKeyReference} cvcaref the public key reference (CHR) of the CVCA.
+ * @return the list of certificates starting with optional CVCA link certificates, the DV certificate and
+ *         the terminal certificate
+ * @type CVC[]
+ */
 CVCertificateStore.prototype.getCertificateChainFor = function(cvcaref) {
 	var chain = new Array();
 	
@@ -131,11 +165,18 @@ CVCertificateStore.prototype.getCertificateChainFor = function(cvcaref) {
 		var ref = cvcacert.getCAR();
 	}
 
-	return(chain);
+	return(chain.reverse());
 }
 
 
 
+/**
+ * Return the current terminal key for a PKI identified by the CVCA reference
+ *
+ * @param {PublicKeyReference} cvcaref the public key reference (CHR) of the CVCA.
+ * @return the private key
+ * @type Key
+ */
 CVCertificateStore.prototype.getTerminalKeyFor = function(cvcaref) {
 	var fn = this.path + "/" + cvcaref.getHolder() + "/terminal/current.pkcs8";
 	
@@ -149,6 +190,9 @@ CVCertificateStore.prototype.getTerminalKeyFor = function(cvcaref) {
 CVCertificateStore.testPath = GPSystem.mapFilename("cvc", GPSystem.CWD);
 
 
+/**
+ * Simple self-test
+ */
 CVCertificateStore.test = function() {
 	var ss = new CVCertificateStore(CVCertificateStore.testPath);
 	
@@ -166,164 +210,3 @@ CVCertificateStore.test = function() {
 		print(cvcchain[i]);
 	}
 }
-
-
-
-function CVC() {
-	if (arguments.length > 0) {
-		this.bin = arguments[0];
-		if (this.bin.bytes(0, 2).toString(HEX) != "7F21") {
-			throw new GPError("CVC", GPError.INVALID_DATA, 0, "Data does not seem to be CV certificate");
-		}
-		this.asn = new ASN1(this.bin);
-	}
-}
-
-
-
-CVC.prototype.getCAR = function() {
-	var cardo = this.asn.get(0).find(CVC.TAG_CAR);
-	
-	if (!cardo) {
-		throw new GPError("CVC", GPError.OBJECT_NOT_FOUND, 0, "Certificate does not contain a CAR");
-	}
-	
-	return new PublicKeyReference(cardo.value);
-}
-
-
-
-CVC.prototype.getCHR = function() {
-	var chrdo = this.asn.get(0).find(CVC.TAG_CHR);
-	
-	if (!chrdo) {
-		throw new GPError("CVC", GPError.OBJECT_NOT_FOUND, 0, "Certificate does not contain a CHR");
-	}
-	
-	return new PublicKeyReference(chrdo.value);
-}
-
-
-
-CVC.prototype.getExtension = function(extoid) {
-	var extdo = this.asn.get(0).find(CVC.TAG_EXTN);
-	
-	if (!extdo) {
-		throw new GPError("CVC", GPError.OBJECT_NOT_FOUND, 0, "Certificate does not contain an extension");
-	}
-
-//	print(extdo);
-	
-	for (var i = 0; i < extdo.length; i++) {
-		var ext = extdo.get(i);
-		var oid = ext.get(0);
-		assert(oid.tag == ASN1.OBJECT_IDENTIFIER);
-		if (oid.value.equals(extoid)) {
-			return ext;
-		}
-	}
-	return null;
-}
-
-
-
-CVC.prototype.getBytes = function() {
-	return this.bin;
-}
-
-
-
-CVC.prototype.toString = function() {
-	var str = "CVC CAR=" + this.getCAR().toString() + " CHR=" + this.getCHR().toString();
-	return str;
-}
-
-
-
-CVC.TAG_CPI = 0x5F29;
-CVC.TAG_CAR = 0x42;
-CVC.TAG_CHR = 0x5F20;
-CVC.TAG_EXTN = 0x65;
-
-
-
-/**
- * Create a public key reference (CAR/CHR) from binary representation or individual fields
- */
-function PublicKeyReference() {
-	if (arguments.length > 0) {
-		if (arguments.length == 1) {
-			if (typeof(arguments[0]) == "string") {
-				this.bin = new ByteString(arguments[0], ASCII);
-			} else {
-				this.bin = arguments[0];
-			}
-		} else {
-			var cc = arguments[0];
-			var mn = arguments[1];
-			var sq = arguments[2];
-			this.bin = new ByteString(cc + mn + sq, ASCII);
-		}
-	}
-}
-
-
-
-PublicKeyReference.prototype.getCountryCode = function() {
-	return this.bin.bytes(0, 2).toString(ASCII);
-}
-
-
-
-PublicKeyReference.prototype.getMnemonic = function() {
-	return this.bin.bytes(2, this.bin.length - 7).toString(ASCII);
-}
-
-
-
-PublicKeyReference.prototype.getSequenceNo = function() {
-	return this.bin.bytes(this.bin.length - 5, 5).toString(ASCII);
-}
-
-
-
-PublicKeyReference.prototype.getHolder = function() {
-	return this.getCountryCode() + this.getMnemonic();
-}
-
-
-
-PublicKeyReference.prototype.getBytes = function() {
-	return this.bin;
-}
-
-
-
-PublicKeyReference.prototype.toString = function() {
-	return this.bin.toString(ASCII);
-}
-
-
-
-PublicKeyReference.test = function() {
-	var p = new PublicKeyReference(new ByteString("UTABCDF0000", ASCII));
-	assert(p.getCountryCode() == "UT");
-	assert(p.getMnemonic() == "ABCD");
-	assert(p.getSequenceNo() == "F0000");
-	assert(p.getHolder() == "UTABCD");
-	
-	var p = new PublicKeyReference("UT", "ABCD", "F0000");
-	assert(p.getCountryCode() == "UT");
-	assert(p.getMnemonic() == "ABCD");
-	assert(p.getSequenceNo() == "F0000");
-	assert(p.getHolder() == "UTABCD");
-	
-	var p = new PublicKeyReference("UTABCDF0000");
-	assert(p.getCountryCode() == "UT");
-	assert(p.getMnemonic() == "ABCD");
-	assert(p.getSequenceNo() == "F0000");
-	assert(p.getHolder() == "UTABCD");
-	
-	assert(p.getBytes().toString(ASCII) == "UTABCDF0000");
-}
-
