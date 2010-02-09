@@ -34,10 +34,14 @@ load("tools/eccutils.js");
 load("cvc.js");
 
 
-/*
+/**
  * Define a generator object for CV certificates
+ * 
+ * @class Class implementing a generator for CV certificates according to EAC 1.1 and EAC 2.0 specifications.
+ * 
+ * @constructor
+ * @param {Crypto} crypto the crypto provider to be used
  */
-// Constructor
 function EAC2CVCertificateGenerator(crypto) {
 	this.crypto = crypto;
 }
@@ -53,16 +57,39 @@ function EAC2CVCertificateGenerator(crypto) {
  * @type ByteString
  */
 EAC2CVCertificateGenerator.encodeUncompressedECPoint = function(x,y) {
-    
-    bb = new ByteBuffer();
-    
-    // uncompressed encoding
-    bb.append(new ByteString("04", HEX));
-    bb.append(new ByteString(x, HEX));
-    bb.append(new ByteString(y, HEX));
-    
-    return bb.toByteString();
+
+	bb = new ByteBuffer();
+
+	// uncompressed encoding
+	bb.append(new ByteString("04", HEX));
+	bb.append(new ByteString(x, HEX));
+	bb.append(new ByteString(y, HEX));
+
+	return bb.toByteString();
 }
+
+
+
+/**
+ * Decode x/y coordinates from uncompressed format
+ *
+ * @param {ByteString} uncompressedPoint the uncompressed point
+ * @return the x-/y-coordinate of the point
+ * @type ByteString
+ */
+
+EAC2CVCertificateGenerator.decodeUncompressedECPoint = function(uncompressedPoint) {
+	
+	// Determine the size of the coordinates ignoring the indicator byte '04'
+	var length = uncompressedPoint.length - 1;
+
+	var sizeOfCoordinate = length / 2;
+
+	var xValue = uncompressedPoint.bytes(1, sizeOfCoordinate);
+	var yValue = uncompressedPoint.bytes(1 + sizeOfCoordinate, sizeOfCoordinate);
+
+	return { x:xValue, y:yValue };
+} 
 
 
 
@@ -99,29 +126,6 @@ EAC2CVCertificateGenerator.dtos = function(d) {
 			EAC2CVCertificateGenerator.itos(d.getDate(), 2);
 	return s;
 }
-
-
-
-/**
- * Decode x/y coordinates from uncompressed format
- *
- * @param {ByteString} uncompressedPoint the uncompressed point
- * @return the x-/y-coordinate of the point
- * @type ByteString
- */
-
-EAC2CVCertificateGenerator.decodeUncompressedECPoint = function(uncompressedPoint) {
-    
-    // Determine the size of the coordinates ignoring the indicator byte '04'
-    var length = uncompressedPoint.length - 1;
-    
-    var sizeOfCoordinate = length / 2;
-    
-    var xValue = uncompressedPoint.bytes(1, sizeOfCoordinate);
-    var yValue = uncompressedPoint.bytes(1 + sizeOfCoordinate, sizeOfCoordinate);
-    
-    return { x:xValue, y:yValue };
-} 
 
 
 
@@ -198,7 +202,7 @@ EAC2CVCertificateGenerator.prototype.setEffectiveDate = function(effectiveDate) 
  */
 EAC2CVCertificateGenerator.prototype.setExpiryDate = function(expiryDate) {
 	if (expiryDate instanceof Date) {
-		this.effectiveDate = EAC2CVCertificateGenerator.dtos(expiryDate);
+		this.expiryDate = EAC2CVCertificateGenerator.dtos(expiryDate);
 	} else {
 		this.expiryDate = expiryDate;
 	}
@@ -379,28 +383,23 @@ EAC2CVCertificateGenerator.prototype.getPublicKey = function() {
 
 	var t = new ASN1("Public Key", 0x7F49);
 	
-	// Create empty public key object- this is just used to extract the domain parameters
-	var key = new Key();
-	key.setType(Key.PUBLIC);
-	key.setComponent(Key.ECC_CURVE_OID, this.publicKey.getComponent(Key.ECC_CURVE_OID)); 
-
 	t.add(new ASN1("Object Identifier", 0x06, this.taOID));
 
 	if (this.includeDomainParameters == true) {
 
-		t.add(new ASN1("Prime Modulus", 0x81, key.getComponent(Key.ECC_P)));
-		t.add(new ASN1("First coefficient a", 0x82, key.getComponent(Key.ECC_A)));
-		t.add(new ASN1("Second coefficient b", 0x83, key.getComponent(Key.ECC_B)));
+		t.add(new ASN1("Prime Modulus", 0x81, this.publicKey.getComponent(Key.ECC_P)));
+		t.add(new ASN1("First coefficient a", 0x82, this.publicKey.getComponent(Key.ECC_A)));
+		t.add(new ASN1("Second coefficient b", 0x83, this.publicKey.getComponent(Key.ECC_B)));
 
-		t.add(new ASN1("Base Point G", 0x84, EAC2CVCertificateGenerator.encodeUncompressedECPoint(key.getComponent(Key.ECC_GX), key.getComponent(Key.ECC_GY))));
+		t.add(new ASN1("Base Point G", 0x84, EAC2CVCertificateGenerator.encodeUncompressedECPoint(this.publicKey.getComponent(Key.ECC_GX), this.publicKey.getComponent(Key.ECC_GY))));
 
-		t.add(new ASN1("Order of the base point", 0x85, key.getComponent(Key.ECC_N)));
+		t.add(new ASN1("Order of the base point", 0x85, this.publicKey.getComponent(Key.ECC_N)));
 	}
 
 	t.add(new ASN1("Public Point y", 0x86, EAC2CVCertificateGenerator.encodeUncompressedECPoint(this.publicKey.getComponent(Key.ECC_QX), this.publicKey.getComponent(Key.ECC_QY))));
 
 	if (this.includeDomainParameters == true) {
-		t.add(new ASN1("Cofactor f", 0x87, this.stripLeadingZeros(key.getComponent(Key.ECC_H))));
+		t.add(new ASN1("Cofactor f", 0x87, this.stripLeadingZeros(this.publicKey.getComponent(Key.ECC_H))));
 	}
 
 	return t;

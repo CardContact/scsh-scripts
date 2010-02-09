@@ -34,7 +34,7 @@ load("publickeyreference.js");
 /**
  * Create a CVC object from a DER encoded ByteString.
  *
- * @class Class implementing a decoder for card verifiable certificates according to 
+ * @class Class implementing a decoder for card verifiable certificates or requests according to 
  *        Extended Access Control (EAC) as defined in BSI TR-03110 1.11 and 2.02.
  * @constructor
  * @param {ByteString} the DER encoded certificate
@@ -48,18 +48,26 @@ function CVC() {
 			this.bin = this.asn.getBytes();
 		} else if (arg instanceof ByteString) {
 			this.bin = arg;
-			if (this.bin.bytes(0, 2).toString(HEX) != "7F21") {
-				throw new GPError("CVC", GPError.INVALID_DATA, 0, "Data does not seem to be CV certificate");
-			}
 			this.asn = new ASN1(this.bin);
 		} else {
 			throw new GPError("CVC", GPError.INVALID_DATA, 0, "Argument must be of type ByteString or ASN1");
+		}
+		if (this.asn.tag == CVC.TAG_AT) {
+			this.body = this.asn.get(0).get(0);
+		} else if (this.asn.tag == CVC.TAG_CVC) {
+			this.body = this.asn.get(0);
+		} else {
+			throw new GPError("CVC", GPError.INVALID_DATA, 0, "Argument is neither a CVC or CVC request");
 		}
 	}
 }
 
 
 
+/** Authentication Template */
+CVC.TAG_AT = 0x67;
+/** CV Certificate */
+CVC.TAG_CVC = 0x7F21;
 /** Certificate Profile Identifier */
 CVC.TAG_CPI = 0x5F29;
 /** Certification Authority Reference */
@@ -84,14 +92,14 @@ CVC.TAG_SIG = 0x5F37;
 /**
  * Returns the certification authority reference (CAR).
  *
- * @return the CAR
+ * @return the CAR or null
  * @type PublicKeyReference
  */
 CVC.prototype.getCAR = function() {
-	var cardo = this.asn.get(0).find(CVC.TAG_CAR);
+	var cardo = this.body.find(CVC.TAG_CAR);
 	
 	if (!cardo) {
-		throw new GPError("CVC", GPError.OBJECT_NOT_FOUND, 0, "Certificate does not contain a CAR");
+		return null
 	}
 	
 	return new PublicKeyReference(cardo.value);
@@ -106,7 +114,7 @@ CVC.prototype.getCAR = function() {
  * @type PublicKeyReference
  */
 CVC.prototype.getCHR = function() {
-	var chrdo = this.asn.get(0).find(CVC.TAG_CHR);
+	var chrdo = this.body.find(CVC.TAG_CHR);
 	
 	if (!chrdo) {
 		throw new GPError("CVC", GPError.OBJECT_NOT_FOUND, 0, "Certificate does not contain a CHR");
@@ -118,13 +126,61 @@ CVC.prototype.getCHR = function() {
 
 
 /**
+ * Returns the certificate effective date (CED).
+ *
+ * @return the CED or null
+ * @type Date
+ */
+CVC.prototype.getCED = function() {
+	var ceddo = this.body.find(CVC.TAG_CED);
+	
+	if (!ceddo) {
+		return null
+	}
+	
+	var b = ceddo.value;
+	
+	var d = new Date();
+	d.setFullYear(b.byteAt(0) * 10 + b.byteAt(1) + 2000, 
+				  b.byteAt(2) * 10 + b.byteAt(3) - 1,
+				  b.byteAt(4) * 10 + b.byteAt(5));
+	return d;
+}
+
+
+
+/**
+ * Returns the certificate expiration date (CXD).
+ *
+ * @return the CXD or null
+ * @type Date
+ */
+CVC.prototype.getCXD = function() {
+	var cxddo = this.body.find(CVC.TAG_CXD);
+	
+	if (!cxddo) {
+		return null
+	}
+	
+	var b = cxddo.value;
+	
+	var d = new Date();
+	d.setFullYear(b.byteAt(0) * 10 + b.byteAt(1) + 2000, 
+				  b.byteAt(2) * 10 + b.byteAt(3) - 1,
+				  b.byteAt(4) * 10 + b.byteAt(5));
+	return d;
+}
+
+
+
+/**
  * Returns the extension identified by the object identifier.
  *
  * @return the extension including the OID or null if not defined
  * @type ASN1
  */
 CVC.prototype.getExtension = function(extoid) {
-	var extdo = this.asn.get(0).find(CVC.TAG_EXTN);
+	var extdo = this.body.find(CVC.TAG_EXTN);
 	
 	if (!extdo) {
 		throw new GPError("CVC", GPError.OBJECT_NOT_FOUND, 0, "Certificate does not contain an extension");
@@ -141,6 +197,126 @@ CVC.prototype.getExtension = function(extoid) {
 		}
 	}
 	return null;
+}
+
+
+
+/**
+ * Returns the public key contained in the certificate.
+ *
+ * @param {Key} domParam domain parameter if they are not contained in certificate
+ * @return the public key object
+ * @type Key
+ */
+CVC.prototype.getPublicKey = function(domParam) {
+	if (typeof(domParam) != "undefined") {
+		var key = new Key(domParam);
+	} else {
+		var key = new Key();
+	}
+	
+	key.setType(Key.PUBLIC);
+	
+	var pdo = this.body.find(CVC.TAG_PUK);
+	if (pdo == null) {
+		throw new GPError("CVC", GPError.OBJECT_NOT_FOUND, 0, "Certificate does not contain a public key");
+	}
+	
+	var d = pdo.find(0x86);		// Public point
+	if (d == null) {
+		throw new GPError("CVC", GPError.OBJECT_NOT_FOUND, 0, "Certificate does not contain a public key value");
+	}
+
+	var b = d.value.bytes(1);
+	key.setComponent(Key.ECC_QX, b.left(b.length >> 1));
+	key.setComponent(Key.ECC_QY, b.right(b.length >> 1));
+
+	var d = pdo.find(0x81);		// Prime modulus
+	if (d != null) {
+		key.setComponent(Key.ECC_P, d.value);
+	}
+
+	var d = pdo.find(0x82);		// First coefficient a
+	if (d != null) {
+		key.setComponent(Key.ECC_A, d.value);
+	}
+
+	var d = pdo.find(0x83);		// First coefficient b
+	if (d != null) {
+		key.setComponent(Key.ECC_B, d.value);
+	}
+
+	var d = pdo.find(0x84);		// Base Point G
+	if (d != null) {
+		var b = d.value.bytes(1);
+		key.setComponent(Key.ECC_GX, b.left(b.length >> 1));
+		key.setComponent(Key.ECC_GY, b.right(b.length >> 1));
+	}
+
+	var d = pdo.find(0x85);		// Order of the base point
+	if (d != null) {
+		key.setComponent(Key.ECC_N, d.value);
+	}
+
+	var d = pdo.find(0x87);		// Cofactor f
+	if (d != null) {
+		key.setComponent(Key.ECC_H, d.value);
+	}
+	
+	return key;
+}
+
+
+
+/**
+ * Determine if this is an authenticated request
+ *
+ * @returns true, if authenticated request
+ * @type Boolean
+ */
+CVC.prototype.isAuthenticatedRequest = function() {
+	return (this.asn.tag == CVC.TAG_AT);
+}
+
+
+
+/**
+ * Verify certificate signature with public key
+ *
+ * @param {Key} puk the public key
+ * @returns true if the signature is valid
+ * @type Boolean
+ */
+CVC.prototype.verifyWith = function(crypto, puk) {
+	if (this.asn.tag == CVC.TAG_AT) {
+		var signature = this.asn.get(0).get(1);
+	} else {
+		var signature = this.asn.get(1);
+	}
+	
+	var signatureValue = ECCUtils.wrapSignature(signature.value);
+	return crypto.verify(puk, Crypto.ECDSA_SHA256, this.body.getBytes(), signatureValue);
+}
+
+
+
+/**
+ * Verify outer signature of an authenticated request with public key
+ *
+ * @param {Key} puk the public key
+ * @returns true if the signature is valid
+ * @type Boolean
+ */
+CVC.prototype.verifyATWith = function(crypto, puk) {
+	if (!this.isAuthenticatedRequest()) {
+		throw new GPError("CVC", GPError.INVALID_DATA, 0, "Not an authenticated request");
+	}
+	
+	var signature = this.asn.get(2);
+	var signatureInput = this.asn.get(0).getBytes().concat(this.asn.get(1).getBytes());
+	
+	var signatureValue = ECCUtils.wrapSignature(signature.value);
+	return crypto.verify(puk, Crypto.ECDSA_SHA256, signatureInput, signatureValue);
 }
 
 
@@ -173,7 +349,33 @@ CVC.prototype.getASN1 = function() {
  * Return a textual description of the certificate
  */
 CVC.prototype.toString = function() {
-	var str = "CVC CAR=" + this.getCAR().toString() + " CHR=" + this.getCHR().toString();
+	var car = this.getCAR();
+	var ced = this.getCED();
+	
+	var str = "CVC ";
+	if (ced == null) {
+		if (this.asn.tag == CVC.TAG_AT) {
+			str = "AT-CVREQ ";
+		} else {
+			str = "CVREQ ";
+		}
+	}
+	
+	if (car) {
+		str += "CAR=" + car.toString() + " ";
+	}
+
+	str += "CHR=" + this.getCHR().toString() + " ";
+	
+	if (ced) {
+		str += "CED=" + ced.toLocaleDateString() + " ";
+	}
+
+	var cxd = this.getCXD();
+	if (cxd) {
+		str += "CXD=" + cxd.toLocaleDateString() + " ";
+	}
+
 	return str;
 }
 

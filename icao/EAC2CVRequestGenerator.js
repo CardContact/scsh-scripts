@@ -29,14 +29,17 @@
  */
 
 load("tools/eccutils.js");
+load("cvc.js");
 
 
 /**
  * Constructor for request generator
  *
+ * @class Class implementing a generator for CVC requests
+ * 
+ * @constructor
  * @param {Crypto} Crypto object to use
  *
- * @constructor
  */
 function EAC2CVRequestGenerator(crypto) {
 	this.crypto = crypto;
@@ -102,7 +105,13 @@ EAC2CVRequestGenerator.prototype.setPublicKey = function(publicKey) {
  * @param {String} chr CHR for the request
  */
 EAC2CVRequestGenerator.prototype.setCHR = function(chr) {
-	this.CHR = chr;
+	if (chr instanceof ByteString) {
+		this.CHR = chr;
+	} else if (chr instanceof PublicKeyReference) {
+		this.CHR = chr.getBytes();
+	} else {
+		this.CHR = new ByteString(chr.toString(), ASCII);
+	}
 }
 
 
@@ -137,7 +146,13 @@ EAC2CVRequestGenerator.prototype.setProfileIdentifier = function(profileID) {
  * @param {String} car CAR for the request
  */
 EAC2CVRequestGenerator.prototype.setCAR = function(car) {
-	this.CAR = car;
+	if (car instanceof ByteString) {
+		this.CAR = car;
+	} else if (car instanceof PublicKeyReference) {
+		this.CAR = car.getBytes();
+	} else {
+		this.CAR = new ByteString(car.toString(), ASCII);
+	}
 }
 
 
@@ -170,8 +185,8 @@ EAC2CVRequestGenerator.prototype.setTAAlgorithmIdentifier = function(oid) {
  * @private
  */
 EAC2CVRequestGenerator.prototype.getCAR = function() {
-    var t = new ASN1("Certification Authority Reference", 0x42, new ByteString(this.CAR, ASCII));
-    return t;
+	var t = new ASN1("Certification Authority Reference", 0x42, this.CAR);
+	return t;
 }
 
 
@@ -182,7 +197,7 @@ EAC2CVRequestGenerator.prototype.getCAR = function() {
  * @private
  */
 EAC2CVRequestGenerator.prototype.getCHR = function() {
-	var t = new ASN1("Certification Holder Reference", 0x5F20, new ByteString(this.CHR, ASCII));
+	var t = new ASN1("Certification Holder Reference", 0x5F20, this.CHR);
 	return t;
 }
 
@@ -196,24 +211,19 @@ EAC2CVRequestGenerator.prototype.getCHR = function() {
 EAC2CVRequestGenerator.prototype.getPublicKey = function() {
 
 	var t = new ASN1("Public Key", 0x7F49);
-    	
-    // Create empty public key object - this is just used to extract the domain parameters
-    var key = new Key();
-    key.setType(Key.PUBLIC);
-	key.setComponent(Key.ECC_CURVE_OID, this.publicKey.getComponent(Key.ECC_CURVE_OID)); 
-    
-    t.add(new ASN1("Object Identifier", 0x06, this.taOID));
-    t.add(new ASN1("Prime Modulus", 0x81, key.getComponent(Key.ECC_P)));
-    t.add(new ASN1("First coefficient a", 0x82, key.getComponent(Key.ECC_A)));
-    t.add(new ASN1("Second coefficient b", 0x83, key.getComponent(Key.ECC_B)));
-    t.add(new ASN1("Base Point G", 0x84, EAC2CVRequestGenerator.encodeUncompressedECPoint(key.getComponent(Key.ECC_GX), key.getComponent(Key.ECC_GY))));
-    t.add(new ASN1("Order of the base point", 0x85, key.getComponent(Key.ECC_N)));
-    
-    t.add(new ASN1("Public Point y", 0x86, EAC2CVRequestGenerator.encodeUncompressedECPoint(this.publicKey.getComponent(Key.ECC_QX), this.publicKey.getComponent(Key.ECC_QY))));
-    
-    t.add(new ASN1("Cofactor f", 0x87, EAC2CVRequestGenerator.stripLeadingZeros(key.getComponent(Key.ECC_H))));
-        
-    return t;
+
+	t.add(new ASN1("Object Identifier", 0x06, this.taOID));
+	t.add(new ASN1("Prime Modulus", 0x81, this.publicKey.getComponent(Key.ECC_P)));
+	t.add(new ASN1("First coefficient a", 0x82, this.publicKey.getComponent(Key.ECC_A)));
+	t.add(new ASN1("Second coefficient b", 0x83, this.publicKey.getComponent(Key.ECC_B)));
+	t.add(new ASN1("Base Point G", 0x84, EAC2CVRequestGenerator.encodeUncompressedECPoint(this.publicKey.getComponent(Key.ECC_GX), this.publicKey.getComponent(Key.ECC_GY))));
+	t.add(new ASN1("Order of the base point", 0x85, this.publicKey.getComponent(Key.ECC_N)));
+
+	t.add(new ASN1("Public Point y", 0x86, EAC2CVRequestGenerator.encodeUncompressedECPoint(this.publicKey.getComponent(Key.ECC_QX), this.publicKey.getComponent(Key.ECC_QY))));
+
+	t.add(new ASN1("Cofactor f", 0x87, EAC2CVRequestGenerator.stripLeadingZeros(this.publicKey.getComponent(Key.ECC_H))));
+
+	return t;
 }
 
 
@@ -239,10 +249,10 @@ EAC2CVRequestGenerator.prototype.getProfileIdentifier = function() {
  * @private
  */
 EAC2CVRequestGenerator.prototype.getExtensions = function() {
-    var t = new ASN1("Certificate Extensions", 0x7F49);
-    for (var i = 0; i < this.extensions.length; i++)
-    	t.add(this.extensions[i]);
-    return t;
+	var t = new ASN1("Certificate Extensions", 0x7F49);
+	for (var i = 0; i < this.extensions.length; i++)
+		t.add(this.extensions[i]);
+	return t;
 }
 
 
@@ -254,20 +264,20 @@ EAC2CVRequestGenerator.prototype.getExtensions = function() {
  */
 EAC2CVRequestGenerator.prototype.getCertificateBody = function() {
 	
-    var t = new ASN1("Certificate Body", 0x7F4E);
-    t.add(this.getProfileIdentifier());
-    
-    if (this.CAR) {
-        t.add(this.getCAR());
-    }
-    
-    t.add(this.getPublicKey());
-    t.add(this.getCHR());
-    
-    if (this.extensions) {
-        t.add(this.getExtensions());
+	var t = new ASN1("Certificate Body", 0x7F4E);
+	t.add(this.getProfileIdentifier());
+	
+	if (this.CAR) {
+		t.add(this.getCAR());
 	}
-    return t;
+
+	t.add(this.getPublicKey());
+	t.add(this.getCHR());
+
+	if (this.extensions) {
+		t.add(this.getExtensions());
+	}
+	return t;
 }
 
 
@@ -283,13 +293,13 @@ EAC2CVRequestGenerator.prototype.generateCVRequest = function(privateKey) {
 	var request = new ASN1("CV Certificate", 0x7F21);
 	
 	var body = this.getCertificateBody();
-    
+
 	request.add(body);
 	
-	var signature = this.crypto.sign(privateKey, Crypto.ECDSA, body.getBytes());
+	var signature = this.crypto.sign(privateKey, Crypto.ECDSA_SHA256, body.getBytes());
 	var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature));
 	
-    request.add(signatureValue);
+	request.add(signatureValue);
 	
 	return request;
 }
@@ -301,7 +311,7 @@ EAC2CVRequestGenerator.prototype.generateCVRequest = function(privateKey) {
  *
  * @param {Key} requestKey Private key for the request signature
  * @param {Key} authenticationKey Private key for used for signing and authenticating the request
- * @param {String} authCHR CHR of the authenticating authority 
+ * @param {PublicKeyReference} authCHR CHR of the authenticating authority 
  *
  * @return The DER-encoded authenticated CV request
  * @type ASN1
@@ -310,18 +320,17 @@ EAC2CVRequestGenerator.prototype.generateAuthenticatedCVRequest = function(reque
 	var authRequest = new ASN1("Authentication", 0x67);
 	
 	var request = this.generateCVRequest(requestKey);
-    
-    var signature = this.crypto.sign(requestKey, Crypto.ECDSA, request.getBytes());
+
+	var chr = new ASN1("Certification Authority Reference", 0x42, authCHR.getBytes());
+
+	var signatureInput = request.getBytes().concat(chr.getBytes());
+	
+	var signature = this.crypto.sign(authenticationKey, Crypto.ECDSA_SHA256, signatureInput);
 	var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature));
 	
-	var chr = new ASN1("Certification Authority Reference", 0x42, new ByteString(authCHR, ASCII));
-	
-	var signature = this.crypto.sign(authenticationKey, Crypto.ECDSA, request.getBytes());
-	var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature));
-	
-    authRequest.add(request);
-    authRequest.add(chr);
-    authRequest.add(signatureValue);
-    
+	authRequest.add(request);
+	authRequest.add(chr);
+	authRequest.add(signatureValue);
+
 	return authRequest;
 }

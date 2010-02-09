@@ -239,6 +239,7 @@ generator.setIncludeDomainParameters(true);
 var priKey = new Key("kp_cvca_ec_private.xml");
 
 var cvc = generator.generateCVCertificate(priKey, Crypto.ECDSA_SHA256);
+print(cvc);
 var certificate = cvc.getBytes();
 
 ///         </example>

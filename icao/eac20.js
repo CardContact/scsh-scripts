@@ -390,7 +390,7 @@ EAC20.prototype.getTrustAnchorCAR = function(previous) {
 
 
 EAC20.prototype.verifyCertificateChain = function(cvcchain) {
-	for (var i = cvcchain.length - 1; i >= 0; i--) {
+	for (var i = 0; i < cvcchain.length; i++) {
 		var cvc = cvcchain[i];
 		
 		var car = cvc.getCAR().getBytes();
@@ -412,7 +412,7 @@ EAC20.prototype.verifyCertificateChain = function(cvcchain) {
 		this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x2A, 0x00, 0xBE, v, [0x9000]);
 	}
 	
-	this.terminalCHR = cvc.getCHR();
+	this.terminalCHR = cvcchain[cvcchain.length - 1].getCHR();
 }
 
 

@@ -3,11 +3,15 @@ load("EAC2CVRequestGenerator.js");
 var CAR = "decvca00000";
 var CHR = "dedvca00001";
 
-var crypto = new Crypto("BC");
+var crypto = new Crypto();
     
-//Create empty private key object
-var priKey = new Key("kp_dvca_ec_private.xml");
-var pubKey = new Key("kp_dvca_ec_public.xml");
+var priKey = new Key();
+var pubKey = new Key();
+priKey.setType(Key.PRIVATE);
+pubKey.setType(Key.PUBLIC);
+priKey.setComponent(Key.ECC_CURVE_OID, new ByteString("brainpoolP256t1", OID));
+pubKey.setComponent(Key.ECC_CURVE_OID, new ByteString("brainpoolP256t1", OID));
+crypto.generateKeyPair(Crypto.EC, pubKey, priKey);
 
 var reqGenerator = new EAC2CVRequestGenerator(crypto);
 
@@ -33,8 +37,13 @@ reqGenerator.setExtensions([ext1, ext2]);
 reqGenerator.setCHR(CHR);
 
 // Generate the request
-var req = reqGenerator.generateAuthenticatedCVRequest(priKey, priKey, "dedvca00000");
-   
+var req = reqGenerator.generateAuthenticatedCVRequest(priKey, priKey, new PublicKeyReference("dedvca00000"));
+var cvreq = new CVC(req);
+print(cvreq);
+
+assert(cvreq.verifyWith(crypto, pubKey));
+assert(cvreq.verifyATWith(crypto, pubKey));
+
 outline = new OutlineNode("CV-Request");
 outline.insert(req);
 outline.show();
