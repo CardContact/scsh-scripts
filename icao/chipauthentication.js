@@ -21,7 +21,8 @@
  *  along with OpenSCDP; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
- * @fileoverview Implementation of the chip authentication for both card and terminal
+ * @fileoverview Implementation of the chip authentication protocol for both card and terminal
+ * as defined for EAC 2.0
  */
 
 

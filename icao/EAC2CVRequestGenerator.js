@@ -1,4 +1,4 @@
-/*
+/**
  *  ---------
  * |.##> <##.|  Open Smart Card Development Platform (www.openscdp.org)
  * |#       #|  

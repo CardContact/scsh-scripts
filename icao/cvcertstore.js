@@ -323,6 +323,12 @@ CVCertificateStore.prototype.storeRequest = function(path, req) {
  * @param {Boolean} makeCurrent true if this certificate become the current certificate
  */
 CVCertificateStore.prototype.storeCertificate = function(path, cert, makeCurrent) {
+	var cfg = this.loadConfig(path);
+	if (cfg == null) {
+		cfg = this.getDefaultConfig(path);
+		this.saveConfig(path, cfg);
+	}
+
 	var chr = cert.getCHR();
 	var fn = this.path + "/" + path + "/" + chr.toString() + ".cvcert";
 	GPSystem.trace("Saving certificate to " + fn);
@@ -335,6 +341,54 @@ CVCertificateStore.prototype.storeCertificate = function(path, cert, makeCurrent
 		cfg.sequence.currentCHR = chr.toString();
 		this.saveConfig(path, cfg);
 	}
+}
+
+
+
+/**
+ * Return certificate for a given CHR
+ *
+ * @param {String} path the relative path of the PKI element (e.g. "UTCVCA1/UTDVCA1")
+ * @param {PublicKeyReference} chr the public key reference for the certificate
+ * @returns the certificate or null if not found
+ * @type CVC
+ */
+CVCertificateStore.prototype.getCertificate = function(path, chr) {
+	var fn = this.path + "/" + path + "/" + chr.toString() + ".cvcert";
+	var cvc = null;
+	try	{
+		var bin = CVCertificateStore.loadBinaryFile(fn);
+		cvc = new CVC(bin);
+	}
+	catch (e) {
+		GPSystem.trace(e);
+	}
+	return cvc;
+}
+
+
+
+/**
+ * List certificates stored for given PKI element
+ *
+ * @param {String} path the relative path of the PKI element (e.g. "UTCVCA1/UTDVCA1")
+ */
+CVCertificateStore.prototype.listCertificates = function(path) {
+	var fn = this.path + "/" + path;
+	var f = new java.io.File(fn);
+	var files = f.list();
+	var result = [];
+	
+	for (var i = 0; i < files.length; i++) {
+		var s = new String(files[i]);
+		var n = s.match(/\.(cvcert|CVCERT)$/);
+		if (n) {
+			var bin = CVCertificateStore.loadBinaryFile(fn + "/" + s);
+			var cvc = new CVC(bin);
+			result.push(cvc);
+		}
+	}
+	return result;
 }
 
 
@@ -400,6 +454,115 @@ CVCertificateStore.prototype.getCHRForSequenceNumber = function(path, sequence) 
 	str = "0000".substr(4 - (5 - str.length)).concat(str);
 	return new PublicKeyReference(l + str);
 
+}
+
+
+
+/**
+ * Insert certificates into certificate store
+ *
+ * <p>The import into the internal data structure is done in three steps:</p>
+ * <ol>
+ *  <li>If allowed, all self-signed certificates are imported</li>
+ *  <li>All certificates issued by root CAs are imported</li>
+ *  <li>All other certificates issued by subordinate CAs are imported</li>
+ * </ol>
+ * <p>Certificates at the terminal level can only be imported, if the issuing
+ *    DVCA certificate is contained in the list. Even if a DVCA certificate
+ *    is already stored, the import of such a certificate will be skipped if the
+ *    DVCA certificate is not part of the imported list.</p>
+ * <p>Before a certificate is imported, the signature is verified.</p>
+ *
+ * @param {Crypto} crypto the crypto provider to be used for certificate verification
+ * @param {CVC[]} certlist the unordered list of certificates
+ * @param {Boolean} insertSelfSigned true, if the import of root certificates is allowed
+ * @returns the (ideally empty) list of unprocessed certificates. This does not contains certificates
+ *          that fail signature verification.
+ * @type CVC[]
+ */
+CVCertificateStore.prototype.insertCertificates = function(crypto, certlist, insertSelfSigned) {
+	
+	if (insertSelfSigned) {		// Process self-signed certificates
+		var unprocessed = [];
+		for (var i = 0; i < certlist.length; i++) {
+			var cvc = certlist[i];
+
+			if (cvc.getCHR().toString() == cvc.getCAR().toString()) { // Self signed
+				var result = cvc.verifyWith(crypto, cvc.getPublicKey());
+		
+				if (result) {
+					var path = cvc.getCHR().getHolder();
+					this.storeCertificate(path, cvc, true);
+				} else {
+					GPSystem.trace("Self-signed certificate failed signature verification. " + cvc);
+				}
+			} else {
+				unprocessed.push(cvc);
+			}
+		}
+		certlist = unprocessed;
+	}
+	
+	var unprocessed = [];		// Collect unprocessed certificates
+	var capath = [];			// Map of CA names to CA paths
+	for (var i = 0; i < certlist.length; i++) {	// Process all certificates issued by root
+		var cvc = certlist[i];
+		var car = cvc.getCAR();
+		
+		var cacert = this.getCertificate(car.getHolder(), car);
+		if (cacert != null) {	// Issued by a root CA
+			var result = cvc.verifyWith(crypto, cacert.getPublicKey());
+			if (result) {
+				var chr = cvc.getCHR();
+				var holder = chr.getHolder();
+				
+				if (holder == car.getHolder()) {	// Link certificate
+					this.storeCertificate(holder, cvc, true);
+				} else {							// Subordinate certificate
+					var path = car.getHolder() + "/" + holder;
+					this.storeCertificate(path, cvc, true);
+					capath[holder] = path;			// Store in list of processed DVCA
+				}
+			} else {
+				GPSystem.trace("Certificate " + cvc + " failed signature verification with " + cacvc);
+			}
+		} else {
+			unprocessed.push(cvc);
+		}
+	}
+	certlist = unprocessed;
+	
+	var unprocessed = [];		// Collect unprocessed certificates
+	for (var i = 0; i < certlist.length; i++) {		// Process remaining certificates
+		var cvc = certlist[i];
+		var car = cvc.getCAR();
+		
+		var path = capath[car.getHolder()];			// Try to locate DVCA processed in previous step
+		if (path) {
+			var cacert = this.getCertificate(path, car);
+			if (cacert != null) {
+				// Determine root certificate to obtain domain parameter
+				var rootcert = this.getCVCACertificateFor(cacert.getCAR());
+				var dp = rootcert.getPublicKey();
+				var result = cvc.verifyWith(crypto, cacert.getPublicKey(dp));
+				if (result) {
+					var chr = cvc.getCHR();
+					var holder = chr.getHolder();
+					
+					this.storeCertificate(path + "/" + holder, cvc, true);
+				} else {
+					GPSystem.trace("Certificate " + cvc + " failed signature verification with " + cacvc);
+				}
+			} else {
+				GPSystem.trace("Could not find certificate " + car.toString());
+				unprocessed.push(cvc);
+			}
+		} else {
+			GPSystem.trace("Could not locate CA " + car.toString());
+			unprocessed.push(cvc);
+		}
+	}
+	return unprocessed;
 }
 
 

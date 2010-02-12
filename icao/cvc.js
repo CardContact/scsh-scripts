@@ -21,11 +21,12 @@
  *  along with OpenSCDP; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  * 
- * @fileoverview Support for card verifiable certificates according to EAC 2.0
+ * @fileoverview Support for card verifiable certificates and certificate requests according to EAC 1.1/2.0
  */
 
 
 
+load("tools/eccutils.js");
 load("publickeyreference.js");
 
 
@@ -68,12 +69,28 @@ function CVC() {
 CVC.TAG_AT = 0x67;
 /** CV Certificate */
 CVC.TAG_CVC = 0x7F21;
+/** Certificate Body */
+CVC.TAG_BODY = 0x7F4E;
 /** Certificate Profile Identifier */
 CVC.TAG_CPI = 0x5F29;
 /** Certification Authority Reference */
 CVC.TAG_CAR = 0x42;
 /** Public Key */
 CVC.TAG_PUK = 0x7F49;
+/** Prime Modulus */
+CVC.TAG_ECC_P = 0x81;
+/** First coefficient a */
+CVC.TAG_ECC_A = 0x82;
+/** Second coefficient b */
+CVC.TAG_ECC_B = 0x83;
+/** Base Point G */
+CVC.TAG_ECC_G = 0x84;
+/** Order of the base point */
+CVC.TAG_ECC_N = 0x85;
+/** Public Point y */
+CVC.TAG_ECC_Q = 0x86;
+/** Cofactor f */
+CVC.TAG_ECC_H = 0x87;
 /** Certificate Holder Reference */
 CVC.TAG_CHR = 0x5F20;
 /** Certificate Holder Authorisation Template */
@@ -87,6 +104,100 @@ CVC.TAG_CXD = 0x5F24;
 /** Signature */
 CVC.TAG_SIG = 0x5F37;
 
+
+/** Table of tag names */
+CVC.OBJECTNAMES = []
+CVC.OBJECTNAMES[CVC.TAG_AT] = "Authentication Template 67";
+CVC.OBJECTNAMES[CVC.TAG_CVC] = "CV Certificate 7F21";
+CVC.OBJECTNAMES[CVC.TAG_BODY] = "Certificate Body 7F4E";
+CVC.OBJECTNAMES[CVC.TAG_CPI] = "Certificate Profile Indicator 5F29";
+CVC.OBJECTNAMES[CVC.TAG_CAR] = "Certification Authority Reference 42";
+CVC.OBJECTNAMES[CVC.TAG_PUK] = "Public Key 7F49";
+CVC.OBJECTNAMES[CVC.TAG_ECC_P] = "Prime Modulus 81";
+CVC.OBJECTNAMES[CVC.TAG_ECC_A] = "First coefficient a 82";
+CVC.OBJECTNAMES[CVC.TAG_ECC_B] = "Second coefficient b 83";
+CVC.OBJECTNAMES[CVC.TAG_ECC_G] = "Base Point G 84";
+CVC.OBJECTNAMES[CVC.TAG_ECC_N] = "Order of the base point 85";
+CVC.OBJECTNAMES[CVC.TAG_ECC_Q] = "Public Point y 86";
+CVC.OBJECTNAMES[CVC.TAG_ECC_H] = "Cofactor f 87";
+CVC.OBJECTNAMES[CVC.TAG_CHR] = "Certificate Holder Reference 5F20";
+CVC.OBJECTNAMES[CVC.TAG_CHAT] = "Certificate Holder Authentication Template 7F4C";
+CVC.OBJECTNAMES[CVC.TAG_EXTN] = "Extension 65";
+CVC.OBJECTNAMES[CVC.TAG_CED] = "Certificate Effective Date 5F25";
+CVC.OBJECTNAMES[CVC.TAG_CXD] = "Certificate Expiration Date 5F24";
+CVC.OBJECTNAMES[CVC.TAG_SIG] = "Signature 5F37";
+
+
+/** Table of rights description for id-IS */
+CVC.ISRIGHTS = [
+	"Read access to ePassport application: DG 3 (Fingerprint)",
+	"Read access to ePassport application: DG 4 (Iris)",
+	"RFU (Bit 3)",
+	"RFU (Bit 4)",
+	"RFU (Bit 5)",
+	"Read access to eID application"
+];
+CVC.idIS = new ByteString("id-IS", OID);
+
+
+/** Table of rights description for id-AT */
+CVC.ATRIGHTS = [
+	"Age Verification",
+	"Community ID Verification",
+	"Restricted Identification",
+	"RFU (Bit 3)",
+	"CAN allowed",
+	"PIN Management",
+	"Install Certificate",
+	"Install Qualified Certificate",
+	
+	"Read Access DG 1 (Document Type)",
+	"Read Access DG 2 (Issuing State)",
+	"Read Access DG 3 (Date of Expiration)",
+	"Read Access DG 4 (Given Name)",
+	"Read Access DG 5 (Surname)",
+	"Read Access DG 6 (Pseudonym)",
+	"Read Access DG 7 (Academic Grade)",
+	"Read Access DG 8 (Date of Birth)",
+
+	"Read Access DG 9 (Place of Birth)",
+	"Read Access DG 10",
+	"Read Access DG 11",
+	"Read Access DG 12",
+	"Read Access DG 13",
+	"Read Access DG 14",
+	"Read Access DG 15",
+	"Read Access DG 16",
+
+	"Read Access DG 17 (Place of Residence)",
+	"Read Access DG 18 (Community ID)",
+	"Read Access DG 19",
+	"Read Access DG 20",
+	"Read Access DG 21",
+	"RFU (Bit 29)",
+	"RFU (Bit 30)",
+	"RFU (Bit 31)",
+
+	"RFU (Bit 32)",
+	"Write Access DG 21",
+	"Write Access DG 20",
+	"Write Access DG 19",
+	"Write Access DG 18 (Community ID)",
+	"Write Access DG 17 (Place of Residence)"
+];
+CVC.idAT = new ByteString("id-AT", OID);
+
+
+/** Table of rights description for id-ST */
+CVC.STRIGHTS = [
+	"Generate electronic signature",
+	"Generate qualified electronic signature",
+	"RFU (Bit 2)",
+	"RFU (Bit 3)",
+	"RFU (Bit 4)",
+	"RFU (Bit 5)"
+];
+CVC.idST = new ByteString("id-ST", OID);
 
 
 /**
@@ -197,6 +308,20 @@ CVC.prototype.getExtension = function(extoid) {
 		}
 	}
 	return null;
+}
+
+
+
+/**
+ * Returns the extension identified by the object identifier.
+ *
+ * @return the extension including the OID or null if not defined
+ * @type ASN1
+ */
+CVC.prototype.getCHAT = function() {
+	var chat = this.body.find(CVC.TAG_CHAT);
+	
+	return chat;
 }
 
 
@@ -346,7 +471,90 @@ CVC.prototype.getASN1 = function() {
 
 
 /**
+ * Function to recursively walk the ASN.1 tree
+ */
+CVC.decorateTree = function(node) {
+	var name = CVC.OBJECTNAMES[node.tag];
+	
+	if (name) {
+		node.setName(name);
+	}
+
+	if (node.isconstructed) {
+		for (var i = 0; i < node.elements; i++) {
+			CVC.decorateTree(node.get(i));
+		}
+	}
+}
+
+
+
+/**
+ * Decorate the ASN.1 object with the correct name
+ */
+CVC.prototype.decorate = function() {
+	CVC.decorateTree(this.asn);
+	var cxddo = this.body.find(CVC.TAG_CXD);
+	if (cxddo == null) {
+		if (this.asn.tag == CVC.TAG_AT) {
+			this.asn.setName("Authenticated CVC Request");
+		} else {
+			this.asn.setName("CVC Request");
+		}
+	}
+}
+
+
+
+/**
+ * Return list of rights granted by the certificate
+ *
+ * @returns the list of rights
+ * @type String[]
+ */
+CVC.prototype.getRightsAsList = function() {
+	var list = [];
+	
+	var rtab;
+	var chat = this.getCHAT();
+	if (chat == null) {
+		return list;
+	}
+	
+	var oid = chat.get(0).value;
+	
+	if (oid.equals(CVC.idIS)) {
+		rtab = CVC.ISRIGHTS;
+	} else if (oid.equals(CVC.idAT)) {
+		rtab = CVC.ATRIGHTS;
+	} else if (oid.equals(CVC.idST)) {
+		rtab = CVC.STRIGHTS;
+	} else {
+		return null;
+	}
+	
+	var mask = chat.get(1).value;
+	var c = 0;
+	for (var i = mask.length - 1; i >= 0; i--) {
+		var akku = mask.byteAt(i);
+		for (var j = 0; j < (i == 0 ? 6 : 8); j++) {
+			if (akku & 1) {
+				list.push(rtab[c]);
+			}
+			c++;
+			akku >>= 1;
+		}
+	}
+	return list;
+}
+
+
+
+/**
  * Return a textual description of the certificate
+ *
+ * @returns a string containing information about the certificate
+ * @type String
  */
 CVC.prototype.toString = function() {
 	var car = this.getCAR();

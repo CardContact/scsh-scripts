@@ -1,4 +1,4 @@
-/*
+/**
  *  ---------
  * |.##> <##.|  Open Smart Card Development Platform (www.openscdp.org)
  * |#       #|  
@@ -21,8 +21,7 @@
  *  along with OpenSCDP; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
- * @fileoverview
- * Simple CVC-CA for testing purposes
+ * @fileoverview Simple CVC-CA for testing purposes
  */
 
 
@@ -188,12 +187,84 @@ CVCCA.prototype.importCertificate = function(cert) {
 
 
 
+/**
+ * Import a list of certificates into the certificate store
+ *
+ * @param {CVC[]} certs the list of certificates
+ */
+CVCCA.prototype.importCertificates = function(certs) {
+	var mycerts = [];
+	var othercerts = [];
+
+	// Separate my certificates from all others
+	for (var i = 0; i < certs.length; i++) {
+		var cvc = certs[i];
+		var chr = cvc.getCHR();
+		if (this.holderId == chr.getHolder()) {
+			mycerts.push(cvc);
+		} else {
+			othercerts.push(cvc);
+		}
+	}
+	
+	// Insert all other certificates into certificate store
+	this.certstore.insertCertificates(crypto, othercerts, true);
+	
+	// Process my own certificates. Should be one at maximum, matching a request
+	for (var i = 0; i < mycerts.length; i++) {
+		var cert = mycerts[i];
+		var chr = cert.getCHR();
+		
+		var cert = this.certstore.getCertificate(this.path, chr);
+		if (cert != null) {
+			GPSystem.trace("We already have " + cert.toString() + " - ignored...");
+		} else {
+			var prk = this.certstore.getPrivateKey(this.path, chr);
+			if (prk == null) {
+				GPSystem.trace("We do not have a key for " + cert.toString() + " - ignored...");
+			} else {
+				this.certstore.storeCertificate(this.path, cert, true);
+			}
+		}
+	}
+}
+
+
+
+/**
+ * Returns a list of relevant certificates.
+ *
+ * <p>If the CA is the root CA, then all self-signed and link certificates are returned.</p>
+ * <p>If the CA is a DVCA, then all certificates of the associated root and the current
+ *    DVCA certificate is returned.</p>
+ *
+ */
+CVCCA.prototype.getCertificateList = function() {
+	var path = this.path;
+	
+	if (!this.isRootCA()) {
+		path = this.parentId;
+	}
+
+	var list = this.certstore.listCertificates(path);
+
+	if (!this.isRootCA()) {
+		var chr = this.certstore.getCurrentCHR(this.path);
+		list.push(this.certstore.getCertificate(this.path, chr));
+	}
+	
+	return list;
+}
+
+
+
 CVCCA.testPath = GPSystem.mapFilename("cvc", GPSystem.CWD);
 
 CVCCA.test = function() {
-	var ss = new CVCertificateStore(CVCCA.testPath);
 	
 	var crypto = new Crypto();
+	
+	var ss = new CVCertificateStore(CVCCA.testPath + "_cvca");
 	var cvca = new CVCCA(crypto, ss, "UTCVCA", "UTCVCA");
 	
 	// Create a new request
@@ -226,17 +297,26 @@ CVCCA.test = function() {
 	print("Certificate: " + cert);
 	print(cert.getASN1());
 	
+	var ss = new CVCertificateStore(CVCCA.testPath + "_dvca");
 	var dvca = new CVCCA(crypto, ss, "UTDVCA", "UTCVCA");
 	
-//	var certlist = cvca.getCertificateList();
-//	dvca.importCertificates(certlist);
+	var certlist = cvca.getCertificateList();
+	dvca.importCertificates(certlist);
 	
 	// Create a new request
 	var req = dvca.generateRequest();
 	print("Request: " + req);
 	print(req.getASN1());
 	
+	// Sign this request with root CA
+	// This must be done after the link certificate has been imported
+	var policy = { certificateValidityDays: 2,
+				   chat: new ByteString("A3", HEX),
+				   includeDP: false
+				 };
+	var cert = cvca.generateCertificate(req, policy);
+	print("Certificate: " + cert);
+	print(cert.getASN1());
+	dvca.importCertificate(cert);
 	
 }
-
-CVCCA.test();

@@ -1,4 +1,4 @@
-/*
+/**
  *  ---------
  * |.##> <##.|  Open Smart Card Development Platform (www.openscdp.org)
  * |#       #|  
@@ -21,8 +21,7 @@
  *  along with OpenSCDP; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
- * @fileoverview
- * EAC2CVCertificateGenerator - Simple CV certificate generator class
+ * @fileoverview EAC2CVCertificateGenerator - Simple CV certificate generator class
  * based on "Advanced Security Mechanisms for Machine Readable Travel Documents", Version 2.0
  *
  *
