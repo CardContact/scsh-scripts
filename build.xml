@@ -78,7 +78,6 @@
 				<exclude name="icao/fillcertstore.js"/>
 				<exclude name="icao/pace.js"/>
 				<exclude name="icao/pkcs8.js"/>
-				<exclude name="icao/publickeyreference.js"/>
 			</fileset> 
 		</copy>
 
@@ -94,10 +93,6 @@
 				<include name="**/*.jpg"/>
 				<include name="**/*.png"/>
 			</fileset> 
-		</copy>
-
-		<copy todir="${build}/doc/icao/jsdoc" >
-			<fileset dir="${basedir}/icao/jsdoc"/>
 		</copy>
 
 		<mkdir dir="released"/>
