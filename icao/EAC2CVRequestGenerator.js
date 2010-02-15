@@ -296,8 +296,10 @@ EAC2CVRequestGenerator.prototype.generateCVRequest = function(privateKey) {
 
 	request.add(body);
 	
+	var keylen = privateKey.getComponent(Key.ECC_P).length;
+
 	var signature = this.crypto.sign(privateKey, Crypto.ECDSA_SHA256, body.getBytes());
-	var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature));
+	var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature, keylen));
 	
 	request.add(signatureValue);
 	
@@ -325,8 +327,10 @@ EAC2CVRequestGenerator.prototype.generateAuthenticatedCVRequest = function(reque
 
 	var signatureInput = request.getBytes().concat(chr.getBytes());
 	
+	var keylen = authenticationKey.getComponent(Key.ECC_P).length;
+
 	var signature = this.crypto.sign(authenticationKey, Crypto.ECDSA_SHA256, signatureInput);
-	var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature));
+	var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature, keylen));
 	
 	authRequest.add(request);
 	authRequest.add(chr);

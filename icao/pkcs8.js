@@ -213,7 +213,7 @@ PKCS8.decodeKeyFromPKCS8Format = function(encodedKey) {
 	key.setComponent(Key.ECC_H, cofactor.value);
 	
 	var order = domainParameter.get(1).get(1);
-	key.setComponent(Key.ECC_P, order.value);
+	key.setComponent(Key.ECC_P, PKCS8.stripLeadingZeros(order.value));
 	
 	var coeff_A = domainParameter.get(2).get(0);
 	key.setComponent(Key.ECC_A, coeff_A.value);
@@ -230,7 +230,7 @@ PKCS8.decodeKeyFromPKCS8Format = function(encodedKey) {
 	
 	var groupOrder = domainParameter.get(4);
 	
-	key.setComponent(Key.ECC_N, groupOrder.value);
+	key.setComponent(Key.ECC_N, PKCS8.stripLeadingZeros(groupOrder.value));
 	
 	return key;	
 }

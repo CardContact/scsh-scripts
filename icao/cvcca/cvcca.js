@@ -25,9 +25,12 @@
  */
 
 
-load("../cvcertstore.js");
-load("../EAC2CVRequestGenerator.js");
-load("../EAC2CVCertificateGenerator.js");
+if (typeof(__ScriptingServer) == "undefined") {
+	load("../cvcertstore.js");
+	load("../EAC2CVRequestGenerator.js");
+	load("../EAC2CVCertificateGenerator.js");
+}
+
 
 
 /**
@@ -208,7 +211,7 @@ CVCCA.prototype.importCertificates = function(certs) {
 	}
 	
 	// Insert all other certificates into certificate store
-	this.certstore.insertCertificates(crypto, othercerts, true);
+	var list = this.certstore.insertCertificates(this.crypto, othercerts, true);
 	
 	// Process my own certificates. Should be one at maximum, matching a request
 	for (var i = 0; i < mycerts.length; i++) {
@@ -227,6 +230,8 @@ CVCCA.prototype.importCertificates = function(certs) {
 			}
 		}
 	}
+	
+	return list;
 }
 
 
@@ -301,7 +306,14 @@ CVCCA.test = function() {
 	var dvca = new CVCCA(crypto, ss, "UTDVCA", "UTCVCA");
 	
 	var certlist = cvca.getCertificateList();
-	dvca.importCertificates(certlist);
+	var list = dvca.importCertificates(certlist);
+	
+	if (list.length > 0) {
+		print("Warning: Could not import the following certificates");
+		for (var i = 0; i < list.length; i++) {
+			print(list[i]);
+		}
+	}
 	
 	// Create a new request
 	var req = dvca.generateRequest();
@@ -320,3 +332,6 @@ CVCCA.test = function() {
 	dvca.importCertificate(cert);
 	
 }
+
+
+CVCCA.test();

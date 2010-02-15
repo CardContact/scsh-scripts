@@ -479,8 +479,10 @@ EAC2CVCertificateGenerator.prototype.generateCVCertificate = function(signingKey
 	
 	var body = this.getCertificateBody();
 	
+	var keylen = signingKey.getComponent(Key.ECC_P).length;
+	
 	var signature = this.crypto.sign(signingKey, Crypto.ECDSA_SHA256, body.getBytes());
-	var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature));
+	var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature, keylen));
 	
 	certificate.add(body);
 
