@@ -90,6 +90,8 @@
 			<fileset dir="${basedir}/icao/jsdoc"/>
 		</copy>
 
+		<mkdir dir="released"/>
+		
 		<zip destfile="${bundle}" includes="*">
 			<zipfileset dir="${build}" prefix="scripts"/>
 		</zip>
@@ -106,7 +108,6 @@
 		<exec executable="pscp" dir="${basedir}">
 			<arg line="${bundle} asc@diavolo:/var/www/openscdp.org/scripts" />
 		</exec>
-		<delete dir="${build}"/>
 	</target>
 
 
