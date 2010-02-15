@@ -25,6 +25,8 @@
  */
 
 
+requires("3.6.733");
+
 load("cvc.js");
 
 

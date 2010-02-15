@@ -559,13 +559,46 @@ CVC.prototype.getRightsAsList = function() {
 CVC.prototype.toString = function() {
 	var car = this.getCAR();
 	var ced = this.getCED();
+	var chat = this.getCHAT();
 	
+	// Decode certificate / request type
 	var str = "CVC ";
 	if (ced == null) {
 		if (this.asn.tag == CVC.TAG_AT) {
 			str = "AT-CVREQ ";
 		} else {
 			str = "CVREQ ";
+		}
+	}
+	
+	// Decode CA type
+	if (chat != null) {
+		var oid = chat.get(0).value;
+	
+		var trustedDV = "";
+		var untrustedDV = "";
+		
+		if (oid.equals(CVC.idIS)) {
+			str += "id-IS ";
+			trustedDV = "(official domestic) ";
+			untrustedDV = "(official foreign) ";
+		} else if (oid.equals(CVC.idAT)) {
+			str += "id-AT ";
+			trustedDV = "(official domestic) ";
+			untrustedDV = "(non-official / foreign) ";
+		} else if (oid.equals(CVC.idST)) {
+			str += "id-ST ";
+			trustedDV = "(accreditation body) ";
+			untrustedDV = "(certification service provider) ";
+		} else {
+			str += oid.toString(OID) + " ";
+		}
+		
+		switch(chat.get(1).value.byteAt(0) & 0xC0) {
+			case 0xC0: str += "CVCA "; break;
+			case 0x80: str += "DV " + trustedDV; break;
+			case 0x40: str += "DV " + untrustedDV; break;
+			case 0x00: str += "Terminal "; break;
 		}
 	}
 	
