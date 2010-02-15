@@ -48,7 +48,7 @@
 
 	<target name="jsdoc">
 		<apply executable="perl" addsourcefile="true" dir="${basedir}/icao" parallel="true" relative="true">
-			<arg line="${jsdoc} --no-sources --directory ${basedir}/icao/jsdoc" />
+			<arg line="${jsdoc} --no-sources --directory ${doc}/icao/jsdoc" />
 			<!-- Collect the JS-files -->
 			<fileset dir="${basedir}/icao" includes="**/*.js"/>
 		</apply>
@@ -69,6 +69,16 @@
 				<exclude name="build.xml"/>
 				<exclude name="build/"/>
 				<exclude name="released/"/>
+				<exclude name="icao/chipauthentication.js"/>
+				<exclude name="icao/cvcertstore.js"/>
+				<exclude name="icao/doeac.js"/>
+				<exclude name="icao/EAC2CV*.js"/>
+				<exclude name="icao/eac20.js"/>
+				<exclude name="icao/eac20sim.js"/>
+				<exclude name="icao/fillcertstore.js"/>
+				<exclude name="icao/pace.js"/>
+				<exclude name="icao/pkcs8.js"/>
+				<exclude name="icao/publickeyreference.js"/>
 			</fileset> 
 		</copy>
 
