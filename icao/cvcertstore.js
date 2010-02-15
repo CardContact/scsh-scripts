@@ -524,7 +524,7 @@ CVCertificateStore.prototype.insertCertificates = function(crypto, certlist, ins
 					capath[holder] = path;			// Store in list of processed DVCA
 				}
 			} else {
-				GPSystem.trace("Certificate " + cvc + " failed signature verification with " + cacvc);
+				GPSystem.trace("Certificate " + cvc + " failed signature verification with " + cacert);
 			}
 		} else {
 			unprocessed.push(cvc);

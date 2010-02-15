@@ -1,4 +1,4 @@
-/*
+/**
  *  ---------
  * |.##> <##.|  Open Smart Card Development Platform (www.openscdp.org)
  * |#       #|  
@@ -21,8 +21,7 @@
  *  along with OpenSCDP; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
- * @fileoverview
- * Script to populate a certificate store from a directory full of certificates
+ * @fileoverview Script to populate a certificate store from a directory full of certificates
  */
 
 

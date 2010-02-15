@@ -1,123 +1,126 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?xml-stylesheet type="text/xsl" href="doctg.xsl" ?>
-<testgroup id="tg_example" arrayElement="testcase" arrayIndex="id">
-    <name>Examples on using the test framework</name>
-    <description>
-        This is an example that explains how to write test cases using an XML structure.
-    </description>
-    <reference>
-        No reference defined.
-    </reference>
+<testgroup 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="http://www.openscdp.org/schema/testframework-1.0.xsd"
+	id="tg_example" arrayElement="testcase,function" arrayIndex="id,Name">
+	<name>Examples on using the test framework</name>
+	<description>
+		<p>This is an example that explains how to write test cases using an XML structure.</p>
+	</description>
+	<reference>
+		<p>No reference defined.</p>
+	</reference>
 
 <!-- Initializing the test group environment -->
 <!-- Enable this if you want your own constructor
-    <constructor Param="name, parameter">
-        <Script><![CDATA[
-    
-    // Call constructor of super class TestGroup and define name of test group
+	<constructor Param="name, parameter">
+		<Script><![CDATA[
+	
+	// Call constructor of super class TestGroup and define name of test group
 	TestGroup.call(this, name, parameter);
 	
-        ]]></Script>
-    </constructor>
+		]]></Script>
+	</constructor>
 -->
 
-    
+	
 <!-- Setup method called before each test case is executed -->
-    <setup>
-        <Script><![CDATA[
+	<setup>
+		<Script><![CDATA[
 
-	print("TestGroup.setup() called.");            
-            
-        ]]></Script>
-    </setup>
+	print("TestGroup.setup() called.");
+			
+		]]></Script>
+	</setup>
 
 
-    
+	
 <!-- Teardown method called after each test case is executed -->
-    <teardown>
-        <Script><![CDATA[
-        
-	print("TestGroup.teardown() called.");            
+	<teardown>
+		<Script><![CDATA[
+		
+	print("TestGroup.teardown() called.");
 
-        ]]></Script>
-    </teardown>
+		]]></Script>
+	</teardown>
 
 
 
 <!-- Each test case must be declared with an id that starts with a 3 digit number -->
-    <testcase id="001FirstTestCase">
-        <name>First example Test Case</name>
-        <description>
-            This is the first test case of the example test group
-        </description>
-        <requirement>
-            The requirement tests with this test case is ...
-        </requirement>
-        <reference>
-            The requirement is defined in ...
-        </reference>
-        <Script><![CDATA[
-                
+	<testcase id="001FirstTestCase">
+		<name>First example Test Case</name>
+		<description>
+			<p>This is the first test case of the example test group</p>
+		</description>
+		<requirement>
+			<p>The requirement tests with this test case is ...</p>
+		</requirement>
+		<reference>
+			<p>The requirement is defined in ...</p>
+		</reference>
+		<Script><![CDATA[
+
 	print("testcase 001FirstTestCase called");
 	for (i in this.parameter) {
 		print(i + "=" + this.parameter[i]);	
 	}
-                
+
 	this.log("testcase 001FirstTestCase called");
 	for (i in this.parameter) {
 		this.log(i + "=" + this.parameter[i]);	
 	}
-	
+
 	this.assertTrue(true, "Condition must be true !");
-	
-        ]]></Script>
-    </testcase>
+
+		]]></Script>
+	</testcase>
 
 
 
 <!-- Each test case must be declared with an id that starts with a 3 digit number -->
-    <testcase id="002BadTestCase">
-        <name>Second example Test Case</name>
-        <description>
-            This is the first test case of the example test group
-        </description>
-        <requirement>
-            The requirement tested with this test case is ...
-        </requirement>
-        <reference>
-            The requirement is defined in ...
-        </reference>
-        <Script><![CDATA[
-                
+	<testcase id="002BadTestCase">
+		<name>Second example Test Case</name>
+		<description>
+			<p>This is the first test case of the example test group</p>
+		</description>
+		<requirement>
+			<p>The requirement tested with this test case is ...</p>
+		</requirement>
+		<reference>
+			<p>The requirement is defined in ...</p>
+		</reference>
+		<Script><![CDATA[
+
 	print("testcase 002FirstTestCase called");
 	this.assertTrue(false, "Test case failed because condition is false");
-	
-        ]]></Script>
-    </testcase>
+
+		]]></Script>
+	</testcase>
 
 
 <!-- Each test case must be declared with an id that starts with a 3 digit number -->
-    <testcase id="003TestCaseUsingTestProcedure">
-        <name>Third Example Test Case with Test Procedure</name>
-        <description>
-            This is the third test case of the example test group using a test procedure
-        </description>
-        <requirement>
-            The requirement tests with this test case is ...
-        </requirement>
-        <reference>
-            The requirement is defined in ...
-        </reference>
-        <procedures arrayElement="procedure" arrayIndex="#">
-        	<procedure id="tp_example"/>
-        </procedures>
-        <Script><![CDATA[
-                
+	<testcase id="003TestCaseUsingTestProcedure">
+		<name>Third Example Test Case with Test Procedure</name>
+		<description>
+			<p>This is the third test case of the example test group using a test procedure</p>
+		</description>
+		<requirement>
+			<p>The requirement tests with this test case is ...</p>
+		</requirement>
+		<reference>
+			<p>The requirement is defined in ...</p>
+		</reference>
+		<procedures arrayElement="procedure" arrayIndex="#">
+			<procedure id="tp_example"/>
+		</procedures>
+		<Script><![CDATA[
+
 	print("testcase 003TestCaseUsingTestProcedure called");
 	for (i in this.parameter) {
 		print(i + "=" + this.parameter[i]);	
 	}
-                
+
 	this.log("testcase 003TestCaseUsingTestProcedure called");
 	for (i in this.parameter) {
 		this.log(i + "=" + this.parameter[i]);	
@@ -129,7 +132,7 @@
 	
 	this.assertTrue(true, "Condition must be true !");
 	
-        ]]></Script>
-    </testcase>
+		]]></Script>
+	</testcase>
 
 </testgroup>

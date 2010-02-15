@@ -1,4 +1,4 @@
-/*
+/**
  *  ---------
  * |.##> <##.|  Open Smart Card Development Platform (www.openscdp.org)
  * |#       #|  
@@ -21,7 +21,7 @@
  *  along with OpenSCDP; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
- *  Dump the content of a passport with Basic Access Control to file
+ *  @fileoverview Dump the content of a passport with Basic Access Control to file
  *
  *  Before running this script, please make sure that the variable mrz2 is set
  *  to the second line of the machine readable zone on your passport.

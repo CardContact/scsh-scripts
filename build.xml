@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project name="doc" basedir="." default="applyTemplate">
 
+	<property name="jsdoc" location="C:/usr/local/jsdoc/jsdoc.pl"/>
+	<property name="build" location="build"/>
 	<property name="doc" location="doc"/>
-
 	
+
 	<target name="init">
 		<tstamp />
 	</target>
@@ -24,22 +26,36 @@
 	<target name="convertJS">
 		<apply executable="perl" addsourcefile="false" dir="${basedir}">
 			<arg value="${doc}/js2html.pl" />
-		    <!-- Collect the JS-files -->
-		    <fileset dir="${basedir}" includes="**/*.js"/>
+			<!-- Collect the JS-files -->
+			<fileset dir="${basedir}">
+				<include name="**/*.js"/>
+				<exclude name="nPA/**"/>
+				<exclude name="icao/**"/>
+				<exclude name="build/**"/>
+				<exclude name=".settings.js"/>
+			</fileset>
 
-		    <redirector>
-		        <!-- redirect STDIN; fileset collects relative to its dir, but we need -->
-		        <!-- relative to basedir -->
-		    	<inputmapper type="identity"/>
-		        <!-- redirect STDOUT to file in dest-dir -->
-		        <outputmapper type="glob" from="*.js" to="${doc}/*.html"/>
-		    </redirector>
+			<redirector>
+				<!-- redirect STDIN; fileset collects relative to its dir, but we need -->
+				<!-- relative to basedir -->
+				<inputmapper type="identity"/>
+				<!-- redirect STDOUT to file in dest-dir -->
+				<outputmapper type="glob" from="*.js" to="${doc}/*.html"/>
+			</redirector>
 		</apply>
 	</target>
 
 
-	<target name="publish" depends="init, applyTemplate">
-		<property name="build" location="build"/>
+	<target name="jsdoc">
+		<apply executable="perl" addsourcefile="true" dir="${basedir}/icao" parallel="true" relative="true">
+			<arg line="${jsdoc} --no-sources --directory ${basedir}/icao/jsdoc" />
+			<!-- Collect the JS-files -->
+			<fileset dir="${basedir}/icao" includes="**/*.js"/>
+		</apply>
+	</target>
+
+
+	<target name="package" depends="init, applyTemplate, jsdoc">
 		<property name="bundlename" value="scripts-${DSTAMP}.zip"/>
 		<property name="bundle" location="released/${bundlename}"/>
 		<filter token="bundlename" value="${bundlename}"/>
@@ -55,7 +71,7 @@
 				<exclude name="released/"/>
 			</fileset> 
 		</copy>
-						
+
 		<copy todir="${build}/doc" filtering="true">
 			<fileset dir="${doc}">
 				<include name="**/*.html"/>
@@ -70,9 +86,19 @@
 			</fileset> 
 		</copy>
 
+		<copy todir="${build}/doc/icao/jsdoc" >
+			<fileset dir="${basedir}/icao/jsdoc"/>
+		</copy>
+
 		<zip destfile="${bundle}" includes="*">
 			<zipfileset dir="${build}" prefix="scripts"/>
 		</zip>
+	</target>
+
+
+	<target name="publish" depends="package">
+		<property name="bundlename" value="scripts-${DSTAMP}.zip"/>
+		<property name="bundle" location="released/${bundlename}"/>
 
 		<exec executable="pscp" dir="${build}/doc">
 			<arg line="-r * asc@diavolo:/var/www/openscdp.org/scripts" />
@@ -82,5 +108,10 @@
 		</exec>
 		<delete dir="${build}"/>
 	</target>
-	
+
+
+	<target name="clean">
+		<delete dir="${build}"/>
+	</target>
+
 </project>

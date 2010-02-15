@@ -1,98 +1,101 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?xml-stylesheet type="text/xsl" href="doctp.xsl" ?>
-<testprocedure id="tp_example" arrayElement="teststep" arrayIndex="id">
-    <name>Examples on using the test framework</name>
-    <description>
-        This is an example that explains how to write a test procedure using an XML structure.
-    </description>
-    <reference>
-        No reference defined.
-    </reference>
+<testprocedure 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="http://www.openscdp.org/schema/testframework-1.0.xsd"
+	id="tp_example" arrayElement="teststep" arrayIndex="id">
+	<name>Examples on using the test framework</name>
+	<description>
+		<p>This is an example that explains how to write a test procedure using an XML structure.</p>
+	</description>
+	<reference>
+		<p>No reference defined.</p>
+	</reference>
 
-<!-- Initializing the test group environment -->
+<!-- Initializing the test procedure environment -->
 <!-- Enable if you want to use your own constructor
-    <constructor Param="name, testgroup, parameter">
-        <Script><![CDATA[
-    
-    // Call constructor of super class TestProcedure and define name of test procedure
+	<constructor Param="name, testgroup, parameter">
+		<Script><![CDATA[
+	
+	// Call constructor of super class TestProcedure and define name of test procedure
 	TestProcedure.call(this, name, testgroup, parameter);
 	
-        ]]></Script>
-    </constructor>
+		]]></Script>
+	</constructor>
 -->
 
-    
+	
 <!-- Setup method called before the test procedure is executed -->
-    <setup>
-        <Script><![CDATA[
+	<setup>
+		<Script><![CDATA[
 
-	print("setup() called.");            
-            
-        ]]></Script>
-    </setup>
+	print("setup() called.");			
+			
+		]]></Script>
+	</setup>
 
 
-    
+	
 <!-- Teardown method called after the test procedure is executed -->
-    <teardown>
-        <Script><![CDATA[
-        
-	print("teardown() called.");            
+	<teardown>
+		<Script><![CDATA[
+		
+	print("teardown() called.");			
 
-        ]]></Script>
-    </teardown>
+		]]></Script>
+	</teardown>
 
 
 
 <!-- Each test step must be declared with an id that starts with a 3 digit number -->
-    <teststep id="001FirstTestStep">
-        <name>First Example Test Step</name>
-        <description>
-            This is the first test step of the example test procedure
-        </description>
-        <requirement>
-            The requirement tests with this test step is ...
-        </requirement>
-        <reference>
-            The requirement is defined in ...
-        </reference>
-        <Script><![CDATA[
-                
+	<teststep id="001FirstTestStep">
+		<name>First Example Test Step</name>
+		<description>
+			<p>This is the first test step of the example test procedure</p>
+		</description>
+		<requirement>
+			<p>The requirement tests with this test step is ...</p>
+		</requirement>
+		<reference>
+			<p>The requirement is defined in ...</p>
+		</reference>
+		<Script><![CDATA[
+
 	print("teststep 001FirstTestStep called");
-	for (i in this.parameter) {
+	for (var i in this.parameter) {
 		print(i + "=" + this.parameter[i]);	
 	}
-                
+
 	this.log("teststep 001FirstTestStep called");
-	for (i in this.parameter) {
+	for (var i in this.parameter) {
 		this.log(i + "=" + this.parameter[i]);	
 	}
 	
 	this.assertTrue(true, "Condition must be true !");
 	
-        ]]></Script>
-    </teststep>
+		]]></Script>
+	</teststep>
 
 
 
 <!-- Each test step must be declared with an id that starts with a 3 digit number -->
-    <teststep id="002BadTestStep">
-        <name>Second Example Test Step</name>
-        <description>
-            This is the first test step of the example test procedure
-        </description>
-        <requirement>
-            The requirement tested with this test step is ...
-        </requirement>
-        <reference>
-            The requirement is defined in ...
-        </reference>
-        <Script><![CDATA[
-                
+	<teststep id="002BadTestStep">
+		<name>Second Example Test Step</name>
+		<description>
+			<p>This is the first test step of the example test procedure</p>
+		</description>
+		<requirement>
+			<p>The requirement tested with this test step is ...</p>
+		</requirement>
+		<reference>
+			<p>The requirement is defined in ...</p>
+		</reference>
+		<Script><![CDATA[
+
 	print("teststep 002BadTestStep called");
 	this.assertTrue(false, "Test case failed because condition is false");
 	
-        ]]></Script>
-    </teststep>
+		]]></Script>
+	</teststep>
 
 </testprocedure>
