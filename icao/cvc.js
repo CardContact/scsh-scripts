@@ -27,8 +27,10 @@
 
 
 load("tools/eccutils.js");
-load("publickeyreference.js");
 
+if (typeof(__ScriptingServer) == "undefined") {
+	load("publickeyreference.js");
+}
 
 
 
@@ -200,6 +202,39 @@ CVC.STRIGHTS = [
 CVC.idST = new ByteString("id-ST", OID);
 
 
+
+/** TA constants */
+CVC.id_TA_ECDSA_SHA_1 = new ByteString("id-TA-ECDSA-SHA-1", OID);
+CVC.id_TA_ECDSA_SHA_224 = new ByteString("id-TA-ECDSA-SHA-224", OID);
+CVC.id_TA_ECDSA_SHA_256 = new ByteString("id-TA-ECDSA-SHA-256", OID);
+CVC.id_TA_ECDSA_SHA_384 = new ByteString("id-TA-ECDSA-SHA-384", OID);
+CVC.id_TA_ECDSA_SHA_512 = new ByteString("id-TA-ECDSA-SHA-512", OID);
+
+
+
+/**
+ * Return signature mechanism for object identifier
+ *
+ * @param {ByteString} oid the object identifer from the public key object
+ * @returns the signature mechanism as Crypto. constant or -1 if not defined
+ * @type Number
+ */
+CVC.getSignatureMech = function(oid) {
+	if (oid.equals(CVC.id_TA_ECDSA_SHA_1))
+		return Crypto.ECDSA_SHA1;
+	if (oid.equals(CVC.id_TA_ECDSA_SHA_224))
+		return Crypto.ECDSA_SHA224;
+	if (oid.equals(CVC.id_TA_ECDSA_SHA_256))
+		return Crypto.ECDSA_SHA256;
+	if (oid.equals(CVC.id_TA_ECDSA_SHA_384))
+		return Crypto.ECDSA_SHA384;
+	if (oid.equals(CVC.id_TA_ECDSA_SHA_512))
+		return Crypto.ECDSA_SHA512;
+	return -1;
+}
+
+
+
 /**
  * Returns the certification authority reference (CAR).
  *
@@ -327,6 +362,27 @@ CVC.prototype.getCHAT = function() {
 
 
 /**
+ * Returns the public key object identifier
+ * 
+ * @returns the object identifier assigned to the public key
+ * @type ByteString
+ */
+CVC.prototype.getPublicKeyOID = function() {
+	var pdo = this.body.find(CVC.TAG_PUK);
+	if (pdo == null) {
+		throw new GPError("CVC", GPError.OBJECT_NOT_FOUND, 0, "Certificate does not contain a public key");
+	}
+	
+	var d = pdo.find(ASN1.OBJECT_IDENTIFIER);
+	if (d == null) {
+		throw new GPError("CVC", GPError.OBJECT_NOT_FOUND, 0, "Public key does not contain an object identifier");
+	}
+	return d.value;
+}
+
+
+
+/**
  * Returns the public key contained in the certificate.
  *
  * @param {Key} domParam domain parameter if they are not contained in certificate
@@ -419,8 +475,11 @@ CVC.prototype.verifyWith = function(crypto, puk) {
 		var signature = this.asn.get(1);
 	}
 	
+	var oid = this.getPublicKeyOID();
+	var mech = CVC.getSignatureMech(oid);
+	
 	var signatureValue = ECCUtils.wrapSignature(signature.value);
-	return crypto.verify(puk, Crypto.ECDSA_SHA256, this.body.getBytes(), signatureValue);
+	return crypto.verify(puk, mech, this.body.getBytes(), signatureValue);
 }
 
 
@@ -440,8 +499,11 @@ CVC.prototype.verifyATWith = function(crypto, puk) {
 	var signature = this.asn.get(2);
 	var signatureInput = this.asn.get(0).getBytes().concat(this.asn.get(1).getBytes());
 	
+	var oid = this.getPublicKeyOID();
+	var mech = CVC.getSignatureMech(oid);
+	
 	var signatureValue = ECCUtils.wrapSignature(signature.value);
-	return crypto.verify(puk, Crypto.ECDSA_SHA256, signatureInput, signatureValue);
+	return crypto.verify(puk, mech, signatureInput, signatureValue);
 }
 
 

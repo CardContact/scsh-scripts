@@ -29,7 +29,10 @@
  */
 
 load("tools/eccutils.js");
-load("cvc.js");
+
+if (typeof(__ScriptingServer) == "undefined") {
+	load("cvc.js");
+}
 
 
 /**
@@ -298,7 +301,8 @@ EAC2CVRequestGenerator.prototype.generateCVRequest = function(privateKey) {
 	
 	var keylen = privateKey.getComponent(Key.ECC_P).length;
 
-	var signature = this.crypto.sign(privateKey, Crypto.ECDSA_SHA256, body.getBytes());
+	var mech = CVC.getSignatureMech(this.taOID);
+	var signature = this.crypto.sign(privateKey, mech, body.getBytes());
 	var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature, keylen));
 	
 	request.add(signatureValue);
@@ -329,7 +333,8 @@ EAC2CVRequestGenerator.prototype.generateAuthenticatedCVRequest = function(reque
 	
 	var keylen = authenticationKey.getComponent(Key.ECC_P).length;
 
-	var signature = this.crypto.sign(authenticationKey, Crypto.ECDSA_SHA256, signatureInput);
+	var mech = CVC.getSignatureMech(this.taOID);
+	var signature = this.crypto.sign(authenticationKey, mech, signatureInput);
 	var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature, keylen));
 	
 	authRequest.add(request);

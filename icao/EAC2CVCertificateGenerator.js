@@ -30,7 +30,11 @@
  */
 
 load("tools/eccutils.js");
-load("cvc.js");
+
+if (typeof(__ScriptingServer) == "undefined") {
+	load("cvc.js");
+}
+
 
 
 /**
@@ -481,7 +485,8 @@ EAC2CVCertificateGenerator.prototype.generateCVCertificate = function(signingKey
 	
 	var keylen = signingKey.getComponent(Key.ECC_P).length;
 	
-	var signature = this.crypto.sign(signingKey, Crypto.ECDSA_SHA256, body.getBytes());
+	var mech = CVC.getSignatureMech(this.taOID);
+	var signature = this.crypto.sign(signingKey, mech, body.getBytes());
 	var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature, keylen));
 	
 	certificate.add(body);

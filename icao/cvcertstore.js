@@ -27,9 +27,10 @@
 
 
 
-load("pkcs8.js");
-load("cvc.js");
-
+if (typeof(__ScriptingServer) == "undefined") {
+	load("pkcs8.js");
+	load("cvc.js");
+}
 
 
 /**
@@ -66,6 +67,8 @@ CVCertificateStore.loadBinaryFile = function(filename) {
 	// Read into byte array
 	var len = f.read(bs);
 
+	f.close();
+	
 	// Allocate JavaScript ByteBuffer from native/wrapped byte array
 	var bb = new ByteBuffer(bs);
 	
@@ -374,10 +377,14 @@ CVCertificateStore.prototype.getCertificate = function(path, chr) {
  * @param {String} path the relative path of the PKI element (e.g. "UTCVCA1/UTDVCA1")
  */
 CVCertificateStore.prototype.listCertificates = function(path) {
+	var result = [];
+
 	var fn = this.path + "/" + path;
 	var f = new java.io.File(fn);
+	if (!f.exists()) {
+		return result;
+	}
 	var files = f.list();
-	var result = [];
 	
 	for (var i = 0; i < files.length; i++) {
 		var s = new String(files[i]);

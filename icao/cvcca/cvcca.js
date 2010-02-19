@@ -54,9 +54,8 @@ function CVCCA(crypto, certstore, holderId, parentId) {
 		this.path = parentId + "/" + holderId;
 	}
 	this.keyspec = new Key();
-	this.keyspec.setComponent(Key.ECC_CURVE_OID, new ByteString("1.3.36.3.3.2.8.1.1.8", OID));
+	this.keyspec.setComponent(Key.ECC_CURVE_OID, new ByteString("brainpoolP256t1", OID));
 	this.taAlgorithmIdentifier = new ByteString("id-TA-ECDSA-SHA-256", OID);
-	this.pki = new ByteString("id-IS", OID);
 }
 
 
@@ -69,6 +68,32 @@ function CVCCA(crypto, certstore, holderId, parentId) {
  */
 CVCCA.prototype.isRootCA = function() {
 	return this.holderId == this.parentId;
+}
+
+
+
+/**
+ * Returns true if this CA is operational.
+ *
+ * @returns true if this CA is operational
+ * @type boolean
+ */
+CVCCA.prototype.isOperational = function() {
+	var currentchr = this.certstore.getCurrentCHR(this.path);
+	return currentchr != null;
+}
+
+
+
+/**
+ * Sets the key specification for generating requests
+ *
+ * @param {Key} keyparam a key object containing key parameters (e.g. EC Curve)
+ * @param {ByteString} algorithm the terminal authentication algorithm object identifier
+ */
+CVCCA.prototype.setKeySpec = function(keyparam, algorithm) {
+	this.keyspec = keyparam;
+	this.taAlgorithmIdentifier = algorithm;
 }
 
 
@@ -134,6 +159,16 @@ CVCCA.prototype.generateRequest = function() {
 /**
  * Generate certificate for certificate request
  *
+ * <p>Certificate contents is defined through the policy object:</p>
+ * <pre>
+ *  	var policy = { certificateValidityDays: 2,
+ * 				   chatRoleOID: new ByteString("id-IS", OID),
+ * 				   chatRights: new ByteString("E3", HEX),
+ * 				   includeDomainParameter: true,
+ * 				   extensions: []
+ * 				 };
+ * </pre>
+ *
  * @param {CVC} req the certificate request
  * @param {Object} policy the object with policy settings
  * @returns the certificate
@@ -148,10 +183,6 @@ CVCCA.prototype.generateCertificate = function(req, policy) {
 		} else {
 			throw new GPError("CVCCA", GPError.INVALID_DATA, 0, "No current certificate found");
 		}
-	} else {
-		if ((car.toString() == req.getCHR().toString()) && !(policy.selfSign)) {
-			throw new GPError("CVCCA", GPError.INVALID_DATA, 0, "Self-signing is not allowed");
-		}
 	}
 	
 	var generator = new EAC2CVCertificateGenerator(this.crypto);
@@ -161,13 +192,13 @@ CVCCA.prototype.generateCertificate = function(req, policy) {
 	var expDate = new Date(policy.certificateValidityDays * (1000 * 60 * 60 * 24) + effDate.getTime());
 	generator.setEffectiveDate(effDate);
 	generator.setExpiryDate(expDate);
-	generator.setChatOID(this.pki);
-	generator.setChatAuthorizationLevel(policy.chat);
+	generator.setChatOID(policy.chatRoleOID);
+	generator.setChatAuthorizationLevel(policy.chatRights);
 	generator.setPublicKey(req.getPublicKey());
 	generator.setProfileIdentifier(0x00);
 	generator.setTAAlgorithmIdentifier(this.taAlgorithmIdentifier);
-	generator.setIncludeDomainParameters(policy.includeDP);
-
+	generator.setIncludeDomainParameters(policy.includeDomainParameter);
+	generator.setExtensions(policy.extensions);
 	var prk = this.certstore.getPrivateKey(this.path, car);
 	var cvc = generator.generateCVCertificate(prk, Crypto.ECDSA_SHA256);
 	return cvc;
@@ -218,8 +249,8 @@ CVCCA.prototype.importCertificates = function(certs) {
 		var cert = mycerts[i];
 		var chr = cert.getCHR();
 		
-		var cert = this.certstore.getCertificate(this.path, chr);
-		if (cert != null) {
+		var havecert = this.certstore.getCertificate(this.path, chr);
+		if (havecert != null) {
 			GPSystem.trace("We already have " + cert.toString() + " - ignored...");
 		} else {
 			var prk = this.certstore.getPrivateKey(this.path, chr);
@@ -255,7 +286,12 @@ CVCCA.prototype.getCertificateList = function() {
 
 	if (!this.isRootCA()) {
 		var chr = this.certstore.getCurrentCHR(this.path);
-		list.push(this.certstore.getCertificate(this.path, chr));
+		if (chr != null) {
+			var rootCert = this.certstore.getCertificate(this.path, chr);
+			if (rootCert != null) {
+				list.push(rootCert);
+			}
+		}
 	}
 	
 	return list;
@@ -281,8 +317,10 @@ CVCCA.test = function() {
 	
 	// Create self-signed or link certificate based on request
 	var policy = { certificateValidityDays: 2,
-				   chat: new ByteString("E3", HEX),
-				   includeDP: true
+				   chatRoleOID: new ByteString("id-IS", OID),
+				   chatRights: new ByteString("E3", HEX),
+				   includeDomainParameter: true,
+				   extensions: []
 				 };
 	var cert = cvca.generateCertificate(req, policy);
 	print("Certificate: " + cert);
@@ -294,9 +332,10 @@ CVCCA.test = function() {
 	// Generate additional self-signed root certificate
 	// This must be done after the link certificate has been imported
 	var policy = { certificateValidityDays: 2,
-				   chat: new ByteString("E3", HEX),
-				   includeDP: true,
-				   selfSign: true
+				   chatRoleOID: new ByteString("id-IS", OID),
+				   chatRights: new ByteString("E3", HEX),
+				   includeDomainParameter: true,
+				   extensions: []
 				 };
 	var cert = cvca.generateCertificate(req, policy);
 	print("Certificate: " + cert);
@@ -323,8 +362,10 @@ CVCCA.test = function() {
 	// Sign this request with root CA
 	// This must be done after the link certificate has been imported
 	var policy = { certificateValidityDays: 2,
-				   chat: new ByteString("A3", HEX),
-				   includeDP: false
+				   chatRoleOID: new ByteString("id-IS", OID),
+				   chatRights: new ByteString("A3", HEX),
+				   includeDomainParameter: false,
+				   extensions: []
 				 };
 	var cert = cvca.generateCertificate(req, policy);
 	print("Certificate: " + cert);
@@ -334,4 +375,4 @@ CVCCA.test = function() {
 }
 
 
-CVCCA.test();
+// CVCCA.test();
