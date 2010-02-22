@@ -43,6 +43,13 @@ function ServiceRequest(messageID, responseURL, certificateRequest) {
 }
 
 
+ServiceRequest.OK_CERT_AVAILABLE			= "ok_cert_available";
+ServiceRequest.OK_SYNTAX					= "ok_syntax";
+ServiceRequest.FAILURE_SYNTAX				= "failure_syntax";
+ServiceRequest.FAILURE_INNER_SIGNATURE		= "failure_inner_signature";
+ServiceRequest.FAILURE_OUTER_SIGNATURE		= "failure_outer_signature";
+ServiceRequest.FAILURE_REQUEST_NOT_ACCEPTED	= "failure_request_not_accepted";
+
 
 /**
  * Returns true if this is a certificate request
@@ -117,6 +124,30 @@ ServiceRequest.prototype.setStatusInfo = function(statusInfo) {
 
 
 /**
+ * Gets the status information after the asynchronously requests has been completed
+ *
+ * @returns the last status information which may be undefined
+ * @type String
+ */
+ServiceRequest.prototype.getFinalStatusInfo = function() {
+	return this.finalStatusInfo;
+}
+
+
+
+/**
+ * Sets the final status information for this request
+ *
+ * @returns the last status information which may be undefined
+ * @type String
+ */
+ServiceRequest.prototype.setFinalStatusInfo = function(statusInfo) {
+	this.finalStatusInfo = statusInfo;
+}
+
+
+
+/**
  * Create a describing string
  *
  * @returns the string
@@ -134,7 +165,12 @@ ServiceRequest.prototype.toString = function() {
 	str += this.responseURL;
 	
 	if (typeof(this.statusInfo) != "undefined") {
-		str += " [" + this.statusInfo + "]";
+		str += " [" + this.statusInfo;
+		if (typeof(this.finalStatusInfo) != "undefined") {
+			str += "/" + this.finalStatusInfo + "]";
+		} else {
+			str += "]"
+		}
 	}
 	return str;
 }

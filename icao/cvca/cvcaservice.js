@@ -36,10 +36,10 @@
  */
 function CVCAService(path, name) {
 	this.name = name;
-	var crypto = new Crypto();
+	this.crypto = new Crypto();
 	
 	this.ss = new CVCertificateStore(path);
-	this.cvca = new CVCCA(crypto, this.ss, name, name);
+	this.cvca = new CVCCA(this.crypto, this.ss, name, name);
 	this.queue = [];
 }
 
@@ -104,6 +104,54 @@ CVCAService.prototype.generateLinkCertificate = function(withDP) {
 
 
 /**
+ * Check certificate request syntax
+ *
+ * @param {ByteString} req the request in binary format
+ * @returns the decoded request or null in case of error
+ * @type CVC
+ */
+CVCAService.prototype.checkRequestSyntax = function(reqbin) {
+	try	{
+		var reqtlv = new ASN1(reqbin);
+		var req = new CVC(reqtlv);
+	}
+	catch(e) {
+		GPSystem.trace("Error decoding ASN1 structure of request: " + e);
+		return null;
+	}
+	
+	return req;
+}
+
+
+
+/**
+ * Check certificate request semantic
+ *
+ * @param {CVC} req the request
+ * @returns one of the ServiceRequest status results (ok_cert_available if successful).
+ * @type String
+ */
+CVCAService.prototype.checkRequestSemantics = function(req) {
+	try	{
+		var puk = req.getPublicKey();
+	}
+	catch(e) {
+		GPSystem.trace("Error checking request semantics in " + e.fileName + "#" + e.lineNumber + " : " + e);
+		return ServiceRequest.FAILURE_SYNTAX;
+	}
+	
+	if (!req.verifyWith(this.crypto, puk)) {
+		GPSystem.trace("Error verifying inner signature");
+		return ServiceRequest.FAILURE_INNER_SIGNATURE;
+	}
+	
+	return ServiceRequest.OK_CERT_AVAILABLE;
+}
+
+
+
+/**
  * Issue certificate for subordinate CA
  *
  * @param {CVC} req the request
@@ -113,7 +161,7 @@ CVCAService.prototype.generateLinkCertificate = function(withDP) {
 CVCAService.prototype.issueCertificate = function(req) {
 
 	var cert = this.cvca.generateCertificate(req, this.dVCertificatePolicy);
-	
+
 	this.cvca.importCertificates([ cert ]);
 
 	GPSystem.trace("CVCAService - Issued certificate: ");
@@ -155,10 +203,14 @@ CVCAService.prototype.getRequest = function(index) {
  */
 CVCAService.prototype.processRequest = function(index) {
 	var sr = this.queue[index];
+
+	if (sr.getStatusInfo().substr(0, 3) == "ok_") {
+		certlist = this.cvca.getCertificateList();
+	} else {
+		certlist = [];
+	}
 	
-	certlist = this.cvca.getCertificateList();
-	
-	if (sr.isCertificateRequest()) {
+	if (sr.isCertificateRequest() && (sr.getStatusInfo() == ServiceRequest.OK_CERT_AVAILABLE)) {
 		var cert = this.issueCertificate(sr.getCertificateRequest());
 		certlist.push(cert);
 	}
@@ -211,10 +263,14 @@ CVCAService.prototype.sendCertificates = function(serviceRequest, certificates) 
 	
 	var response = soapConnection.call(serviceRequest.getResponseURL(), request);
 	
-	if (response.Result.ns1::returnCode.substr(0, 3) != "ok_") {
+	var result = response.Result.ns1::returnCode.toString();
+	
+	serviceRequest.setFinalStatusInfo(result);
+	
+	if (result.substr(0, 3) != "ok_") {
 		GPSystem.trace("SendCertificates failed:");
 		GPSystem.trace(response);
-		throw new GPError("CVCAService", GPError.DEVICE_ERROR, 0, "SendCertificates failed with returnCode " + response.Result.ns1::returnCode);
+		throw new GPError("CVCAService", GPError.DEVICE_ERROR, 0, "SendCertificates failed with returnCode " + result);
 	}
 }
 
@@ -236,19 +292,15 @@ CVCAService.prototype.GetCACertificates = function(soapBody) {
 	var callback = soapBody.callbackIndicator;
 	
 	var certlist = [];
-	var response = "ok_cert_available";
+	var response = ServiceRequest.OK_CERT_AVAILABLE;
 	
 	if (callback == "callback_possible") {
 		var asyncreq = new ServiceRequest(
 							soapBody.messageID.ns1::messageID,
 							soapBody.responseURL.ns1::string);
 
-//		var asyncreq = {
-//			msgid: soapBody.messageID.ns1::messageID.toString(),
-//			url: soapBody.responseURL.ns1::string.toString()
-//		};
 		this.queue.push(asyncreq);
-		var response = "ok_syntax";
+		var response = ServiceRequest.OK_SYNTAX;
 	} else {
 		// Add certificate list to response
 		certlist = this.cvca.getCertificateList();
@@ -289,37 +341,47 @@ CVCAService.prototype.RequestCertificate = function(soapBody) {
 	
 	var ns = new Namespace("uri:EAC-PKI-CVCA-Protocol/1.0");
 	var ns1 = new Namespace("uri:eacBT/1.0");
-	
-	var reqbin = new ByteString(soapBody.certReq, BASE64);
-	var req = new CVC(reqbin);
-	
-	GPSystem.trace("CVCAService - Received certificate request: ");
-	GPSystem.trace(req);
-	
-	var callback = soapBody.callbackIndicator;
-	
-	var certlist = [];
-	var response = "ok_cert_available";
-	
-	if (callback == "callback_possible") {
-		var asyncreq = new ServiceRequest(
-							soapBody.messageID.ns1::messageID,
-							soapBody.responseURL.ns1::string,
-							req);
 
-//		var asyncreq = {
-//			msgid: soapBody.messageID.ns1::messageID.toString(),
-//			url: soapBody.responseURL.ns1::string.toString(),
-//			request: req
-//		};
-		this.queue.push(asyncreq);
-		var response = "ok_syntax";
-	} else {
-		var cert = this.issueCertificate(req);
+	var certlist = [];
+
+	try	{
+		var reqbin = new ByteString(soapBody.certReq, BASE64);
+
+		var req = this.checkRequestSyntax(reqbin);
+
+		if (req == null) {
+			var response = ServiceRequest.FAILURE_SYNTAX;
+		} else {
+			GPSystem.trace("CVCAService - Received certificate request: ");
+			GPSystem.trace(req);
 	
-		// Add certificate list to response
-		certlist = this.cvca.getCertificateList();
-		certlist.push(cert);
+			var response = this.checkRequestSemantics(req);
+
+			var callback = soapBody.callbackIndicator;
+
+			if (callback == "callback_possible") {
+				var asyncreq = new ServiceRequest(
+								soapBody.messageID.ns1::messageID,
+								soapBody.responseURL.ns1::string,
+								req);
+
+				asyncreq.setStatusInfo(response);
+				this.queue.push(asyncreq);
+				var response = ServiceRequest.OK_SYNTAX;
+			} else {
+				certlist = this.cvca.getCertificateList();
+
+				if (response == ServiceRequest.OK_CERT_AVAILABLE) {
+					var cert = this.issueCertificate(req);
+					// Add certificate list to response
+					certlist.push(cert);
+				}
+			}
+		}
+	}
+	catch(e) {
+		GPSystem.trace("CVCAService - Error decoding request in " + e.fileName + "#" + e.lineNumber + " : " + e);
+		var response = ServiceRequest.FAILURE_SYNTAX;
 	}
 
 	var response =

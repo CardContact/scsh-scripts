@@ -33,19 +33,19 @@ var linkPolicy = { certificateValidityDays: 2,
 				   chatRoleOID: new ByteString("id-IS", OID),
 				   chatRights: new ByteString("E3", HEX),
 				   includeDomainParameter: true,
-				   extensions: []
+				   extensions: null
 				 };
 
 cvca.setLinkCertificatePolicy(linkPolicy);
 
-var dVpolicy = { certificateValidityDays: 2,
+var dVPolicy = { certificateValidityDays: 2,
 				   chatRoleOID: new ByteString("id-IS", OID),
 				   chatRights: new ByteString("A3", HEX),
 				   includeDomainParameter: false,
-				   extensions: []
+				   extensions: null
 				 };
 
-cvca.setDVCertificatePolicy(linkPolicy);
+cvca.setDVCertificatePolicy(dVPolicy);
 
 /*
 // Set signature key specification

@@ -385,7 +385,7 @@ CVC.prototype.getPublicKeyOID = function() {
 /**
  * Returns the public key contained in the certificate.
  *
- * @param {Key} domParam domain parameter if they are not contained in certificate
+ * @param {Key} domParam optional domain parameter if they are not contained in certificate
  * @return the public key object
  * @type Key
  */
