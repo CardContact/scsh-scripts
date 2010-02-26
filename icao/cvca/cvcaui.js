@@ -227,7 +227,6 @@ CVCAUI.prototype.serveRefreshPage = function(req, res, refreshUrl) {
 			</body>
 		</html>
 
-	print(page);
 	res.print(page.toXMLString());
 	return;
 }
@@ -242,7 +241,6 @@ CVCAUI.prototype.serveRefreshPage = function(req, res, refreshUrl) {
  */
 CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 
-	print("URL = " + url[0]);
 	// Handle status page
 	// ToDo: Refactor to getter
 	var status = this.service.cvca.isOperational() ? "operational" : "not operational";
@@ -318,7 +316,6 @@ CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 CVCAUI.prototype.handleInquiry = function(req, res) {
 	// pathInfo always starts with an "/"
 	var url = req.pathInfo.substr(1).split("/");
-	print(url);
 
 	// Handle details
 	if (url.length > 2) {

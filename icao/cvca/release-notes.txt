@@ -1,0 +1,33 @@
+Online CVCA - Release Notes
+===========================
+
+Online CVCA is a simple test CVCA suitable for implementation and test of document
+verifierer implementing TR-03110 and TR-03129 webservices.
+
+Runtime
+=======
+Online CVCA requires a running ScriptingServer instance.
+
+Deployment
+==========
+Start the ScriptingServer instance and use the loadserver.cmd batch file to upload
+scripts into the server.
+
+In the default configuration, a server status page is available at
+
+	http://localhost:8080/scriptingserver
+		
+the CVCA status page is located at
+
+	http://localhost:8080/scriptingserver/cvca
+		
+the DVCA status page is located at
+
+	http://localhost:8080/scriptingserver/dvca
+
+
+Missing functionality
+=====================
+1. The CVCA only implements a minimal request checking
+2. Link certificates without domain parameter do not work
+3. The CVCA does not differentiate between DVCAs, all follow the same policy
