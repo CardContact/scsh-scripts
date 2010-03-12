@@ -207,7 +207,7 @@ CVCCA.prototype.generateCertificate = function(req, policy) {
 
 
 /**
- * Import a certificate into the certificate store
+ * Import a certificate into the certificate store and make it the current certificate
  *
  * @param {CVC} cert the certificate
  */
@@ -216,7 +216,8 @@ CVCCA.prototype.importCertificate = function(cert) {
 	if (prk == null) {
 		throw new GPError("CVCCA", GPError.INVALID_DATA, 0, "Invalid certificate");
 	}
-	this.certstore.storeCertificate(this.path, cert, true);
+	var c = this.certstore.getCertificate(this.path, cert.getCHR());
+	this.certstore.storeCertificate(this.path, cert, (c == null));
 }
 
 

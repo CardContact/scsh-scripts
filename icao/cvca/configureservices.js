@@ -29,6 +29,15 @@
 // Create CA service
 var cvca = new CVCAService("c:/tmp/eacpki/cvca", "UTCVCA");
 
+var rootPolicy = { certificateValidityDays: 2,
+				   chatRoleOID: new ByteString("id-IS", OID),
+				   chatRights: new ByteString("E3", HEX),
+				   includeDomainParameter: true,
+				   extensions: null
+				 };
+
+cvca.setRootCertificatePolicy(rootPolicy);
+
 var linkPolicy = { certificateValidityDays: 2,
 				   chatRoleOID: new ByteString("id-IS", OID),
 				   chatRights: new ByteString("E3", HEX),

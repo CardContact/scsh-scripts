@@ -51,7 +51,15 @@ function CVCAUI(service) {
 CVCAUI.prototype.handleCertificateDetails = function(req, res, url) {
 
 	// ToDo: Refactor to getter
-	var cert = this.service.ss.getCertificate(this.service.name, url[2]);
+	
+	var chr = url[2];
+	var ss = url.indexOf(".selfsigned");
+	
+	if (ss >= 0) {
+		chr = chr.substring(0, ss);
+	}
+	
+	var cert = this.service.ss.getCertificate(this.service.name, chr, ss >= 0);
 	cert.decorate();
 	
 	var page = 
@@ -283,7 +291,8 @@ CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 	var l = page.body.ol[0];
 	for (var i = 0; i < certlist.length; i++) {
 		var cvc = certlist[i];
-		var refurl = url[0] + "/cvc/" + cvc.getCHR().toString();
+		var postfix = (cvc.getCHR().equals(cvc.getCAR()) ? ".selfsigned" : "");
+		var refurl = url[0] + "/cvc/" + cvc.getCHR().toString() + postfix;
 		l.li += <li><a href={refurl}>{cvc.toString()}</a></li>;
 	}
 	

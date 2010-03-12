@@ -197,6 +197,11 @@ CVCertificateStore.prototype.getDVCACertificateFor = function(cvcaref, dvcaref) 
 CVCertificateStore.prototype.getCVCACertificateFor = function(cvcaref) {
 	var fn = this.path + "/" + cvcaref.getHolder() + "/" + cvcaref.toString() + ".cvcert";
 	
+	var f = new java.io.File(fn);
+	if (!f.exists()) {
+		fn = this.path + "/" + path + "/" + chr.toString() + ".selfsigned.cvcert";
+	}
+	
 	var bin = CVCertificateStore.loadBinaryFile(fn);
 	
 	var cvc = new CVC(bin);
@@ -332,8 +337,13 @@ CVCertificateStore.prototype.storeCertificate = function(path, cert, makeCurrent
 		this.saveConfig(path, cfg);
 	}
 
+	var car = cert.getCAR();
 	var chr = cert.getCHR();
-	var fn = this.path + "/" + path + "/" + chr.toString() + ".cvcert";
+	if (car.equals(chr)) {
+		var fn = this.path + "/" + path + "/" + chr.toString() + ".selfsigned.cvcert";
+	} else {
+		var fn = this.path + "/" + path + "/" + chr.toString() + ".cvcert";
+	}
 	GPSystem.trace("Saving certificate to " + fn);
 	CVCertificateStore.saveBinaryFile(fn, cert.getBytes());
 
@@ -351,13 +361,28 @@ CVCertificateStore.prototype.storeCertificate = function(path, cert, makeCurrent
 /**
  * Return certificate for a given CHR
  *
+ * <p>This method returns a self-signed root certificate if the selfsigned
+ *    parameter is set. If not set or set to false, then matching link certificate,
+ *    if any, is returned rather than the self-signed certificate.</p>
+ *
  * @param {String} path the relative path of the PKI element (e.g. "UTCVCA1/UTDVCA1")
  * @param {PublicKeyReference} chr the public key reference for the certificate
+ * @param {boolean} selfsigned return the self-signed root certificate rather than a link certificate
  * @returns the certificate or null if not found
  * @type CVC
  */
-CVCertificateStore.prototype.getCertificate = function(path, chr) {
-	var fn = this.path + "/" + path + "/" + chr.toString() + ".cvcert";
+CVCertificateStore.prototype.getCertificate = function(path, chr, selfsigned) {
+	if (selfsigned) {
+		fn = this.path + "/" + path + "/" + chr.toString() + ".selfsigned.cvcert";
+	} else {
+		var fn = this.path + "/" + path + "/" + chr.toString() + ".cvcert";
+
+		var f = new java.io.File(fn);
+		if (!f.exists()) {
+			fn = this.path + "/" + path + "/" + chr.toString() + ".selfsigned.cvcert";
+		}
+	}
+	
 	var cvc = null;
 	try	{
 		var bin = CVCertificateStore.loadBinaryFile(fn);

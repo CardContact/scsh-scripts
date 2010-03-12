@@ -136,6 +136,18 @@ PublicKeyReference.prototype.toString = function() {
 
 
 /**
+ * Returns true if other public key reference equals this public key reference
+ *
+ * @return true if equals
+ * @type boolean
+ */
+PublicKeyReference.prototype.equals = function(other) {
+	return this.bin.equals(other.bin);
+}
+
+
+
+/**
  * Test function
  */
 PublicKeyReference.test = function() {

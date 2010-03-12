@@ -58,7 +58,18 @@ CVCAService.prototype.setKeySpec = function(keyparam, algorithm) {
 
 
 /**
- * Sets the policy for issuing the root and link certificates
+ * Sets the policy for issuing root certificates
+ *
+ * @param {Object} policy policy object as defined for CVCCA.prototype.generateCertificate()
+ */
+CVCAService.prototype.setRootCertificatePolicy = function(policy) {
+	this.rootCertificatePolicy = policy;
+}
+
+
+
+/**
+ * Sets the policy for issuing the link certificates
  *
  * @param {Object} policy policy object as defined for CVCCA.prototype.generateCertificate()
  */
@@ -87,14 +98,24 @@ CVCAService.prototype.setDVCertificatePolicy = function(policy) {
 CVCAService.prototype.generateLinkCertificate = function(withDP) {
 	// Create a new request
 	var req = this.cvca.generateRequest();
-	print("Link certificate request: " + req);
+	print("Link/Root certificate request: " + req);
 	print(req.getASN1());
 	
-	this.linkCertificatePolicy.includeDomainParameter = withDP;
+	if (this.cvca.isOperational()) {
+		this.linkCertificatePolicy.includeDomainParameter = withDP;
 
-	// Create self-signed or link certificate based on request
-	var cert = this.cvca.generateCertificate(req, this.linkCertificatePolicy);
-	print("Certificate: " + cert);
+		// Create link certificate based on request
+		var cert = this.cvca.generateCertificate(req, this.linkCertificatePolicy);
+		print("Link certificate: " + cert);
+		print(cert.getASN1());
+
+		// Import certificate into store, making it the most current certificate
+		this.cvca.importCertificate(cert);
+	}
+	
+	// Create root certificate based on request
+	var cert = this.cvca.generateCertificate(req, this.rootCertificatePolicy);
+	print("Root certificate: " + cert);
 	print(cert.getASN1());
 
 	// Import certificate into store, making it the most current certificate
