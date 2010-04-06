@@ -56,12 +56,14 @@ var dVPolicy = { certificateValidityDays: 2,
 
 cvca.setDVCertificatePolicy(dVPolicy);
 
+
 /*
 // Set signature key specification
 var key = new Key();
 key.setComponent(Key.ECC_CURVE_OID, new ByteString("brainpoolP384t1", OID));
 cvca.setKeySpec(key, new ByteString("id-TA-ECDSA-SHA-384", OID));
 */
+
 
 // Create GUI
 var cvcaui = new CVCAUI(cvca);
@@ -72,3 +74,4 @@ SOAPServer.registerService("cvca", cvca, cvcaui);
 var dvca = new DVCAService("c:/tmp/eacpki/dvca", "UTDVCA", "UTCVCA", "http://localhost:8080/scriptingserver/se/cvca");
 dvca.setSendCertificateURL("http://localhost:8080/scriptingserver/se/dvca");
 SOAPServer.registerService("dvca", dvca, dvca);
+

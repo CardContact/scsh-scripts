@@ -10,6 +10,7 @@ curl -H "X-Content-Name: EAC2CVRequestGenerator.js" -T ../EAC2CVRequestGenerator
 curl -H "X-Content-Name: cvcca.js" -T ../cvcca/cvcca.js http://localhost:8080/scriptingserver/admin
 curl -H "X-Content-Name: servicerequest.js" -T servicerequest.js http://localhost:8080/scriptingserver/admin
 curl -H "X-Content-Name: cvcaservice.js" -T cvcaservice.js http://localhost:8080/scriptingserver/admin
+curl -H "X-Content-Name: certstorebrowser.js" -T certstorebrowser.js http://localhost:8080/scriptingserver/admin
 curl -H "X-Content-Name: cvcaui.js" -T cvcaui.js http://localhost:8080/scriptingserver/admin
 curl -H "X-Content-Name: dvcaservice.js" -T dvcaservice.js http://localhost:8080/scriptingserver/admin
 curl -H "X-Content-Name: configureservices.js" -T configureservices.js http://localhost:8080/scriptingserver/admin

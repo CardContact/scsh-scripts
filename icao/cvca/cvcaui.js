@@ -35,6 +35,7 @@
  */
 function CVCAUI(service) {
 	this.service = service;
+	this.certstorebrowser = new CertStoreBrowser(service.ss);
 }
 
 
@@ -42,7 +43,7 @@ function CVCAUI(service) {
 /**
  * Serves a simple certificate details page.
  *
- * <p>The URL processed has the format <caname>/cvc/<cert.chr></p>
+ * <p>The URL processed has the format <caname>/cvc?path=path&chr=chr&selfsigned=true|false</p>
  *
  * @param {HttpRequest} req the request object
  * @param {HttpResponse} req the response object
@@ -50,27 +51,27 @@ function CVCAUI(service) {
  */
 CVCAUI.prototype.handleCertificateDetails = function(req, res, url) {
 
-	// ToDo: Refactor to getter
+	var op = CertStoreBrowser.parseQueryString(req.queryString);
 	
-	var chr = url[2];
-	var ss = url.indexOf(".selfsigned");
-	
-	if (ss >= 0) {
-		chr = chr.substring(0, ss);
+	var ss = false;
+	if (typeof(op.selfsigned) != "undefined") {
+		ss = op.selfsigned == "true";
 	}
 	
-	var cert = this.service.ss.getCertificate(this.service.name, chr, ss >= 0);
+	var chr = new PublicKeyReference(op.chr);
+	
+	var cert = this.service.ss.getCertificate(op.path, chr, ss);
 	cert.decorate();
 	
 	var page = 
 		<html>
 			<head>
 				<title>Certificate details</title>
-				<link rel="stylesheet" type="text/css" href="../../../css/style.css"/>
+				<link rel="stylesheet" type="text/css" href="../../css/style.css"/>
 				
 			</head>
 			<body>
-				<div align="left"><a href="http://www.cardcontact.de"><img src="../../../images/banner.jpg" width="750" height="80" border="0"/></a></div>
+				<div align="left"><a href="http://www.cardcontact.de"><img src="../../images/banner.jpg" width="750" height="80" border="0"/></a></div>
 				<br/>
 				<h1>Certificate Details</h1>
 				<p>{cert.toString()}</p>
@@ -79,6 +80,7 @@ CVCAUI.prototype.handleCertificateDetails = function(req, res, url) {
 				<pre>
 					{cert.getASN1().toString()}
 				</pre>
+				<p><a href={"../" + url[0]}>Main Page...</a></p>
 			</body>
 		</html>;
 
@@ -88,6 +90,78 @@ CVCAUI.prototype.handleCertificateDetails = function(req, res, url) {
 	for (var i = 0; i < rights.length; i++) {
 		l.li += <li>{rights[i]}</li>
 	}
+	
+	res.print(page.toXMLString());
+	return;
+}
+
+
+
+/**
+ * Serves a simple certificate list page.
+ *
+ * <p>The URL processed has the format <caname>/certificates?path=path&start=start</p>
+ *
+ * @param {HttpRequest} req the request object
+ * @param {HttpResponse} req the response object
+ * @param {String[]} url array of URL path elements
+ */
+CVCAUI.prototype.handleCertificateList = function(req, res, url) {
+
+	var page = 
+		<html>
+			<head>
+				<title>Certificates</title>
+				<link rel="stylesheet" type="text/css" href="../../css/style.css"/>
+				
+			</head>
+			<body>
+				<div align="left"><a href="http://www.cardcontact.de"><img src="../../images/banner.jpg" width="750" height="80" border="0"/></a></div>
+				<br/>
+				<h1>Certificates</h1>
+				<div id="certificatelist"/>
+				<p><a href={"../" + url[0]}>Main Page...</a></p>
+			</body>
+		</html>;
+
+	var div = page.body.div.(@id == "certificatelist");
+	div.div = this.certstorebrowser.generateCertificateList(req.queryString, "certlist", "cvc");
+	
+	res.print(page.toXMLString());
+	return;
+}
+
+
+
+/**
+ * Serves a simple certificate holder list page.
+ *
+ * <p>The URL processed has the format <caname>/holder?path=path&start=start</p>
+ *
+ * @param {HttpRequest} req the request object
+ * @param {HttpResponse} req the response object
+ * @param {String[]} url array of URL path elements
+ */
+CVCAUI.prototype.handleCertificateHolderList = function(req, res, url) {
+
+	var page = 
+		<html>
+			<head>
+				<title>Certificate Holder</title>
+				<link rel="stylesheet" type="text/css" href="../../css/style.css"/>
+				
+			</head>
+			<body>
+				<div align="left"><a href="http://www.cardcontact.de"><img src="../../images/banner.jpg" width="750" height="80" border="0"/></a></div>
+				<br/>
+				<h1>Certificate Holder</h1>
+				<div id="holderlist"/>
+				<p><a href={"../" + url[0]}>Main Page...</a></p>
+			</body>
+		</html>;
+
+	var div = page.body.div.(@id == "holderlist");
+	div.div = this.certstorebrowser.generateCertificateHolderList(req.queryString, "holderlist", "certlist");
 	
 	res.print(page.toXMLString());
 	return;
@@ -262,15 +336,12 @@ CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 				<div align="left"><a href="http://www.cardcontact.de"><img src="../images/banner.jpg" width="750" height="80" border="0"/></a></div>
 				<br/>
 				<h1>CVCA Service {status}</h1>
-				<h2>Active certificate chain:</h2>
-				<ol>
-				</ol>
-				<h2>Pending requests:</h2>
-				<ol>
-				</ol>
+				<div id="activechain"/>
+				<div id="pendingrequests"/>
 				<h2>Possible actions:</h2>
 				<ul>
 				</ul>
+				<p><a href={url[0] + "/holderlist?path=" + this.service.name }>Browse Document Verifier...</a></p>
 			</body>
 		</html>
 	
@@ -278,7 +349,7 @@ CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 	
 	// ToDo: Refactor to getter
 	if (this.service.cvca.isOperational()) {
-//		l.li += <li><a href="?link">Generate link certificate without domain parameter</a></li>
+		l.li += <li><a href="?link">Generate link certificate without domain parameter</a></li>
 		l.li += <li><a href="?linkdp">Generate link certificate with domain parameter</a></li>
 	} else {
 		l.li += <li><a href="?linkdp">Generate root certificate</a></li>
@@ -287,30 +358,55 @@ CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 	// ToDo: Refactor to getter
 	var certlist = this.service.cvca.getCertificateList();
 	
-	// Certificate list
-	var l = page.body.ol[0];
-	for (var i = 0; i < certlist.length; i++) {
-		var cvc = certlist[i];
-		var postfix = (cvc.getCHR().equals(cvc.getCAR()) ? ".selfsigned" : "");
-		var refurl = url[0] + "/cvc/" + cvc.getCHR().toString() + postfix;
-		l.li += <li><a href={refurl}>{cvc.toString()}</a></li>;
-	}
+	if (certlist.length > 0) {
+		// Certificate list
+		var div = page.body.div.(@id == "activechain");
+		div.h2 = "Active certificate chain:";
 	
-	// Pending requests list
-	var l = page.body.ol[1];
+		div.ul = <ul/>;
+		var l = div.ul;
 
-	var queue = this.service.listRequests();
-	
-	for (var i = 0; i < queue.length; i++) {
-		var sr = queue[i];
-
-		if (sr.isCertificateRequest()) {
-			var refurl = url[0] + "/request/" + i;
+		var i = certlist.length - 6;
+		if (i <= 0) {
+			i = 0;
 		} else {
-			var refurl = url[0] + "/getcert/" + i;
+			refurl = url[0] + "/certlist?path=" + this.service.name;
+			l.li += <li><a href={refurl}>Older ...</a></li>;
 		}
-		l.li += <li><a href={refurl}>{sr.toString()}</a></li>;
+		
+		for (; i < certlist.length; i++) {
+			var cvc = certlist[i];
+			var selfsigned = cvc.getCHR().equals(cvc.getCAR());
+			var refurl = url[0] + "/cvc?" + 
+							"path=" + this.service.name + "&" +
+							"chr=" + cvc.getCHR().toString() + "&" +
+							"selfsigned=" + selfsigned;
+			l.li += <li><a href={refurl}>{cvc.toString()}</a></li>;
+		}
 	}
+	
+	var queue = this.service.listRequests();
+
+	if (queue.length > 0) {
+		// Pending requests list
+		var div = page.body.div.(@id == "pendingrequests");
+		div.h2 = "Pending requests:";
+		
+		div.ol = <ol/>;
+		var l = div.ol;
+	
+		for (var i = 0; i < queue.length; i++) {
+			var sr = queue[i];
+
+			if (sr.isCertificateRequest()) {
+				var refurl = url[0] + "/request/" + i;
+			} else {
+				var refurl = url[0] + "/getcert/" + i;
+			}
+			l.li += <li><a href={refurl}>{sr.toString()}</a></li>;
+		}
+	}
+
 	res.print(page.toXMLString());
 }
 
@@ -327,12 +423,18 @@ CVCAUI.prototype.handleInquiry = function(req, res) {
 	var url = req.pathInfo.substr(1).split("/");
 
 	// Handle details
-	if (url.length > 2) {
+	if (url.length > 1) {
 		var detailsType = url[1];
 		GPSystem.trace("Handle details for :" + detailsType);
 		switch(detailsType) {
 		case "cvc":
 			this.handleCertificateDetails(req, res, url);
+			break;
+		case "certlist":
+			this.handleCertificateList(req, res, url);
+			break;
+		case "holderlist":
+			this.handleCertificateHolderList(req, res, url);
 			break;
 		case "getcert":
 			this.handleGetCertificateRequestDetails(req, res, url);
@@ -346,7 +448,7 @@ CVCAUI.prototype.handleInquiry = function(req, res) {
 	} else {
 		// Handle operations
 		var operation = req.queryString;
-	
+
 		switch(operation) {
 		case "link":
 			this.service.generateLinkCertificate(false);

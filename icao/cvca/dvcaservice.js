@@ -40,6 +40,7 @@ function DVCAService(path, name, parent, parentURL) {
 	this.ss = new CVCertificateStore(path);
 	this.dvca = new CVCCA(this.crypto, this.ss, name, parent);
 	this.parentURL = parentURL;
+	this.parent = parent;
 	this.queue = [];
 }
 
@@ -99,6 +100,11 @@ DVCAService.prototype.updateCACertificates = function(async) {
  */
 DVCAService.prototype.renewCertificate = function(async) {
 
+	var dp = this.ss.getDefaultDomainParameter(this.parent);
+	var algo = this.ss.getDefaultPublicKeyOID(this.parent);
+	
+	this.dvca.setKeySpec(dp, algo);
+	
 	// Create a new request
 	var req = this.dvca.generateRequest();
 	print("Request: " + req);
@@ -125,7 +131,9 @@ DVCAService.prototype.renewCertificate = function(async) {
 
 
 /**
- * Import certificate
+ * Import certificates
+ *
+ * @param {CVC[]} certlist the list of certificates
  *
  */
 DVCAService.prototype.importCertificates = function(certlist) {

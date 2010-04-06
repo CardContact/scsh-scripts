@@ -349,8 +349,6 @@ CVCertificateStore.prototype.storeCertificate = function(path, cert, makeCurrent
 
 	if (makeCurrent) {
 		var cfg = this.loadConfig(path);
-		var seq = parseInt(cfg.sequence.current);
-		cfg.sequence.current = seq + 1;
 		cfg.sequence.currentCHR = chr.toString();
 		this.saveConfig(path, cfg);
 	}
@@ -400,6 +398,8 @@ CVCertificateStore.prototype.getCertificate = function(path, chr, selfsigned) {
  * List certificates stored for given PKI element
  *
  * @param {String} path the relative path of the PKI element (e.g. "UTCVCA1/UTDVCA1")
+ * @returns a list of certificates, possibly empty
+ * @type CVC[]
  */
 CVCertificateStore.prototype.listCertificates = function(path) {
 	var result = [];
@@ -426,6 +426,103 @@ CVCertificateStore.prototype.listCertificates = function(path) {
 
 
 /**
+ * List certificate holders for a given PKI element
+ *
+ * @param {String} path the relative path of the PKI element (e.g. "UTCVCA1/UTDVCA1")
+ * @returns a list of holder ids, possibly empty
+ * @type String[]
+ */
+CVCertificateStore.prototype.listHolders = function(path) {
+	var result = [];
+
+	var fn = this.path + "/" + path;
+	var f = new java.io.File(fn);
+	if (!f.exists()) {
+		return result;
+	}
+	var files = f.list();
+	
+	for (var i = 0; i < files.length; i++) {
+		var s = new String(files[i]);
+		var fd = new java.io.File(f, s);
+		if (fd.isDirectory()) {
+			result.push(s);
+		}
+	}
+	return result;
+}
+
+
+
+/**
+ * Returns the domain parameter for a given CHR of an CVCA certificate
+ * 
+ * @param {PublicKeyReference} chr the CHR of the CVCA certificate to start the search with
+ * @return the domain parameter
+ * @type Key
+ */
+CVCertificateStore.prototype.getDomainParameter = function(chr) {
+	var path = chr.getHolder();
+	
+	do {
+		var cvc = this.getCertificate(path, chr);
+		
+		if (cvc == null) {
+			throw new GPError("CVCertificateStore", GPError.INVALID_ARGUMENTS, 0, "Could not locate certificate " + chr);
+		}
+		
+		var p = cvc.getPublicKey();
+		if (typeof(p.getComponent(Key.ECC_P)) != "undefined") {
+			return p;
+		}
+		chr = cvc.getCAR();
+	} while (!chr.equals(cvc.getCHR()));
+
+	throw new GPError("CVCertificateStore", GPError.INVALID_ARGUMENTS, 0, "Could not locate current CVCA certificate");
+}
+
+
+
+/**
+ * Returns the default domain parameter for a given PKI
+ * 
+ * @param {String} path the CVCA path (e.g. "UTCVCA1")
+ * @return the domain parameter
+ * @type Key
+ */
+CVCertificateStore.prototype.getDefaultDomainParameter = function(path) {
+	chr = this.getCurrentCHR(path);
+	if (chr == null) {
+		throw new GPError("CVCertificateStore", GPError.INVALID_ARGUMENTS, 0, "Could not locate current CVCA certificate");
+	}
+	return this.getDomainParameter(chr);
+}
+
+
+
+/**
+ * Returns the default algorithm identifier OID from the most recent link certificate
+ * 
+ * @param {String} path the CVCA path (e.g. "UTCVCA1")
+ * @return the algorithm identifier
+ * @type ByteString
+ */
+CVCertificateStore.prototype.getDefaultPublicKeyOID = function(path) {
+	chr = this.getCurrentCHR(path);
+	if (chr == null) {
+		throw new GPError("CVCertificateStore", GPError.INVALID_ARGUMENTS, 0, "Could not locate current CVCA certificate");
+	}
+	var cvc = this.getCertificate(path, chr);
+	if (cvc == null) {
+		throw new GPError("CVCertificateStore", GPError.INVALID_ARGUMENTS, 0, "Could not locate current CVCA certificate");
+	}
+	
+	return cvc.getPublicKeyOID();
+}
+
+
+
+/**
  * Return the current CHR for which a valid certificate exists
  *
  * @param {String} path the relative path of the PKI element (e.g. "UTCVCA1/UTDVCA1")
@@ -437,18 +534,12 @@ CVCertificateStore.prototype.getCurrentCHR = function(path) {
 	if (cfg == null) {
 		return null;
 	}
-	
-	if (cfg.sequence.currentCHR) {
-		print("Current CHR: " + cfg.sequence.currentCHR);
-		return new PublicKeyReference(cfg.sequence.currentCHR);
+
+	if (cfg.sequence.currentCHR.toString()) {
+		return new PublicKeyReference(cfg.sequence.currentCHR.toString());
 	}
 	
-	var seq = parseInt(cfg.sequence.current);
-	if (seq == 0) {
-		return null;
-	}
-	
-	return this.getCHRForSequenceNumber(path, seq);
+	return null;
 }
 
 
@@ -457,16 +548,20 @@ CVCertificateStore.prototype.getCurrentCHR = function(path) {
  * Return the next CHR
  *
  * @param {String} path the relative path of the PKI element (e.g. "UTCVCA1/UTDVCA1")
- * @returns the next CHR following the CHR for which a certificate exists or null if none exists
+ * @returns the next CHR based on the sequence counter maintained in the configuration file
  * @type PublicKeyReference
  */
 CVCertificateStore.prototype.getNextCHR = function(path) {
 	var cfg = this.loadConfig(path);
 	if (cfg == null) {
-		return this.getCHRForSequenceNumber(path, 1);
+		cfg = this.getDefaultConfig();
 	}
 	var seq = parseInt(cfg.sequence.current);
-	return this.getCHRForSequenceNumber(path, seq + 1);
+	seq += 1;
+	cfg.sequence.current = seq;
+	this.saveConfig(path, cfg);
+
+	return this.getCHRForSequenceNumber(path, seq);
 }
 
 
@@ -521,7 +616,7 @@ CVCertificateStore.prototype.insertCertificates = function(crypto, certlist, ins
 
 			if (cvc.getCHR().toString() == cvc.getCAR().toString()) { // Self signed
 				var result = cvc.verifyWith(crypto, cvc.getPublicKey());
-		
+
 				if (result) {
 					var path = cvc.getCHR().getHolder();
 					this.storeCertificate(path, cvc, true);
@@ -543,7 +638,8 @@ CVCertificateStore.prototype.insertCertificates = function(crypto, certlist, ins
 		
 		var cacert = this.getCertificate(car.getHolder(), car);
 		if (cacert != null) {	// Issued by a root CA
-			var result = cvc.verifyWith(crypto, cacert.getPublicKey());
+			var dp = this.getDomainParameter(car);
+			var result = cvc.verifyWith(crypto, cacert.getPublicKey(dp));
 			if (result) {
 				var chr = cvc.getCHR();
 				var holder = chr.getHolder();
@@ -572,8 +668,11 @@ CVCertificateStore.prototype.insertCertificates = function(crypto, certlist, ins
 		var path = capath[car.getHolder()];			// Try to locate DVCA processed in previous step
 		if (path) {
 			var cacert = this.getCertificate(path, car);
+			var cacertcar = cacert.getCAR();
 			if (cacert != null) {
 				// Determine root certificate to obtain domain parameter
+				var dp = this.getDomainParameter(cacertcar);
+				
 				var rootcert = this.getCVCACertificateFor(cacert.getCAR());
 				var dp = rootcert.getPublicKey();
 				var result = cvc.verifyWith(crypto, cacert.getPublicKey(dp));
