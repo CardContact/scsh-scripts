@@ -13,7 +13,9 @@ try	{
 	var card = new Card(_scsh3.reader);
 	card.reset(Card.RESET_COLD);
 	
-	var aid = new ByteString("A0000000041010", HEX); // MC
+//	var aid = new ByteString("A0000000041010", HEX); // MC
+	var aid = new ByteString("A0000000031010", HEX); // VISA
+	
 //	var aid = new ByteString("1PAY.SYS.DDF01", ASCII);
 
 

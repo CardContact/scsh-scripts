@@ -11,7 +11,7 @@
 	</target>
 
 
-	<target name="applyTemplate" depends="convertJS">
+	<target name="applyTemplate" depends="convertJS,convertTutorialJS">
 		<apply executable="perl" dir="${doc}" force="true">
 			<arg value="stt.pl" />
 			<fileset dir="." includes="**/*.html"/>
@@ -26,13 +26,35 @@
 	<target name="convertJS">
 		<apply executable="perl" addsourcefile="false" dir="${basedir}">
 			<arg value="${doc}/js2html.pl" />
+			<arg value="templatesubdir.dwt" />
 			<!-- Collect the JS-files -->
 			<fileset dir="${basedir}">
 				<include name="**/*.js"/>
 				<exclude name="nPA/**"/>
 				<exclude name="icao/**"/>
 				<exclude name="build/**"/>
+				<exclude name="tutorial/**"/>
 				<exclude name=".settings.js"/>
+			</fileset>
+
+			<redirector>
+				<!-- redirect STDIN; fileset collects relative to its dir, but we need -->
+				<!-- relative to basedir -->
+				<inputmapper type="identity"/>
+				<!-- redirect STDOUT to file in dest-dir -->
+				<outputmapper type="glob" from="*.js" to="${doc}/*.html"/>
+			</redirector>
+		</apply>
+	</target>
+
+
+	<target name="convertTutorialJS">
+		<apply executable="perl" addsourcefile="false" dir="${basedir}">
+			<arg value="${doc}/js2html.pl" />
+			<arg value="templatesubsubdir.dwt" />
+			<!-- Collect the JS-files -->
+			<fileset dir="${basedir}">
+				<include name="tutorial/**/*.js"/>
 			</fileset>
 
 			<redirector>

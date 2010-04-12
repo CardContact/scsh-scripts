@@ -5,7 +5,10 @@
 #
 #
 
-print "<!-- #BeginTemplate \"templatesubdir.dwt\" -->\n";
+#$template = @ARGV[0];
+$template = shift;
+
+print "<!-- #BeginTemplate \"$template\" -->\n";
 print "<!-- #BeginEditable \"TITLE\" -->\n";
 print "<title>Application - Reference Documentation</title>\n";
 print "<!-- #EndEditable -->\n";
