@@ -36,10 +36,13 @@
  */
 function CVCAService(path, name) {
 	this.name = name;
+	this.type = "CVCA";
+
 	this.crypto = new Crypto();
 	
 	this.ss = new CVCertificateStore(path);
 	this.cvca = new CVCCA(this.crypto, this.ss, name, name);
+	this.path = this.cvca.path;
 	this.queue = [];
 }
 

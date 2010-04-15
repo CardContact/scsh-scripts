@@ -35,12 +35,17 @@
  * @param {String} parentURL the URL of the parent CA's webservice
  */ 
 function DVCAService(path, name, parent, parentURL) {
+	this.name = name;
+	this.type = "DVCA";
+	
+	this.parent = parent;
+	this.parentURL = parentURL;
+	
 	this.crypto = new Crypto();
 	
 	this.ss = new CVCertificateStore(path);
 	this.dvca = new CVCCA(this.crypto, this.ss, name, parent);
-	this.parentURL = parentURL;
-	this.parent = parent;
+	this.path = this.dvca.path;
 	this.queue = [];
 }
 
@@ -416,7 +421,7 @@ DVCAService.prototype.handleInquiry = function(req, res) {
 		var cvc = certlist[i];
 		l.li += <li>{cvc.toString()}</li>;
 	}
-	
+
 	var l = page.body.ol[1];
 	for (var i = 0; i < this.queue.length; i++) {
 		var entry = this.queue[i];

@@ -36,7 +36,7 @@
  */
 function CertStoreBrowser(certstore) {
 	this.certstore = certstore;
-	this.listsize = 2;
+	this.listsize = 15;
 }
 
 
@@ -164,15 +164,45 @@ CertStoreBrowser.prototype.generatePageNavigator = function(urlprefix, start, le
 
 
 /**
+ * Generate a browser that allows to navigate the CA hierarchie
+ *
+ * @param {String} urlprefixholder the prefix to use for URLs addressing holder lists
+ * @param {String} urlprefixlists the prefix to use for URLs addressing lists
+ * @param {String} path the current path
+ * @returns the table and navigator elements
+ * @type XML
+ */
+CertStoreBrowser.prototype.generateHierachieNavigator = function(urlprefixholder, urlprefixlists, path) {
+	var elem = path.substr(1).split("/");
+	
+	var nav = "<div align=\"left\">";
+	
+	if ((elem.length > 0) && (elem[0].length > 0)) {
+		var newpath = "";
+		for (var i = 0; i < elem.length; i++) {
+			newpath += "/" + elem[i];
+			nav += "<a href=\"" + urlprefixlists + "?path=" + newpath + "\">" + elem[i] + "</a>";
+			nav += " <a href=\"" + urlprefixholder + "?path=" + newpath + "\">&gt;&gt;</a> ";
+		}
+	}
+	
+	nav += "</div>";
+	return new XML(nav);
+}
+
+
+
+/**
  * Generate a table of certificates and the navigator elements
  *
  * @param {String} operations the operations part of the URL
+ * @param {String} urlprefixholder the prefix to use for URLs addressing holder lists
  * @param {String} urlprefixlists the prefix to use for URLs addressing lists
  * @param {String} urlprefixcerts the prefix to use for URLs addressing certificates
  * @returns the table and navigator elements
  * @type XML
  */
-CertStoreBrowser.prototype.generateCertificateList = function(operation, urlprefixlists, urlprefixcerts) {
+CertStoreBrowser.prototype.generateCertificateList = function(operation, urlprefixholder, urlprefixlists, urlprefixcerts) {
 	var div = <div/>;
 	
 	var op = CertStoreBrowser.parseQueryString(operation);
@@ -194,10 +224,16 @@ CertStoreBrowser.prototype.generateCertificateList = function(operation, urlpref
 	var baseurl = urlprefixlists + "?" + "path=" + op.path + "&amp;";
 	
 	var nav = this.generatePageNavigator(baseurl, start, certlist.length);
+	var hier = this.generateHierachieNavigator(urlprefixholder, urlprefixlists, op.path);
+
+	var navt = <table width="100%"><tr><td>{hier}</td><td>{nav}</td></tr></table>;
+
+	div.appendChild(navt);
+
+	var t = <table class="content"/>;
+
+	t.tr += <tr><th>CHR</th><th>CAR</th><th>Type</th><th>Effective</th><th>Expiration</th></tr>;
 	
-	div.appendChild(nav);
-	div.appendChild(<table/>);
-	var t = div.table;
 	for (var i = 0; i < cnt; i++) {
 		var cvc = certlist[start + i];
 		var selfsigned = cvc.getCHR().equals(cvc.getCAR());
@@ -206,12 +242,17 @@ CertStoreBrowser.prototype.generateCertificateList = function(operation, urlpref
 		             "chr=" + cvc.getCHR().toString() + "&" +
 		             "selfsigned=" + selfsigned;
 
-		var tr = <tr/>;
-		tr.td += <td><a href={refurl}>{cvc.toString()}</a></td>;
-		t.tr += tr;
+		t.tr += <tr>
+			<td><a href={refurl}>{cvc.getCHR().toString()}</a></td>
+			<td>{cvc.getCAR().toString()}</td>
+			<td>{cvc.getType()}</td>
+			<td>{cvc.getCED().toLocaleDateString()}</td>
+			<td>{cvc.getCXD().toLocaleDateString()}</td>
+		</tr>
 	}
 
-	div.appendChild(nav);
+	div.appendChild(t);
+	div.appendChild(navt);
 	return div;
 }
 
@@ -248,12 +289,15 @@ CertStoreBrowser.prototype.generateCertificateHolderList = function(operation, u
 	var baseurl = urlprefixholder + "?" + "path=" + op.path + "&amp;";
 	
 	var nav = this.generatePageNavigator(baseurl, start, holderlist.length);
-	
-	div.appendChild(nav);
-	div.appendChild(<table/>);
+	var hier = this.generateHierachieNavigator(urlprefixholder, urlprefixcerts, op.path);
 
-	div.table = <table/>;
-	var t = div.table;
+	var navt = <table width="100%"><tr><td>{hier}</td><td>{nav}</td></tr></table>;
+
+	div.appendChild(navt);
+
+	var t = <table class="content"/>;
+	
+	t.tr += <tr><th>Holder</th><th>Certificates</th></tr>
 	for (var i = 0; i < cnt; i++) {
 		var holder = holderlist[start + i];
 		var refurl = urlprefixholder + "?" +
@@ -261,12 +305,13 @@ CertStoreBrowser.prototype.generateCertificateHolderList = function(operation, u
 		var certurl = urlprefixcerts + "?" +
 		             "path=" + op.path + "/" + holder;
 		
-		var tr = <tr/>;
-		tr.td += <td><a href={refurl}>{holder}</a></td>;
-		tr.td += <td><a href={certurl}>Certificates...</a></td>;
-		t.tr += tr;
+		t.tr += <tr>
+				<td><a href={refurl}>{holder}</a></td>
+				<td><a href={certurl}>...</a></td>
+				</tr>
 	}
 	
-	div.appendChild(nav);
+	div.appendChild(t);
+	div.appendChild(navt);
 	return div;
 }

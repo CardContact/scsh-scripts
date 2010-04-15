@@ -34,138 +34,11 @@
  * @param {CVCAService} service the service to which the GUI is attached
  */
 function CVCAUI(service) {
-	this.service = service;
-	this.certstorebrowser = new CertStoreBrowser(service.ss);
+	CommonUI.call(this, service);
 }
 
-
-
-/**
- * Serves a simple certificate details page.
- *
- * <p>The URL processed has the format <caname>/cvc?path=path&chr=chr&selfsigned=true|false</p>
- *
- * @param {HttpRequest} req the request object
- * @param {HttpResponse} req the response object
- * @param {String[]} url array of URL path elements
- */
-CVCAUI.prototype.handleCertificateDetails = function(req, res, url) {
-
-	var op = CertStoreBrowser.parseQueryString(req.queryString);
-	
-	var ss = false;
-	if (typeof(op.selfsigned) != "undefined") {
-		ss = op.selfsigned == "true";
-	}
-	
-	var chr = new PublicKeyReference(op.chr);
-	
-	var cert = this.service.ss.getCertificate(op.path, chr, ss);
-	cert.decorate();
-	
-	var page = 
-		<html>
-			<head>
-				<title>Certificate details</title>
-				<link rel="stylesheet" type="text/css" href="../../css/style.css"/>
-				
-			</head>
-			<body>
-				<div align="left"><a href="http://www.cardcontact.de"><img src="../../images/banner.jpg" width="750" height="80" border="0"/></a></div>
-				<br/>
-				<h1>Certificate Details</h1>
-				<p>{cert.toString()}</p>
-				<ul>
-				</ul>
-				<pre>
-					{cert.getASN1().toString()}
-				</pre>
-				<p><a href={"../" + url[0]}>Main Page...</a></p>
-			</body>
-		</html>;
-
-	var l = page.body.ul;
-	var rights = cert.getRightsAsList();
-
-	for (var i = 0; i < rights.length; i++) {
-		l.li += <li>{rights[i]}</li>
-	}
-	
-	res.print(page.toXMLString());
-	return;
-}
-
-
-
-/**
- * Serves a simple certificate list page.
- *
- * <p>The URL processed has the format <caname>/certificates?path=path&start=start</p>
- *
- * @param {HttpRequest} req the request object
- * @param {HttpResponse} req the response object
- * @param {String[]} url array of URL path elements
- */
-CVCAUI.prototype.handleCertificateList = function(req, res, url) {
-
-	var page = 
-		<html>
-			<head>
-				<title>Certificates</title>
-				<link rel="stylesheet" type="text/css" href="../../css/style.css"/>
-				
-			</head>
-			<body>
-				<div align="left"><a href="http://www.cardcontact.de"><img src="../../images/banner.jpg" width="750" height="80" border="0"/></a></div>
-				<br/>
-				<h1>Certificates</h1>
-				<div id="certificatelist"/>
-				<p><a href={"../" + url[0]}>Main Page...</a></p>
-			</body>
-		</html>;
-
-	var div = page.body.div.(@id == "certificatelist");
-	div.div = this.certstorebrowser.generateCertificateList(req.queryString, "certlist", "cvc");
-	
-	res.print(page.toXMLString());
-	return;
-}
-
-
-
-/**
- * Serves a simple certificate holder list page.
- *
- * <p>The URL processed has the format <caname>/holder?path=path&start=start</p>
- *
- * @param {HttpRequest} req the request object
- * @param {HttpResponse} req the response object
- * @param {String[]} url array of URL path elements
- */
-CVCAUI.prototype.handleCertificateHolderList = function(req, res, url) {
-
-	var page = 
-		<html>
-			<head>
-				<title>Certificate Holder</title>
-				<link rel="stylesheet" type="text/css" href="../../css/style.css"/>
-				
-			</head>
-			<body>
-				<div align="left"><a href="http://www.cardcontact.de"><img src="../../images/banner.jpg" width="750" height="80" border="0"/></a></div>
-				<br/>
-				<h1>Certificate Holder</h1>
-				<div id="holderlist"/>
-				<p><a href={"../" + url[0]}>Main Page...</a></p>
-			</body>
-		</html>;
-
-	var div = page.body.div.(@id == "holderlist");
-	div.div = this.certstorebrowser.generateCertificateHolderList(req.queryString, "holderlist", "certlist");
-	
-	res.print(page.toXMLString());
-	return;
-}
+CVCAUI.prototype = new CommonUI();
+CVCAUI.constructor = CVCAUI;
 
 
 
@@ -180,45 +53,36 @@ CVCAUI.prototype.handleCertificateHolderList = function(req, res, url) {
  */
 CVCAUI.prototype.handleGetCertificateRequestDetails = function(req, res, url) {
 
-	var index = parseInt(url[2]);
+	var op = CertStoreBrowser.parseQueryString(req.queryString);
+	
+	var index = parseInt(op.index);
 	var sr = this.service.getRequest(index);
 	
-	// Handle operations
-	var operation = req.queryString;
-
-	if (operation != null) {
-		if (operation == "delete") {
+	if (typeof(op.action) != "undefined") {
+		if (op.action == "delete") {
 			this.service.deleteRequest(index);
-			this.serveRefreshPage(req, res, "../../" + url[0]);
+			this.serveRefreshPage(req, res, url);
 		} else {
-			sr.setStatusInfo(operation);
+			sr.setStatusInfo(op.action);
 			this.service.processRequest(index);
-			this.serveRefreshPage(req, res, "../../" + url[0]);
+			this.serveRefreshPage(req, res, url);
 		}
 	} else {
 		var page = 
-			<html>
-				<head>
-					<title>GetCertificate request details</title>
-					<link rel="stylesheet" type="text/css" href="../../../css/style.css"/>
-				</head>
-				<body>
-					<div align="left"><a href="http://www.cardcontact.de"><img src="../../../images/banner.jpg" width="750" height="80" border="0"/></a></div>
-					<br/>
-					<h1>Pending GetCertificates request</h1>
-					<p>  MessageID: {sr.getMessageID()}</p>
-					<p>  ResponseURL: {sr.getResponseURL()}</p>
-					<h2>Possible actions:</h2>
-					<ul>
-						<li><a href="?ok_cert_available">Respond</a> with "ok_cert_available"</li>
-						<li><a href="?failure_syntax">Respond</a> with "failure_syntax"</li>
-						<li><a href="?failure_request_not_accepted">Respond</a> with "failure_request_not_accepted"</li>
-						<li><a href="?delete">Delete</a> request without a response</li>
-					</ul>
-				</body>
-			</html>;
+			<div>
+				<h1>Pending GetCertificates request</h1>
+				<p>  MessageID: {sr.getMessageID()}</p>
+				<p>  ResponseURL: {sr.getResponseURL()}</p>
+				<h2>Possible actions:</h2>
+				<ul>
+					<li><a href={"getcert?index=" + op.index + "&action=ok_cert_available"}>Respond</a> with "ok_cert_available"</li>
+					<li><a href={"getcert?index=" + op.index + "&action=failure_syntax"}>Respond</a> with "failure_syntax"</li>
+					<li><a href={"getcert?index=" + op.index + "&action=failure_request_not_accepted"}>Respond</a> with "failure_request_not_accepted"</li>
+					<li><a href={"getcert?index=" + op.index + "&action=delete"}>Delete</a> request without a response</li>
+				</ul>
+			</div>;
 
-		res.print(page.toXMLString());
+		this.sendPage(req, res, url, page);
 	}
 }
 
@@ -235,82 +99,43 @@ CVCAUI.prototype.handleGetCertificateRequestDetails = function(req, res, url) {
  */
 CVCAUI.prototype.handleRequestCertificateRequestDetails = function(req, res, url) {
 
-	var index = parseInt(url[2]);
+	var op = CertStoreBrowser.parseQueryString(req.queryString);
+	
+	var index = parseInt(op.index);
 	var sr = this.service.getRequest(index);
 	
 	var certreq = sr.getCertificateRequest();
 	certreq.decorate();
 	
-	// Handle operations
-	var operation = req.queryString;
-
-	if (operation != null) {
-		if (operation == "delete") {
+	if (typeof(op.action) != "undefined") {
+		if (op.action == "delete") {
 			this.service.deleteRequest(index);
-			this.serveRefreshPage(req, res, "../../" + url[0]);
+			this.serveRefreshPage(req, res, url);
 		} else {
-			sr.setStatusInfo(operation);
+			sr.setStatusInfo(op.action);
 			this.service.processRequest(index);
-			this.serveRefreshPage(req, res, "../../" + url[0]);
+			this.serveRefreshPage(req, res, url);
 		}
 	} else {
 		var page = 
-			<html>
-				<head>
-					<title>RequestCertificate request details</title>
-					<link rel="stylesheet" type="text/css" href="../../../css/style.css"/>
-				</head>
-				<body>
-					<div align="left"><a href="http://www.cardcontact.de"><img src="../../../images/banner.jpg" width="750" height="80" border="0"/></a></div>
-					<br/>
-					<h1>Pending RequestCertificate request</h1>
-					<p>  MessageID: {sr.getMessageID()}</p>
-					<p>  ResponseURL: {sr.getResponseURL()}</p>
-					<h2>Possible actions:</h2>
-					<ul>
-						<li><a href="?ok_cert_available">Respond</a> with "ok_cert_available"</li>
-						<li><a href="?failure_syntax">Respond</a> with "failure_syntax"</li>
-						<li><a href="?failure_inner_signature">Respond</a> with "failure_inner_signature"</li>
-						<li><a href="?failure_outer_signature">Respond</a> with "failure_outer_signature"</li>
-						<li><a href="?failure_request_not_accepted">Respond</a> with "failure_request_not_accepted"</li>
-						<li><a href="?delete">Delete</a> request without a reponse</li>
-					</ul>
-					<pre>{certreq.getASN1()}</pre>
-				</body>
-			</html>;
+			<div>
+				<h1>Pending RequestCertificate request</h1>
+				<p>  MessageID: {sr.getMessageID()}</p>
+				<p>  ResponseURL: {sr.getResponseURL()}</p>
+				<h2>Possible actions:</h2>
+				<ul>
+					<li><a href={"request?index=" + op.index + "&action=ok_cert_available"}>Respond</a> with "ok_cert_available"</li>
+					<li><a href={"request?index=" + op.index + "&action=failure_syntax"}>Respond</a> with "failure_syntax"</li>
+					<li><a href={"request?index=" + op.index + "&action=failure_inner_signature"}>Respond</a> with "failure_inner_signature"</li>
+					<li><a href={"request?index=" + op.index + "&action=failure_outer_signature"}>Respond</a> with "failure_outer_signature"</li>
+					<li><a href={"request?index=" + op.index + "&action=failure_request_not_accepted"}>Respond</a> with "failure_request_not_accepted"</li>
+					<li><a href={"request?index=" + op.index + "&action=delete"}>Delete</a> request without a response</li>
+				</ul>
+				<pre>{certreq.getASN1()}</pre>
+			</div>;
 
-		res.print(page.toXMLString());
+		this.sendPage(req, res, url, page);
 	}
-}
-
-
-
-/**
- * Serves a refresh page that redirects back to the given URL
- *
- * @param {HttpRequest} req the request object
- * @param {HttpResponse} req the response object
- * @param {String} refreshUrl the redirect URL
- */
-CVCAUI.prototype.serveRefreshPage = function(req, res, refreshUrl) {
-
-	var page = 
-		<html>
-			<head>
-				<meta http-equiv="Refresh" content={"1; url=" + refreshUrl}/>
-				<link rel="stylesheet" type="text/css" href="../css/style.css"/>
-				<title>Operation completed</title>
-				
-			</head>
-			<body>
-				<div align="left"><a href="http://www.cardcontact.de"><img src="../images/banner.jpg" width="750" height="80" border="0"/></a></div>
-				<br/>
-				<p>Operation completed - <a href={refreshUrl}>Back to overview</a></p>
-			</body>
-		</html>
-
-	res.print(page.toXMLString());
-	return;
 }
 
 
@@ -326,31 +151,25 @@ CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 	// Handle status page
 	// ToDo: Refactor to getter
 	var status = this.service.cvca.isOperational() ? "operational" : "not operational";
+
 	var page =
-		<html>
-			<head>
-				<title>CVCA</title>
-				<link rel="stylesheet" type="text/css" href="../css/style.css"/>
-			</head>
-			<body>
-				<div align="left"><a href="http://www.cardcontact.de"><img src="../images/banner.jpg" width="750" height="80" border="0"/></a></div>
-				<br/>
-				<h1>CVCA Service {status}</h1>
-				<div id="activechain"/>
-				<div id="pendingrequests"/>
-				<h2>Possible actions:</h2>
-				<ul>
-				</ul>
-				<p><a href={url[0] + "/holderlist?path=" + this.service.name }>Browse Document Verifier...</a></p>
-			</body>
-		</html>
+		<div>
+			<h1>CVCA Service {status}</h1>
+			<div id="activechain"/>
+			<div id="pendingrequests"/>
+			<h2>Possible actions:</h2>
+			<ul>
+			</ul>
+			<p><a href={url[0] + "/holderlist?path=" + this.service.path }>Browse Document Verifier...</a></p>
+		</div>
 	
-	var l = page.body.ul;
+	var l = page.ul;
 	
 	// ToDo: Refactor to getter
 	if (this.service.cvca.isOperational()) {
 		l.li += <li><a href="?link">Generate link certificate without domain parameter</a></li>
 		l.li += <li><a href="?linkdp">Generate link certificate with domain parameter</a></li>
+		l.li += <li><a href="?linkdp100">Generate 100 link certificate with domain parameter</a></li>
 	} else {
 		l.li += <li><a href="?linkdp">Generate root certificate</a></li>
 	}
@@ -359,37 +178,45 @@ CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 	var certlist = this.service.cvca.getCertificateList();
 	
 	if (certlist.length > 0) {
-		// Certificate list
-		var div = page.body.div.(@id == "activechain");
-		div.h2 = "Active certificate chain:";
-	
-		div.ul = <ul/>;
-		var l = div.ul;
+		var t = <table class="content"/>;
+
+		t.tr += <tr><th>CHR</th><th>CAR</th><th>Type</th><th>Effective</th><th>Expiration</th></tr>;
 
 		var i = certlist.length - 6;
 		if (i <= 0) {
 			i = 0;
 		} else {
-			refurl = url[0] + "/certlist?path=" + this.service.name;
-			l.li += <li><a href={refurl}>Older ...</a></li>;
+			refurl = url[0] + "/certlist?path=" + this.service.path;
+			t.tr += <tr><td><a href={refurl}>Older ...</a></td><td></td><td></td><td></td><td></td></tr>;
 		}
 		
 		for (; i < certlist.length; i++) {
 			var cvc = certlist[i];
 			var selfsigned = cvc.getCHR().equals(cvc.getCAR());
 			var refurl = url[0] + "/cvc?" + 
-							"path=" + this.service.name + "&" +
+							"path=" + this.service.path + "&" +
 							"chr=" + cvc.getCHR().toString() + "&" +
 							"selfsigned=" + selfsigned;
-			l.li += <li><a href={refurl}>{cvc.toString()}</a></li>;
+			t.tr += <tr>
+				<td><a href={refurl}>{cvc.getCHR().toString()}</a></td>
+				<td>{cvc.getCAR().toString()}</td>
+				<td>{cvc.getType()}</td>
+				<td>{cvc.getCED().toLocaleDateString()}</td>
+				<td>{cvc.getCXD().toLocaleDateString()}</td>
+			</tr>
 		}
+	
+		// Certificate list
+		var div = page.div.(@id == "activechain");
+		div.h2 = "Active certificate chain:";
+		div.appendChild(t);
 	}
 	
 	var queue = this.service.listRequests();
 
 	if (queue.length > 0) {
 		// Pending requests list
-		var div = page.body.div.(@id == "pendingrequests");
+		var div = page.div.(@id == "pendingrequests");
 		div.h2 = "Pending requests:";
 		
 		div.ol = <ol/>;
@@ -399,15 +226,15 @@ CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 			var sr = queue[i];
 
 			if (sr.isCertificateRequest()) {
-				var refurl = url[0] + "/request/" + i;
+				var refurl = url[0] + "/request?index=" + i;
 			} else {
-				var refurl = url[0] + "/getcert/" + i;
+				var refurl = url[0] + "/getcert?index=" + i;
 			}
 			l.li += <li><a href={refurl}>{sr.toString()}</a></li>;
 		}
 	}
 
-	res.print(page.toXMLString());
+	this.sendPage(req, res, url, page);
 }
 
 
@@ -425,7 +252,7 @@ CVCAUI.prototype.handleInquiry = function(req, res) {
 	// Handle details
 	if (url.length > 1) {
 		var detailsType = url[1];
-		GPSystem.trace("Handle details for :" + detailsType);
+//		GPSystem.trace("Handle details for :" + detailsType);
 		switch(detailsType) {
 		case "cvc":
 			this.handleCertificateDetails(req, res, url);
@@ -452,11 +279,17 @@ CVCAUI.prototype.handleInquiry = function(req, res) {
 		switch(operation) {
 		case "link":
 			this.service.generateLinkCertificate(false);
-			this.serveRefreshPage(req, res, url[0]);
+			this.serveRefreshPage(req, res, url);
 			break;
 		case "linkdp":
 			this.service.generateLinkCertificate(true);
-			this.serveRefreshPage(req, res, url[0]);
+			this.serveRefreshPage(req, res, url);
+			break;
+		case "linkdp100":
+			for (var i = 0; i < 100; i++) {
+				this.service.generateLinkCertificate(true);
+			}
+			this.serveRefreshPage(req, res, url);
 			break;
 		default:
 			this.serveStatusPage(req, res, url);

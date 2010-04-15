@@ -49,9 +49,9 @@ function CVCCA(crypto, certstore, holderId, parentId) {
 	this.parentId = parentId;
 	
 	if (this.isRootCA()) {		// CVCA
-		this.path = holderId;
+		this.path = "/" + holderId;
 	} else {					// DVCA
-		this.path = parentId + "/" + holderId;
+		this.path = "/" + parentId + "/" + holderId;
 	}
 	this.keyspec = new Key();
 	this.keyspec.setComponent(Key.ECC_CURVE_OID, new ByteString("brainpoolP256t1", OID));

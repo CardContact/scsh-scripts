@@ -25,6 +25,7 @@
  */
 
 
+var url = "http://localhost:8080";
 
 // Create CA service
 var cvca = new CVCAService("c:/tmp/eacpki/cvca", "UTCVCA");
@@ -71,7 +72,11 @@ var cvcaui = new CVCAUI(cvca);
 SOAPServer.registerService("cvca", cvca, cvcaui);
 
 
-var dvca = new DVCAService("c:/tmp/eacpki/dvca", "UTDVCA", "UTCVCA", "http://localhost:8080/scriptingserver/se/cvca");
-dvca.setSendCertificateURL("http://localhost:8080/scriptingserver/se/dvca");
-SOAPServer.registerService("dvca", dvca, dvca);
+var dvca = new DVCAService("c:/tmp/eacpki/dvca", "UTDVCA", "UTCVCA", url + "/se/cvca");
+dvca.setSendCertificateURL(url + "/se/dvca");
+
+// Create GUI
+var dvcaui = new DVCAUI(dvca);
+
+SOAPServer.registerService("dvca", dvca, dvcaui);
 

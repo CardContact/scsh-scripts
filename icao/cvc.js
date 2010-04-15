@@ -40,7 +40,7 @@ if (typeof(__ScriptingServer) == "undefined") {
  * @class Class implementing a decoder for card verifiable certificates or requests according to 
  *        Extended Access Control (EAC) as defined in BSI TR-03110 1.11 and 2.02.
  * @constructor
- * @param {ByteString} the DER encoded certificate
+ * @param {ByteString} param the DER encoded certificate
  * @return
  */
 function CVC() {
@@ -613,13 +613,12 @@ CVC.prototype.getRightsAsList = function() {
 
 
 /**
- * Return a textual description of the certificate
+ * Return a string describing the certificate type
  *
- * @returns a string containing information about the certificate
+ * @returns a describing string
  * @type String
  */
-CVC.prototype.toString = function() {
-	var car = this.getCAR();
+CVC.prototype.getType = function() {
 	var ced = this.getCED();
 	var chat = this.getCHAT();
 	
@@ -664,6 +663,23 @@ CVC.prototype.toString = function() {
 		}
 	}
 	
+	return str;
+}
+
+
+
+/**
+ * Return a textual description of the certificate
+ *
+ * @returns a string containing information about the certificate
+ * @type String
+ */
+CVC.prototype.toString = function() {
+	var car = this.getCAR();
+	var ced = this.getCED();
+
+	var str = this.getType();
+
 	if (car) {
 		str += "CAR=" + car.toString() + " ";
 	}

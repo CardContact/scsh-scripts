@@ -1,16 +1,19 @@
-curl http://localhost:8080/scriptingserver/admin?restart
-curl -H "X-Content-Name: soapserver.js" -T soapserver.js http://localhost:8080/scriptingserver/admin
+set URL=http://localhost:8080
+curl %URL%/admin?restart
+curl -H "X-Content-Name: soapserver.js" -T soapserver.js %URL%/admin
 
-curl -H "X-Content-Name: publickeyreference.js" -T ../publickeyreference.js http://localhost:8080/scriptingserver/admin
-curl -H "X-Content-Name: cvc.js" -T ../cvc.js http://localhost:8080/scriptingserver/admin
-curl -H "X-Content-Name: pkcs8.js" -T ../pkcs8.js http://localhost:8080/scriptingserver/admin
-curl -H "X-Content-Name: cvcertstore.js" -T ../cvcertstore.js http://localhost:8080/scriptingserver/admin
-curl -H "X-Content-Name: EAC2CVCertificateGenerator.js" -T ../EAC2CVCertificateGenerator.js http://localhost:8080/scriptingserver/admin
-curl -H "X-Content-Name: EAC2CVRequestGenerator.js" -T ../EAC2CVRequestGenerator.js http://localhost:8080/scriptingserver/admin
-curl -H "X-Content-Name: cvcca.js" -T ../cvcca/cvcca.js http://localhost:8080/scriptingserver/admin
-curl -H "X-Content-Name: servicerequest.js" -T servicerequest.js http://localhost:8080/scriptingserver/admin
-curl -H "X-Content-Name: cvcaservice.js" -T cvcaservice.js http://localhost:8080/scriptingserver/admin
-curl -H "X-Content-Name: certstorebrowser.js" -T certstorebrowser.js http://localhost:8080/scriptingserver/admin
-curl -H "X-Content-Name: cvcaui.js" -T cvcaui.js http://localhost:8080/scriptingserver/admin
-curl -H "X-Content-Name: dvcaservice.js" -T dvcaservice.js http://localhost:8080/scriptingserver/admin
-curl -H "X-Content-Name: configureservices.js" -T configureservices.js http://localhost:8080/scriptingserver/admin
+curl -H "X-Content-Name: publickeyreference.js" -T ../publickeyreference.js %URL%/admin
+curl -H "X-Content-Name: cvc.js" -T ../cvc.js %URL%/admin
+curl -H "X-Content-Name: pkcs8.js" -T ../pkcs8.js %URL%/admin
+curl -H "X-Content-Name: cvcertstore.js" -T ../cvcertstore.js %URL%/admin
+curl -H "X-Content-Name: EAC2CVCertificateGenerator.js" -T ../EAC2CVCertificateGenerator.js %URL%/admin
+curl -H "X-Content-Name: EAC2CVRequestGenerator.js" -T ../EAC2CVRequestGenerator.js %URL%/admin
+curl -H "X-Content-Name: cvcca.js" -T ../cvcca/cvcca.js %URL%/admin
+curl -H "X-Content-Name: servicerequest.js" -T servicerequest.js %URL%/admin
+curl -H "X-Content-Name: certstorebrowser.js" -T certstorebrowser.js %URL%/admin
+curl -H "X-Content-Name: commonui.js" -T commonui.js %URL%/admin
+curl -H "X-Content-Name: cvcaservice.js" -T cvcaservice.js %URL%/admin
+curl -H "X-Content-Name: cvcaui.js" -T cvcaui.js %URL%/admin
+curl -H "X-Content-Name: dvcaservice.js" -T dvcaservice.js %URL%/admin
+curl -H "X-Content-Name: dvcaui.js" -T dvcaui.js %URL%/admin
+curl -H "X-Content-Name: configureservices.js" -T configureservices.js %URL%/admin
