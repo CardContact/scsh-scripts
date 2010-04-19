@@ -32,23 +32,33 @@
  * @class Class storing entries in the internal work queue
  * @constructor
  *
- * @param {String} messageID the message identifier send by the client
- * @param {String} responseURL the URL to which the result of processing this request is send
- * @param {CVC} certificateRequest the optional certificate request for this request
+ * @param {String} messageID the message identifier send by the client (optional)
+ * @param {String} responseURL the URL to which the result of processing this request is send (optional)
+ * @param {CVC} certificateRequest the optional certificate request for this request (optional)
  */
 function ServiceRequest(messageID, responseURL, certificateRequest) {
-	this.messageID = messageID.toString();
-	this.responseURL = responseURL.toString();
+	if (messageID) {
+		this.messageID = messageID.toString();
+	}
+	if (responseURL) {
+		this.responseURL = responseURL.toString();
+	}
 	this.certificateRequest = certificateRequest;
 }
 
 
-ServiceRequest.OK_CERT_AVAILABLE			= "ok_cert_available";
-ServiceRequest.OK_SYNTAX					= "ok_syntax";
-ServiceRequest.FAILURE_SYNTAX				= "failure_syntax";
-ServiceRequest.FAILURE_INNER_SIGNATURE		= "failure_inner_signature";
-ServiceRequest.FAILURE_OUTER_SIGNATURE		= "failure_outer_signature";
-ServiceRequest.FAILURE_REQUEST_NOT_ACCEPTED	= "failure_request_not_accepted";
+ServiceRequest.OK_CERT_AVAILABLE					= "ok_cert_available";
+ServiceRequest.OK_SYNTAX							= "ok_syntax";
+ServiceRequest.OK_RECEIVED_CORRECTLY				= "ok_received_correctly";
+ServiceRequest.FAILURE_SYNTAX						= "failure_syntax";
+ServiceRequest.FAILURE_INNER_SIGNATURE				= "failure_inner_signature";
+ServiceRequest.FAILURE_OUTER_SIGNATURE				= "failure_outer_signature";
+ServiceRequest.FAILURE_REQUEST_NOT_ACCEPTED			= "failure_request_not_accepted";
+ServiceRequest.FAILURE_FOREIGNCAR_UNKNOWN			= "failure_foreignCAR_unknown";
+ServiceRequest.FAILURE_NOT_FORWARDED				= "failure_not_forwarded";
+ServiceRequest.FAILURE_REQUEST_NOT_ACCEPTED_FOREIGN	= "failure_request_not_accepted_foreign";
+ServiceRequest.FAILURE_MESSAGEID_UNKNOWN			= "failure_messageID_unknown";
+
 
 
 /**
@@ -59,6 +69,18 @@ ServiceRequest.FAILURE_REQUEST_NOT_ACCEPTED	= "failure_request_not_accepted";
  */
 ServiceRequest.prototype.isCertificateRequest = function() {
 	return (typeof(this.certificateRequest) != "undefined");
+}
+
+
+
+/**
+ * Returns true if this is an asynchronous request
+ *
+ * @returns true if this is an asynchronous request
+ * @type boolean
+ */
+ServiceRequest.prototype.isAsynchronous = function() {
+	return (typeof(this.messageID) != "undefined");
 }
 
 
@@ -130,6 +152,9 @@ ServiceRequest.prototype.setStatusInfo = function(statusInfo) {
  * @type String
  */
 ServiceRequest.prototype.getFinalStatusInfo = function() {
+	if (!this.isAsynchronous()) {
+		return "Synchronous Request";
+	}
 	return this.finalStatusInfo;
 }
 
@@ -154,7 +179,11 @@ ServiceRequest.prototype.setFinalStatusInfo = function(statusInfo) {
  * @type String
  */
 ServiceRequest.prototype.toString = function() {
-	var str = this.messageID + " - ";
+	if (this.isAsynchronous()) {
+		var str = this.messageID + " - ";
+	} else {
+		var str = "";
+	}
 	
 	if (this.isCertificateRequest()) {
 		str += this.certificateRequest.toString() + " - ";

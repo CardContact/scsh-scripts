@@ -8,7 +8,7 @@ curl -H "X-Content-Name: pkcs8.js" -T ../pkcs8.js %URL%/admin
 curl -H "X-Content-Name: cvcertstore.js" -T ../cvcertstore.js %URL%/admin
 curl -H "X-Content-Name: EAC2CVCertificateGenerator.js" -T ../EAC2CVCertificateGenerator.js %URL%/admin
 curl -H "X-Content-Name: EAC2CVRequestGenerator.js" -T ../EAC2CVRequestGenerator.js %URL%/admin
-curl -H "X-Content-Name: cvcca.js" -T ../cvcca/cvcca.js %URL%/admin
+curl -H "X-Content-Name: cvcca.js" -T cvcca.js %URL%/admin
 curl -H "X-Content-Name: servicerequest.js" -T servicerequest.js %URL%/admin
 curl -H "X-Content-Name: certstorebrowser.js" -T certstorebrowser.js %URL%/admin
 curl -H "X-Content-Name: commonui.js" -T commonui.js %URL%/admin

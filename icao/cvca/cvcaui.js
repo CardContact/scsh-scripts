@@ -89,7 +89,7 @@ CVCAUI.prototype.handleGetCertificateRequestDetails = function(req, res, url) {
 
 
 /**
- * Serves a details page for pending RequestCertifcate requests.
+ * Serves a details page for pending RequestCertificate requests.
  *
  * <p>The URL processed has the format <caname>/request/<queueindex></p>
  *
@@ -215,23 +215,41 @@ CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 	var queue = this.service.listRequests();
 
 	if (queue.length > 0) {
-		// Pending requests list
-		var div = page.div.(@id == "pendingrequests");
-		div.h2 = "Pending requests:";
-		
-		div.ol = <ol/>;
-		var l = div.ol;
-	
+		var t = <table class="content"/>;
+
+		t.tr += <tr><th width="20%">MessageID</th><th>Request</th><th>Status</th><th>Final Status</th></tr>;
+
 		for (var i = 0; i < queue.length; i++) {
 			var sr = queue[i];
 
 			if (sr.isCertificateRequest()) {
 				var refurl = url[0] + "/request?index=" + i;
+				var reqstr = sr.getCertificateRequest().toString();
 			} else {
 				var refurl = url[0] + "/getcert?index=" + i;
+				var reqstr = "GetCertificates";
 			}
-			l.li += <li><a href={refurl}>{sr.toString()}</a></li>;
+			var status = sr.getStatusInfo();
+			if (!status) {
+				status = "Undefined";
+			}
+			var finalStatus = sr.getFinalStatusInfo();
+			if (!finalStatus) {
+				finalStatus = "Not yet send";
+			}
+			t.tr += <tr>
+				<td><a href={refurl}>{sr.getMessageID()}</a></td>
+				<td>{reqstr}</td>
+				<td>{status}</td>
+				<td>{finalStatus}</td>
+			</tr>
 		}
+
+		// Pending requests list
+		var div = page.div.(@id == "pendingrequests");
+		div.h2 = "Inbound requests:";
+		
+		div.appendChild(t);
 	}
 
 	this.sendPage(req, res, url, page);

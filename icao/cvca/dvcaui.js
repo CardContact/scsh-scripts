@@ -43,6 +43,38 @@ DVCAUI.constructor = DVCAUI;
 
 
 /**
+ * Serves a details page for pending outbound RequestCertificate requests.
+ *
+ * <p>The URL processed has the format <caname>/request/<queueindex></p>
+ *
+ * @param {HttpRequest} req the request object
+ * @param {HttpResponse} req the response object
+ * @param {String[]} url array of URL path elements
+ */
+DVCAUI.prototype.handleRequestCertificateOutboundRequestDetails = function(req, res, url) {
+
+	var op = CertStoreBrowser.parseQueryString(req.queryString);
+	
+	var index = parseInt(op.index);
+	var sr = this.service.getOutboundRequest(index);
+	
+	var certreq = sr.getCertificateRequest();
+	certreq.decorate();
+	
+	var page = 
+		<div>
+			<h1>Outbound RequestCertificate request</h1>
+			<p>  MessageID: {sr.getMessageID()}</p>
+			<p>  ResponseURL: {sr.getResponseURL()}</p>
+			<pre>{certreq.getASN1()}</pre>
+		</div>;
+
+	this.sendPage(req, res, url, page);
+}
+
+
+
+/**
  * Serve the status page
  *
  * @param {HttpRequest} req the request object
@@ -58,7 +90,7 @@ DVCAUI.prototype.serveStatusPage = function(req, res, url) {
 		<div>
 			<h1>DVCA Service {status}</h1>
 			<div id="activechain"/>
-			<div id="pendingrequests"/>
+			<div id="pendingoutboundrequests"/>
 			<h2>Possible actions:</h2>
 			<ul>
 				<li><a href="?update">Update CVCA certificates synchronously</a></li>
@@ -113,27 +145,48 @@ DVCAUI.prototype.serveStatusPage = function(req, res, url) {
 		div.appendChild(t);
 	}
 	
-//	var queue = this.service.listRequests();
-	queue = [];
+	var queue = this.service.listOutboundRequests();
 	
 	if (queue.length > 0) {
-		// Pending requests list
-		var div = page.body.div.(@id == "pendingrequests");
-		div.h2 = "Pending requests:";
-		
-		div.ol = <ol/>;
-		var l = div.ol;
-	
+		var t = <table class="content"/>;
+
+		t.tr += <tr><th width="20%">MessageID</th><th>Request</th><th>Status</th><th>Final Status</th></tr>;
+
 		for (var i = 0; i < queue.length; i++) {
 			var sr = queue[i];
 
-			if (sr.isCertificateRequest()) {
-				var refurl = url[0] + "/request/" + i;
-			} else {
-				var refurl = url[0] + "/getcert/" + i;
+			var tr = <tr/>;
+			var msgid = sr.getMessageID();
+			if (!msgid) {
+				msgid = "";
 			}
-			l.li += <li><a href={refurl}>{sr.toString()}</a></li>;
+			tr.td += <td>{msgid}</td>
+			
+			if (sr.isCertificateRequest()) {
+				var refurl = url[0] + "/outrequest?" + "index=" + i;
+				tr.td += <td><a href={refurl}>{sr.getCertificateRequest().toString()}</a></td>;
+			} else {
+				tr.td += <td>GetCertificates</td>;
+			}
+			var status = sr.getStatusInfo();
+			if (!status) {
+				status = "Undefined";
+			}
+			var finalStatus = sr.getFinalStatusInfo();
+			if (!finalStatus) {
+				finalStatus = "Not yet received";
+			}
+			
+			tr.td += <td>{status}</td>
+			tr.td += <td>{finalStatus}</td>
+			t.tr += tr;
 		}
+
+		// Pending requests list
+		var div = page.div.(@id == "pendingoutboundrequests");
+		div.h2 = "Outbound requests:";
+		
+		div.appendChild(t);
 	}
 
 	this.sendPage(req, res, url, page);
@@ -168,8 +221,8 @@ DVCAUI.prototype.handleInquiry = function(req, res) {
 		case "getcert":
 			this.handleGetCertificateRequestDetails(req, res, url);
 			break;
-		case "request":
-			this.handleRequestCertificateRequestDetails(req, res, url);
+		case "outrequest":
+			this.handleRequestCertificateOutboundRequestDetails(req, res, url);
 			break;
 		default:
 			res.setStatus(HttpResponse.SC_NOT_FOUND);

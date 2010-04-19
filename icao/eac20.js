@@ -555,6 +555,7 @@ EAC20.prototype.performRestrictedIdentification = function(keyId, sectorPublicKe
 	GPSystem.trace(msedata);
 	this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x22, 0x41, 0xA4, msedata, [0x9000]);
 	
+	// ToDo change to sectorPublicKey.value
 	var dado = new ASN1(0x7C, new ASN1(0xA0, sectorPublicKey.bytes(5)));
 
 //	print("GA Input: " + dado.getBytes());

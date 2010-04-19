@@ -285,17 +285,17 @@ CVCAService.prototype.sendCertificates = function(serviceRequest, certificates) 
 
 	GPSystem.trace(request);
 	
-	var response = soapConnection.call(serviceRequest.getResponseURL(), request);
+	try	{
+		var response = soapConnection.call(serviceRequest.getResponseURL(), request);
+	}
+	catch(e) {
+		GPSystem.trace("SOAP call to " + serviceRequest.getResponseURL() + " failed : " + e);
+		throw new GPError("CVCAService", GPError.DEVICE_ERROR, 0, "SendCertificates failed with : " + e);
+	}
 	
 	var result = response.Result.ns1::returnCode.toString();
 	
 	serviceRequest.setFinalStatusInfo(result);
-	
-	if (result.substr(0, 3) != "ok_") {
-		GPSystem.trace("SendCertificates failed:");
-		GPSystem.trace(response);
-		throw new GPError("CVCAService", GPError.DEVICE_ERROR, 0, "SendCertificates failed with returnCode " + result);
-	}
 }
 
 
