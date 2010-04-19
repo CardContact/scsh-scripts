@@ -181,7 +181,7 @@ DVCAService.prototype.updateCACertificates = function(async) {
  * Renew certificate through parent CA
  *
  */
-DVCAService.prototype.renewCertificate = function(async) {
+DVCAService.prototype.renewCertificate = function(async, forceinitial) {
 
 	var dp = this.ss.getDefaultDomainParameter(this.parent);
 	var algo = this.ss.getDefaultPublicKeyOID(this.parent);
@@ -189,7 +189,7 @@ DVCAService.prototype.renewCertificate = function(async) {
 	this.dvca.setKeySpec(dp, algo);
 	
 	// Create a new request
-	var req = this.dvca.generateRequest();
+	var req = this.dvca.generateRequest(forceinitial);
 	print("Request: " + req);
 	print(req.getASN1());
 

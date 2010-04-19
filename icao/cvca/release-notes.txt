@@ -28,6 +28,4 @@ the DVCA status page is located at
 
 Missing functionality
 =====================
-1. The CVCA only implements a minimal request checking
-2. Link certificates without domain parameter do not work
-3. The CVCA does not differentiate between DVCAs, all follow the same policy
+1. The CVCA only implements basic request checking

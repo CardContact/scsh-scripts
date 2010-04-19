@@ -96,9 +96,11 @@ DVCAUI.prototype.serveStatusPage = function(req, res, url) {
 				<li><a href="?update">Update CVCA certificates synchronously</a></li>
 				<li><a href="?updateasync">Update CVCA certificates asynchronously</a></li>
 				<li><a href="?renew">Renew certificate synchronously</a></li>
-				<li><a href="?renewasync">Renew certificate asychronously</a></li>
+				<li><a href="?renewasync">Renew certificate asynchronously</a></li>
+				<li><a href="?initial">Request initial certificate synchronously</a></li>
+				<li><a href="?initialasync">Request initial certificate asynchronously</a></li>
 			</ul>
-			<p><a href={url[0] + "/holderlist?path=" + this.service.path }>Browse Document Verifier...</a></p>
+			<p><a href={url[0] + "/holderlist?path=" + this.service.path }>Browse Terminals...</a></p>
 		</div>
 	
 	// ToDo: Refactor to getter
@@ -177,8 +179,8 @@ DVCAUI.prototype.serveStatusPage = function(req, res, url) {
 				finalStatus = "Not yet received";
 			}
 			
-			tr.td += <td>{status}</td>
-			tr.td += <td>{finalStatus}</td>
+			tr.td += <td>{status.substr(0, 24)}</td>
+			tr.td += <td>{finalStatus.substr(0, 24)}</td>
 			t.tr += tr;
 		}
 
@@ -241,11 +243,19 @@ DVCAUI.prototype.handleInquiry = function(req, res) {
 			this.serveRefreshPage(req, res, url);
 			break;
 		case "renew":
-			this.service.renewCertificate(false);
+			this.service.renewCertificate(false, false);
 			this.serveRefreshPage(req, res, url);
 			break;
 		case "renewasync":
-			this.service.renewCertificate(true);
+			this.service.renewCertificate(true, false);
+			this.serveRefreshPage(req, res, url);
+			break;
+		case "initial":
+			this.service.renewCertificate(false, true);
+			this.serveRefreshPage(req, res, url);
+			break;
+		case "initialasync":
+			this.service.renewCertificate(true, true);
 			this.serveRefreshPage(req, res, url);
 			break;
 		default:

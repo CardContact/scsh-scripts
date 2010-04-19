@@ -290,6 +290,7 @@ CVC.prototype.getCED = function() {
 	d.setFullYear(b.byteAt(0) * 10 + b.byteAt(1) + 2000, 
 				  b.byteAt(2) * 10 + b.byteAt(3) - 1,
 				  b.byteAt(4) * 10 + b.byteAt(5));
+	d.setHours(12, 0, 0, 0);
 	return d;
 }
 
@@ -314,7 +315,29 @@ CVC.prototype.getCXD = function() {
 	d.setFullYear(b.byteAt(0) * 10 + b.byteAt(1) + 2000, 
 				  b.byteAt(2) * 10 + b.byteAt(3) - 1,
 				  b.byteAt(4) * 10 + b.byteAt(5));
+	d.setHours(12, 0, 0, 0);
 	return d;
+}
+
+
+
+/**
+ * Returns the outer certification authority reference (CAR).
+ *
+ * @return the outer CAR or null
+ * @type PublicKeyReference
+ */
+CVC.prototype.getOuterCAR = function() {
+	if (!this.isAuthenticatedRequest()) {
+		return null;
+	}
+	var cardo = this.asn.get(1);
+	
+	if (!cardo) {
+		return null
+	}
+	
+	return new PublicKeyReference(cardo.value);
 }
 
 

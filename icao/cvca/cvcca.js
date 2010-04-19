@@ -101,10 +101,11 @@ CVCCA.prototype.setKeySpec = function(keyparam, algorithm) {
 /**
  * Generate a certificate request
  *
+ * @param {boolean} forceInitial force an initial request, even if a current certificate is available
  * @return the certificate request
  * @type CVC
  */
-CVCCA.prototype.generateRequest = function() {
+CVCCA.prototype.generateRequest = function(forceinitial) {
 
 	// Obtain key parameter
 
@@ -138,9 +139,8 @@ CVCCA.prototype.generateRequest = function() {
 	// Set CHR for the request
 	reqGenerator.setCHR(nextchr);
 
-	if (currentchr != null) {
+	if ((currentchr != null) && !forceinitial) {
 		var previousprk = this.certstore.getPrivateKey(this.path, currentchr);
-		// ToDo include CAR of current certificate
 		var req = reqGenerator.generateAuthenticatedCVRequest(prk, previousprk, currentchr);
 	} else {
 		// Generate the request
@@ -189,7 +189,9 @@ CVCCA.prototype.generateCertificate = function(req, policy) {
 	generator.setCAR(car);
 	generator.setCHR(req.getCHR());
 	var effDate = new Date();
-	var expDate = new Date(policy.certificateValidityDays * (1000 * 60 * 60 * 24) + effDate.getTime());
+	effDate.setHours(12, 0, 0, 0);
+	var expDate = new Date((policy.certificateValidityDays - 1) * (1000 * 60 * 60 * 24) + effDate.getTime());
+	expDate.setHours(12, 0, 0, 0);
 	generator.setEffectiveDate(effDate);
 	generator.setExpiryDate(expDate);
 	generator.setChatOID(policy.chatRoleOID);
@@ -296,6 +298,53 @@ CVCCA.prototype.getCertificateList = function() {
 	}
 	
 	return list;
+}
+
+
+
+/**
+ * Return certificate issued by this CA
+ *
+ * @param {PublicKeyReference} chr the certificate holder reference
+ * @returns the certificate or null if not found
+ * @type CVC
+ */
+CVCCA.prototype.getIssuedCertificate = function(chr) {
+	var path = this.path + "/" + chr.getHolder();
+	
+	var cvc = this.certstore.getCertificate(path, chr);
+	if (cvc == null) {
+		GPSystem.trace("No certificate found for " + chr);
+		return null;
+	}
+	
+	return cvc;
+}
+
+
+
+/**
+ * Return authentic public key with domain parameter for a given CHR subordinate to the CA
+ *
+ * @param {PublicKeyReference} chr the certificate holder reference
+ * @returns the public key or null
+ * @type Key
+ */
+CVCCA.prototype.getAuthenticPublicKey = function(chr) {
+	var cvc = this.getIssuedCertificate(chr);
+	
+	if (this.isRootCA()) {
+		var dp = this.certstore.getDomainParameter(cvc.getCAR());
+	} else {
+		var dvcacvc = this.certstore.getCertificate(this.path, cvc.getCAR());
+		if (dvcacvc == null) {
+			GPSystem.trace("No certificate found for " + cvc.getCAR());
+			return null;
+		}
+		var dp = this.certstore.getDomainParameter(dvcacvc.getCAR());
+	}
+	
+	return(cvc.getPublicKey(dp));
 }
 
 

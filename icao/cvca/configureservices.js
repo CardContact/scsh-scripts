@@ -52,11 +52,27 @@ var dVPolicy = { certificateValidityDays: 2,
 				   chatRoleOID: new ByteString("id-IS", OID),
 				   chatRights: new ByteString("A3", HEX),
 				   includeDomainParameter: false,
-				   extensions: null
+				   extensions: null,
+				   authenticatedRequestsApproved: false,
+				   initialRequestsApproved: false,
+				   declineExpiredAuthenticatedRequest: true
 				 };
 
+// Default policy
 cvca.setDVCertificatePolicy(dVPolicy);
 
+var dVPolicy = { certificateValidityDays: 1,
+				   chatRoleOID: new ByteString("id-IS", OID),
+				   chatRights: new ByteString("A3", HEX),
+				   includeDomainParameter: false,
+				   extensions: null,
+				   authenticatedRequestsApproved: true,
+				   initialRequestsApproved: false,
+				   declineExpiredAuthenticatedRequest: false
+				 };
+
+// Policy for UTDVCA
+cvca.setDVCertificatePolicy(dVPolicy, /^UTDVCA.*$/);
 
 /*
 // Set signature key specification

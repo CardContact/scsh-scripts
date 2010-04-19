@@ -44,6 +44,7 @@ function CVCAService(path, name) {
 	this.cvca = new CVCCA(this.crypto, this.ss, name, name);
 	this.path = this.cvca.path;
 	this.queue = [];
+	this.dVCertificatePolicies = [];
 }
 
 
@@ -86,9 +87,33 @@ CVCAService.prototype.setLinkCertificatePolicy = function(policy) {
  * Sets the policy for issuing document verifier certificates
  *
  * @param {Object} policy policy object as defined for CVCCA.prototype.generateCertificate()
+ * @param {Regex} chrregex a regular expression that the CHR must match in order to use this rule
  */
-CVCAService.prototype.setDVCertificatePolicy = function(policy) {
-	this.dVCertificatePolicy = policy;
+CVCAService.prototype.setDVCertificatePolicy = function(policy, chrregex) {
+	if (typeof(chrregex) != "undefined") {
+		this.dVCertificatePolicies.push( { regex: chrregex, policy: policy } );
+	} else {
+		this.dVCertificatePolicy = policy;
+	}
+}
+
+
+
+/**
+ * Returns the policy to apply for a given CHR
+ *
+ * @param {PublicKeyReference} chr the certificate holder reference
+ * @returns a matching policy or the default policy
+ * @type Object
+ */
+CVCAService.prototype.getDVCertificatePolicyForCHR = function(chr) {
+	for (var i = 0; i < this.dVCertificatePolicies.length; i++) {
+		var p = this.dVCertificatePolicies[i];
+		if (chr.toString().match(p.regex)) {
+			return p.policy;
+		}
+	}
+	return this.dVCertificatePolicy;
 }
 
 
@@ -170,7 +195,61 @@ CVCAService.prototype.checkRequestSemantics = function(req) {
 		return ServiceRequest.FAILURE_INNER_SIGNATURE;
 	}
 	
+	if (req.isAuthenticatedRequest()) {
+		var puk = this.cvca.getAuthenticPublicKey(req.getOuterCAR());
+		if (puk) {
+			if (!req.verifyATWith(this.crypto, puk)) {
+				GPSystem.trace("Error verifying outer signature");
+				return ServiceRequest.FAILURE_OUTER_SIGNATURE;
+			}
+		} else {
+			GPSystem.trace("No public key found for authenticated request");
+			return ServiceRequest.FAILURE_OUTER_SIGNATURE;
+		}
+	}
+	
 	return ServiceRequest.OK_CERT_AVAILABLE;
+}
+
+
+
+/**
+ * Check certificate request against policy
+ *
+ * @param {CVC} req the request
+ * @param {String} response the proposed response string
+ * @param {Boolean} callback the indicator if a call-back is possible
+ * @returns one of the ServiceRequest status results (ok_cert_available if successful).
+ * @type String
+ */
+CVCAService.prototype.checkPolicy = function(req, response, callback) {
+	if (response != ServiceRequest.OK_CERT_AVAILABLE) {
+		return response;
+	}
+	
+	var policy = this.getDVCertificatePolicyForCHR(req.getCHR());
+	
+	if (req.isAuthenticatedRequest()) {
+		var cvc = this.cvca.getIssuedCertificate(req.getOuterCAR());
+		var now = new Date();
+		now.setHours(12, 0, 0, 0);
+		if (now.valueOf() > cvc.getCXD().valueOf()) {
+			GPSystem.trace("Certificate " + cvc.toString() + " is expired");
+			if (policy.declineExpiredAuthenticatedRequest) {
+				return ServiceRequest.FAILURE_OUTER_SIGNATURE;
+			}
+		} else {
+			if (policy.authenticatedRequestsApproved) {
+				return ServiceRequest.OK_CERT_AVAILABLE;
+			}
+		}
+	} else {
+		if (policy.initialRequestsApproved) {
+			return ServiceRequest.OK_CERT_AVAILABLE;
+		}
+	}
+	
+	return callback ? ServiceRequest.OK_SYNTAX : ServiceRequest.FAILURE_SYNCHRONOUS_PROCESSING_NOT_POSSIBLE;
 }
 
 
@@ -184,7 +263,8 @@ CVCAService.prototype.checkRequestSemantics = function(req) {
  */
 CVCAService.prototype.issueCertificate = function(req) {
 
-	var cert = this.cvca.generateCertificate(req, this.dVCertificatePolicy);
+	var policy = this.getDVCertificatePolicyForCHR(req.getCHR());
+	var cert = this.cvca.generateCertificate(req, policy);
 
 	this.cvca.importCertificates([ cert ]);
 
@@ -382,8 +462,9 @@ CVCAService.prototype.RequestCertificate = function(soapBody) {
 			var response = this.checkRequestSemantics(req);
 
 			var callback = soapBody.callbackIndicator;
+			var response = this.checkPolicy(req, response, (callback == "callback_possible"));
 
-			if (callback == "callback_possible") {
+			if (response == ServiceRequest.OK_SYNTAX) {
 				var asyncreq = new ServiceRequest(
 								soapBody.messageID.ns1::messageID,
 								soapBody.responseURL.ns1::string,
@@ -391,7 +472,6 @@ CVCAService.prototype.RequestCertificate = function(soapBody) {
 
 				asyncreq.setStatusInfo(response);
 				this.queue.push(asyncreq);
-				var response = ServiceRequest.OK_SYNTAX;
 			} else {
 				certlist = this.cvca.getCertificateList();
 
