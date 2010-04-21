@@ -2,7 +2,7 @@
 //  ---------
 // |.##> <##.|  CardContact Software & System Consulting
 // |#       #|  32429 Minden, Germany (www.cardcontact.de)
-// |#       #|  Copyright (c) 1999-2005. All rights reserved
+// |#       #|  Copyright (c) 2010. All rights reserved
 // |'##> <##'|  See file COPYING for details on licensing
 //  --------- 
 //
@@ -51,12 +51,14 @@ generator.setVersion(version);
 
 ///     <method name="setType">
 ///         <signature>void setType(ByteString type)</signature>
-///         <description><p>Set the type of the black list. (complete (0), added(1), removed(2)</p></description>
+///         <description><p>Set the type of the black list. Use one of the already defined constants:
+///				BlackListGEnerator.COMPLETE_LIST - for a complete black list
+///				BlackListGEnerator.ADDED_LIST - for a black list containing added items
+///				BlackListGEnerator.REMOVED_LIST - for a black list containing removed items
+///			</p></description>
 ///         <example>
 
-var type = new ByteString("00", HEX); // complete list
-
-generator.setType(type);
+generator.setType(BlackListGenerator.REMOVED_LIST);
 
 ///         </example>
 ///     </method>
@@ -67,7 +69,7 @@ generator.setType(type);
 ///         <description><p>Set the unique ID of the black list.</p></description>
 ///         <example>
 
-var listID = new ByteString("02", HEX); 
+var listID = new ByteString("201003200001", ASCII); 
 
 generator.setListID(listID);
 
@@ -80,16 +82,16 @@ generator.setListID(listID);
 ///         <description><p>Set the unique ID of the delta base of the black list.</p></description>
 ///         <example>
 
-var deltaBase = new ByteString("01", HEX); 
+var deltaBase = new ByteString("201003150001", HEX); 
 
 generator.setDeltaBase(deltaBase);
 
 ///         </example>
 ///     </method>
 
-///     <method name="generateBlackList">
+///     <method name="addBlackListDetails">
 ///         <signature>ByteString addBlackListDetails(ByteString sectorID, ByteString[] sectorSpecificIDs)</signature>
-///         <description><p>Create the black list.</p></description>
+///         <description><p>Add details to the black list.</p></description>
 ///         <example>
 
 var sector_A = new ByteString("0xFFFFFF", HEX);

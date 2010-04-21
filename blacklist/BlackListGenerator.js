@@ -2,7 +2,7 @@
  *  ---------
  * |.##> <##.|  Open Smart Card Development Platform (www.openscdp.org)
  * |#       #|  
- * |#       #|  Copyright (c) 1999-2006 CardContact Software & System Consulting
+ * |#       #|  Copyright (c) 2010 CardContact Software & System Consulting
  * |'##> <##'|  Andreas Schwier, 32429 Minden, Germany (www.cardcontact.de)
  *  --------- 
  *
@@ -25,23 +25,18 @@
  * BlackListGenerator - Simple generator for black lists
  * based on TR-03129, Version 1.0
  *
- *
- * TODO: For now we only support ECC crypto
- *
  */
+
+// Some constants for blacklist types
+BlackListGenerator.COMPLETE_LIST = new ByteString("00", HEX);
+BlackListGenerator.ADDED_LIST = new ByteString("01", HEX);
+BlackListGenerator.REMOVED_LIST = new ByteString("02", HEX);
+
  
-//TODO: Move to oid file
-//ASN1.defineObjectIdentifier("id-BlackList", "bsi-de applications(3) eID(2) 2");
-
-
-/*
- * Define a generator object for the black list generator
- */
 // Constructor
 function BlackListGenerator() {
 	this.content = new ASN1("content", ASN1.SEQUENCE);
 }
-
 
 BlackListGenerator.prototype.reset = function() {
 }
