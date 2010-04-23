@@ -425,7 +425,7 @@ EAC20.prototype.performTerminalAuthentication = function(termkey, auxdata) {
 	GPSystem.trace("Signature (Encoded):");
 	GPSystem.trace(signature);
 
-	signature = ECCUtils.unwrapSignature(signature);
+	signature = ECCUtils.unwrapSignature(signature, termkey.getComponent(Key.ECC_P).length);
 	GPSystem.trace("Signature (Encoded):");
 	GPSystem.trace(signature);
 
