@@ -352,7 +352,7 @@ CVC.prototype.getExtension = function(extoid) {
 	var extdo = this.body.find(CVC.TAG_EXTN);
 	
 	if (!extdo) {
-		throw new GPError("CVC", GPError.OBJECT_NOT_FOUND, 0, "Certificate does not contain an extension");
+		return null;
 	}
 
 //	print(extdo);
