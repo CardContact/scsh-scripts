@@ -15,7 +15,6 @@ load("tools/oid/pkix.js");
  * content	ByteString content for file
  *
  */
- 
 function writeFileOnDisk(name, content) {
 
 	// Map filename
@@ -27,10 +26,11 @@ function writeFileOnDisk(name, content) {
 	file.close();
 }
 
+// Create the crypto object
 var crypto = new Crypto();
 
 // Generate an asymmetric 2048 bit key pair and a self signed certificate for Alice
-print("Generating data for Alice...\n");
+print("Generating key pair and self-signed certificate for Alice...\n");
 
 var privKeyA = new Key();
 privKeyA.setType(Key.PRIVATE);
@@ -63,33 +63,48 @@ x.addAuthorityKeyIdentifierExtension(pubKeyA);
 
 var certA = x.generateX509Certificate(privKeyA);
 
-// 32 byte data blocks for sector ID and sector specific revocations
-var sectorID = new ByteString("0001020304050607080900010203040506070809000102030405060708090001", HEX);
-var sectorSpecificID = new ByteString("0101010101010101010101010101010101010101010101010101010101010101", HEX);
 
 // Define how many elements should be added to the added/removed lists
-var numberOfEntries = 50000;
+var numberOfEntries = 10;
+print("Creating list for " + numberOfEntries + " entries\n");
 
 // Generate black list with added items
 generator = new BlackListGenerator();
 
+// Set black list version
 var version = new ByteString("00", HEX);
 generator.setVersion(version);
 
+// Set black list type
 generator.setType(BlackListGenerator.ADDED_LIST);
 var listID = new ByteString("01", HEX); 
 generator.setListID(listID);
 
-var sector_A = sectorID;
+// Define some random value for the sector ID
+var sector_A = crypto.generateRandom(32);
 
 var sectorSpecificIDs_A = new Array();
 
-// Create entries to the added list
+// Create sector specific entries at random and add them to the list
 for (var i = 0; i < numberOfEntries; i++) {
-	sectorSpecificIDs_A[i] = sectorSpecificID;
+	sectorSpecificIDs_A[i] = crypto.generateRandom(32);
 }
 
+// Add the complete details to the list
 generator.addBlackListDetails(sector_A, sectorSpecificIDs_A);
+
+
+// Create a second sector ID at random
+var sector_B = crypto.generateRandom(32);
+
+var sectorSpecificIDs_B = new Array();
+
+// Create entries to the added list
+for (var i = 0; i < numberOfEntries; i++) {
+	sectorSpecificIDs_B[i] = crypto.generateRandom(32);
+}
+
+generator.addBlackListDetails(sector_B, sectorSpecificIDs_B);
 
 var blackList = generator.generateBlackList();
 var bl_added = new ASN1(blackList);
@@ -101,33 +116,7 @@ var cmsGenerator = new CMSGenerator(CMSGenerator.TYPE_SIGNED_DATA);
 cmsGenerator.setDataContent(blackList);
 cmsGenerator.addSigner(privKeyA, certA, new ByteString("id-sha1", OID), true);
 
-var cms = cmsGenerator.generate();
-print(cms);
+var contentOID = new ByteString("0.4.0.127.0.7.3.2.2", OID);
+var cms = cmsGenerator.generate(contentOID);
 
 writeFileOnDisk("blacklist.bin", cms);
-
-/*
-// Generate black list with removed items
-generator = new BlackListGenerator();
-
-var version = new ByteString("00", HEX);
-generator.setVersion(version);
-
-generator.setType(BlackListGenerator.REMOVED_LIST);
-
-var listID = new ByteString("03", HEX); 
-generator.setListID(listID);
-
-var sector_B = sectorID;
-var sectorSpecificIDs_B = new Array();
-// Create entries to the added list
-for (var i = 0; i < numberOfEntries; i++) {
-	sectorSpecificIDs_B[i] = sectorSpecificID;
-}
-generator.addBlackListDetails(sector_B, sectorSpecificIDs_B);
-
-var blackList = generator.generateBlackList();
-var bl_removed = new ASN1(blackList);
-print(bl_removed);
-print("Total bytes: " + blackList.length);
-*/
