@@ -91,8 +91,28 @@ SOAPServer.registerService("cvca", cvca, cvcaui);
 var dvca = new DVCAService("c:/tmp/eacpki/dvca", "UTDVCA", "UTCVCA", url + "/se/cvca");
 dvca.setSendCertificateURL(url + "/se/dvca");
 
+var terminalPolicy = { certificateValidityDays: 1,
+				   chatRoleOID: new ByteString("id-IS", OID),
+				   chatRights: new ByteString("23", HEX),
+				   includeDomainParameter: false,
+				   extensions: null,
+				   authenticatedRequestsApproved: true,
+				   initialRequestsApproved: false,
+				   declineExpiredAuthenticatedRequest: false
+				 };
+
+dvca.setTerminalCertificatePolicy(terminalPolicy);
+
 // Create GUI
 var dvcaui = new DVCAUI(dvca);
 
 SOAPServer.registerService("dvca", dvca, dvcaui);
 
+
+var tcc = new TCCService("c:/tmp/eacpki/tcc", "/UTCVCA/UTDVCA/UTTERM", url + "/se/dvca");
+tcc.setSendCertificateURL(url + "/se/tcc");
+
+// Create GUI
+var tccui = new TCCUI(tcc);
+
+SOAPServer.registerService("tcc", tcc, tccui);

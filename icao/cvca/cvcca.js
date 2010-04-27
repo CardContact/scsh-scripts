@@ -41,17 +41,33 @@ if (typeof(__ScriptingServer) == "undefined") {
  *
  * @constructor
  * @param {Crypto} crypto the crypto provider to use
+ * @param {CVCertificateStore} certstore the certificate store to use
+ * @param {String} path the path of holderIDs (eg. "/UTCVCA/UTDVCA/UTTERM")
  */
-function CVCCA(crypto, certstore, holderId, parentId) {
+function CVCCA(crypto, certstore, holderId, parentId, path) {
 	this.crypto = crypto;
 	this.certstore = certstore;
-	this.holderId = holderId;
-	this.parentId = parentId;
 	
-	if (this.isRootCA()) {		// CVCA
-		this.path = "/" + holderId;
-	} else {					// DVCA
-		this.path = "/" + parentId + "/" + holderId;
+	if (typeof(path) == "undefined") {	// ToDo: Remove after migration
+		this.holderId = holderId;
+		this.parentId = parentId;
+	
+		if (this.isRootCA()) {		// CVCA
+			this.path = "/" + holderId;
+		} else {					// DVCA
+			this.path = "/" + parentId + "/" + holderId;
+		}
+	} else {
+		this.path = path;
+		var pe = path.substr(1).split("/");
+		var l = pe.length;
+		assert(l >= 1);
+		this.holderId = pe[l - 1];
+		if (l > 1) {
+			this.parentId = pe[l - 2];
+		} else {
+			this.parentId = this.holderId;
+		}
 	}
 	this.keyspec = new Key();
 	this.keyspec.setComponent(Key.ECC_CURVE_OID, new ByteString("brainpoolP256t1", OID));
@@ -279,21 +295,27 @@ CVCCA.prototype.importCertificates = function(certs) {
  *
  */
 CVCCA.prototype.getCertificateList = function() {
-	var path = this.path;
+	var list;
 	
-	if (!this.isRootCA()) {
-		path = this.parentId;
-	}
-
-	var list = this.certstore.listCertificates(path);
-
-	if (!this.isRootCA()) {
-		var chr = this.certstore.getCurrentCHR(this.path);
-		if (chr != null) {
-			var rootCert = this.certstore.getCertificate(this.path, chr);
-			if (rootCert != null) {
-				list.push(rootCert);
+	if (this.isRootCA()) {
+		list = this.certstore.listCertificates(this.path);
+	} else {
+		var path = this.path;
+		
+		while(true) {
+			var chr = this.certstore.getCurrentCHR(path);
+			if (chr == null) {
+				var ofs = path.lastIndexOf("/");
+				if (ofs == 0) {
+					list = [];
+				} else {
+					path = path.substr(0, ofs);
+					continue;
+				}
+			} else {
+				list = this.certstore.getCertificateChain(path, chr);
 			}
+			break;
 		}
 	}
 	
@@ -349,14 +371,14 @@ CVCCA.prototype.getAuthenticPublicKey = function(chr) {
 
 
 
-CVCCA.testPath = GPSystem.mapFilename("cvc", GPSystem.CWD);
+CVCCA.testPath = GPSystem.mapFilename("testca", GPSystem.CWD);
 
 CVCCA.test = function() {
 	
 	var crypto = new Crypto();
 	
-	var ss = new CVCertificateStore(CVCCA.testPath + "_cvca");
-	var cvca = new CVCCA(crypto, ss, "UTCVCA", "UTCVCA");
+	var ss = new CVCertificateStore(CVCCA.testPath + "/cvca");
+	var cvca = new CVCCA(crypto, ss, null, null, "/UTCVCA");
 	
 	// Create a new request
 	var req = cvca.generateRequest();
@@ -390,22 +412,23 @@ CVCCA.test = function() {
 	var cert = cvca.generateCertificate(req, policy);
 	print("Certificate: " + cert);
 	print(cert.getASN1());
-	
-	var ss = new CVCertificateStore(CVCCA.testPath + "_dvca");
-	var dvca = new CVCCA(crypto, ss, "UTDVCA", "UTCVCA");
-	
+
+
+	var ss = new CVCertificateStore(CVCCA.testPath + "/dvca");
+	var dvca = new CVCCA(crypto, ss, null, null, "/UTCVCA/UTDVCA");
+
 	var certlist = cvca.getCertificateList();
 	var list = dvca.importCertificates(certlist);
-	
+
 	if (list.length > 0) {
 		print("Warning: Could not import the following certificates");
 		for (var i = 0; i < list.length; i++) {
 			print(list[i]);
 		}
 	}
-	
+
 	// Create a new request
-	var req = dvca.generateRequest();
+	var req = dvca.generateRequest(false);
 	print("Request: " + req);
 	print(req.getASN1());
 	
@@ -421,7 +444,40 @@ CVCCA.test = function() {
 	print("Certificate: " + cert);
 	print(cert.getASN1());
 	dvca.importCertificate(cert);
+
+
+	var ss = new CVCertificateStore(CVCCA.testPath + "/term");
+	var term = new CVCCA(crypto, ss, null, null, "/UTCVCA/UTDVCA/UTTERM");
+
+	var certlist = dvca.getCertificateList();
+	print("Certificate list: ");
+	print(certlist);
+	var list = term.importCertificates(certlist);
+
+	if (list.length > 0) {
+		print("Warning: Could not import the following certificates");
+		for (var i = 0; i < list.length; i++) {
+			print(list[i]);
+		}
+	}
+
+	// Create a new request
+	var req = term.generateRequest(false);
+	print("Request: " + req);
+	print(req.getASN1());
 	
+	// Sign this request with DVCA
+	// This must be done after the link certificate has been imported
+	var policy = { certificateValidityDays: 2,
+				   chatRoleOID: new ByteString("id-IS", OID),
+				   chatRights: new ByteString("23", HEX),
+				   includeDomainParameter: false,
+				   extensions: []
+				 };
+	var cert = dvca.generateCertificate(req, policy);
+	print("Certificate: " + cert);
+	print(cert.getASN1());
+	term.importCertificate(cert);
 }
 
 

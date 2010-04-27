@@ -49,6 +49,7 @@ function DVCAService(path, name, parent, parentURL) {
 	this.inqueue = [];
 	this.outqueue = [];
 	this.outqueuemap = [];
+	this.terminalCertificatePolicies = [];
 }
 
 
@@ -77,26 +78,159 @@ DVCAService.prototype.setKeySpec = function(keyparam, algorithm) {
 
 
 /**
- * Enumerate all pending service requests from subordinate systems
+ * Sets the policy for issuing terminal certificates
  *
- * @returns the pending service requests
- * @type ServiceRequest[]
+ * @param {Object} policy policy object as defined for CVCCA.prototype.generateCertificate()
+ * @param {Regex} chrregex a regular expression that the CHR must match in order to use this rule
  */
-DVCAService.prototype.listInboundRequests = function() {
-	return this.inqueue;
+DVCAService.prototype.setTerminalCertificatePolicy = function(policy, chrregex) {
+	if (typeof(chrregex) != "undefined") {
+		this.terminalCertificatePolicies.push( { regex: chrregex, policy: policy } );
+	} else {
+		this.terminalCertificatePolicy = policy;
+	}
 }
 
 
 
 /**
- * Gets the indexed request
+ * Returns the policy to apply for a given CHR
  *
- * @param {Number} index the index into the work queue identifying the request
- * @returns the indexed request
- * @type ServiceRequest
+ * @param {PublicKeyReference} chr the certificate holder reference
+ * @returns a matching policy or the default policy
+ * @type Object
  */
-DVCAService.prototype.getInboundRequest = function(index) {
-	return this.inqueue[index];
+DVCAService.prototype.getTerminalCertificatePolicyForCHR = function(chr) {
+	for (var i = 0; i < this.terminalCertificatePolicies.length; i++) {
+		var p = this.terminalCertificatePolicies[i];
+		if (chr.toString().match(p.regex)) {
+			return p.policy;
+		}
+	}
+	return this.terminalCertificatePolicy;
+}
+
+
+
+/**
+ * Check certificate request syntax
+ *
+ * @param {ByteString} req the request in binary format
+ * @returns the decoded request or null in case of error
+ * @type CVC
+ */
+DVCAService.prototype.checkRequestSyntax = function(reqbin) {
+	try	{
+		var reqtlv = new ASN1(reqbin);
+		var req = new CVC(reqtlv);
+	}
+	catch(e) {
+		GPSystem.trace("Error decoding ASN1 structure of request: " + e);
+		return null;
+	}
+	
+	return req;
+}
+
+
+
+/**
+ * Check certificate request semantic
+ *
+ * @param {CVC} req the request
+ * @returns one of the ServiceRequest status results (ok_cert_available if successful).
+ * @type String
+ */
+DVCAService.prototype.checkRequestSemantics = function(req) {
+	try	{
+		var puk = req.getPublicKey();
+	}
+	catch(e) {
+		GPSystem.trace("Error checking request semantics in " + e.fileName + "#" + e.lineNumber + " : " + e);
+		return ServiceRequest.FAILURE_SYNTAX;
+	}
+	
+	if (!req.verifyWith(this.crypto, puk)) {
+		GPSystem.trace("Error verifying inner signature");
+		return ServiceRequest.FAILURE_INNER_SIGNATURE;
+	}
+	
+	if (req.isAuthenticatedRequest()) {
+		var puk = this.dvca.getAuthenticPublicKey(req.getOuterCAR());
+		if (puk) {
+			if (!req.verifyATWith(this.crypto, puk)) {
+				GPSystem.trace("Error verifying outer signature");
+				return ServiceRequest.FAILURE_OUTER_SIGNATURE;
+			}
+		} else {
+			GPSystem.trace("No public key found for authenticated request");
+			return ServiceRequest.FAILURE_OUTER_SIGNATURE;
+		}
+	}
+	
+	return ServiceRequest.OK_CERT_AVAILABLE;
+}
+
+
+
+/**
+ * Check certificate request against policy
+ *
+ * @param {CVC} req the request
+ * @param {String} response the proposed response string
+ * @param {Boolean} callback the indicator if a call-back is possible
+ * @returns one of the ServiceRequest status results (ok_cert_available if successful).
+ * @type String
+ */
+DVCAService.prototype.checkPolicy = function(req, response, callback) {
+	if (response != ServiceRequest.OK_CERT_AVAILABLE) {
+		return response;
+	}
+	
+	var policy = this.getTerminalCertificatePolicyForCHR(req.getCHR());
+	
+	if (req.isAuthenticatedRequest()) {
+		var cvc = this.dvca.getIssuedCertificate(req.getOuterCAR());
+		var now = new Date();
+		now.setHours(12, 0, 0, 0);
+		if (now.valueOf() > cvc.getCXD().valueOf()) {
+			GPSystem.trace("Certificate " + cvc.toString() + " is expired");
+			if (policy.declineExpiredAuthenticatedRequest) {
+				return ServiceRequest.FAILURE_OUTER_SIGNATURE;
+			}
+		} else {
+			if (policy.authenticatedRequestsApproved) {
+				return ServiceRequest.OK_CERT_AVAILABLE;
+			}
+		}
+	} else {
+		if (policy.initialRequestsApproved) {
+			return ServiceRequest.OK_CERT_AVAILABLE;
+		}
+	}
+	
+	return callback ? ServiceRequest.OK_SYNTAX : ServiceRequest.FAILURE_SYNCHRONOUS_PROCESSING_NOT_POSSIBLE;
+}
+
+
+
+/**
+ * Issue certificate for subordinate CA
+ *
+ * @param {CVC} req the request
+ * @returns the certificate
+ * @type CVC
+ */
+DVCAService.prototype.issueCertificate = function(req) {
+
+	var policy = this.getTerminalCertificatePolicyForCHR(req.getCHR());
+	var cert = this.dvca.generateCertificate(req, policy);
+
+	this.dvca.importCertificates([ cert ]);
+
+	GPSystem.trace("DVCAService - Issued certificate: ");
+	GPSystem.trace(cert.getASN1());
+	return cert;
 }
 
 
@@ -150,6 +284,111 @@ DVCAService.prototype.addOutboundRequest = function(sr) {
 
 
 /**
+ * Enumerate all pending service requests from subordinate systems
+ *
+ * @returns the pending service requests
+ * @type ServiceRequest[]
+ */
+DVCAService.prototype.listInboundRequests = function() {
+	return this.inqueue;
+}
+
+
+
+/**
+ * Gets the indexed request
+ *
+ * @param {Number} index the index into the work queue identifying the request
+ * @returns the indexed request
+ * @type ServiceRequest
+ */
+DVCAService.prototype.getInboundRequest = function(index) {
+	return this.inqueue[index];
+}
+
+
+
+/**
+ * Process request and send certificates
+ *
+ * @param {Number} index the index into the work queue identifying the request
+ */
+DVCAService.prototype.processInboundRequest = function(index) {
+	var sr = this.inqueue[index];
+
+	if (sr.getStatusInfo().substr(0, 3) == "ok_") {
+		certlist = this.dvca.getCertificateList();
+	} else {
+		certlist = [];
+	}
+	
+	if (sr.isCertificateRequest() && (sr.getStatusInfo() == ServiceRequest.OK_CERT_AVAILABLE)) {
+		var cert = this.issueCertificate(sr.getCertificateRequest());
+		certlist.push(cert);
+	}
+	
+	this.sendCertificates(sr, certlist);
+}
+
+
+
+/**
+ * Delete a request from the work queue
+ *
+ * @param {Number} index the index into the work queue
+ */
+DVCAService.prototype.deleteInboundRequest = function(index) {
+	this.inqueue.splice(index, 1);
+}
+
+
+
+/**
+ * Send certificates using a webservice call
+ *
+ * @param {ServiceRequest} serviceRequest the underlying request
+ * @param {CVC[]} certificates the list of certificates to send
+ */
+DVCAService.prototype.sendCertificates = function(serviceRequest, certificates) {
+
+	var soapConnection = new SOAPConnection();
+
+	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/1.0");
+	var ns1 = new Namespace("uri:eacBT/1.0");
+
+	var request =
+		<ns:SendCertificates xmlns:ns={ns} xmlns:ns1={ns1}>
+			<messageID>{serviceRequest.getMessageID()}</messageID>
+			<statusInfo>{serviceRequest.getStatusInfo()}</statusInfo>
+			<certificateSeq>
+			</certificateSeq>
+		</ns:SendCertificates>;
+
+	var list = request.certificateSeq;
+
+	for (var i = 0; i < certificates.length; i++) {
+		var cvc = certificates[i];
+		list.certificate += <ns1:certificate xmlns:ns1={ns1}>{cvc.getBytes().toString(BASE64)}</ns1:certificate>
+	}
+
+	GPSystem.trace(request);
+	
+	try	{
+		var response = soapConnection.call(serviceRequest.getResponseURL(), request);
+	}
+	catch(e) {
+		GPSystem.trace("SOAP call to " + serviceRequest.getResponseURL() + " failed : " + e);
+		throw new GPError("DVCAService", GPError.DEVICE_ERROR, 0, "SendCertificates failed with : " + e);
+	}
+	
+	var result = response.Result.ns1::returnCode.toString();
+	
+	serviceRequest.setFinalStatusInfo(result);
+}
+
+
+
+/**
  * Update certificate list from parent CA
  *
  */
@@ -183,8 +422,8 @@ DVCAService.prototype.updateCACertificates = function(async) {
  */
 DVCAService.prototype.renewCertificate = function(async, forceinitial) {
 
-	var dp = this.ss.getDefaultDomainParameter(this.parent);
-	var algo = this.ss.getDefaultPublicKeyOID(this.parent);
+	var dp = this.ss.getDefaultDomainParameter(this.path);
+	var algo = this.ss.getDefaultPublicKeyOID(this.path);
 	
 	this.dvca.setKeySpec(dp, algo);
 	
@@ -335,6 +574,136 @@ DVCAService.prototype.requestCertificateFromCVCA = function(sr) {
 	}
 
 	return certlist;
+}
+
+
+
+/**
+ * Webservice that returns the list of certificates for this and superior CAs
+ * 
+ * @param {XML} soapBody the body of the SOAP message
+ * @returns the soapBody of the response
+ * @type XML
+ */
+DVCAService.prototype.GetCACertificates = function(soapBody) {
+
+	// Create empty response
+	var ns = new Namespace("uri:EAC-PKI-DV-Protocol/1.0");
+	var ns1 = new Namespace("uri:eacBT/1.0");
+
+	var callback = soapBody.callbackIndicator;
+	
+	var certlist = [];
+	var response = ServiceRequest.OK_CERT_AVAILABLE;
+	
+	if (callback == "callback_possible") {
+		var asyncreq = new ServiceRequest(
+							soapBody.messageID.ns1::messageID,
+							soapBody.responseURL.ns1::string);
+
+		this.inqueue.push(asyncreq);
+		var response = ServiceRequest.OK_SYNTAX;
+	} else {
+		// Add certificate list to response
+		certlist = this.dvca.getCertificateList();
+	}
+	
+	var response =
+		<ns:GetCACertificatesResult xmlns:ns={ns} xmlns:ns1={ns1}>
+			<Result>
+				<ns1:returnCode>{response}</ns1:returnCode>
+				<!--Optional:-->
+				<ns1:certificateSeq>
+					<!--Zero or more repetitions:-->
+				</ns1:certificateSeq>
+			</Result>
+		</ns:GetCACertificatesResult>
+	
+	var list = response.Result.ns1::certificateSeq;
+
+	for (var i = 0; i < certlist.length; i++) {
+		var cvc = certlist[i];
+		list.certificate += <ns1:certificate xmlns:ns1={ns1}>{cvc.getBytes().toString(BASE64)}</ns1:certificate>
+	}
+
+	return response;
+}
+
+
+
+/**
+ * Webservice that issues a new certificate for the submitted request
+ * 
+ * @param {XML} soapBody the body of the SOAP message
+ * @returns the soapBody of the response
+ * @type XML
+ */
+DVCAService.prototype.RequestCertificate = function(soapBody) {
+	
+	var ns = new Namespace("uri:EAC-PKI-DV-Protocol/1.0");
+	var ns1 = new Namespace("uri:eacBT/1.0");
+
+	var certlist = [];
+
+	try	{
+		var reqbin = new ByteString(soapBody.certReq, BASE64);
+
+		var req = this.checkRequestSyntax(reqbin);
+
+		if (req == null) {
+			var response = ServiceRequest.FAILURE_SYNTAX;
+		} else {
+			GPSystem.trace("DVCAService - Received certificate request: ");
+			GPSystem.trace(req);
+	
+			var response = this.checkRequestSemantics(req);
+
+			var callback = soapBody.callbackIndicator;
+			var response = this.checkPolicy(req, response, (callback == "callback_possible"));
+
+			if (response == ServiceRequest.OK_SYNTAX) {
+				var asyncreq = new ServiceRequest(
+								soapBody.messageID.ns1::messageID,
+								soapBody.responseURL.ns1::string,
+								req);
+
+				asyncreq.setStatusInfo(response);
+				this.inqueue.push(asyncreq);
+			} else {
+				certlist = this.dvca.getCertificateList();
+
+				if (response == ServiceRequest.OK_CERT_AVAILABLE) {
+					var cert = this.issueCertificate(req);
+					// Add certificate list to response
+					certlist.push(cert);
+				}
+			}
+		}
+	}
+	catch(e) {
+		GPSystem.trace("DVCAService - Error decoding request in " + e.fileName + "#" + e.lineNumber + " : " + e);
+		var response = ServiceRequest.FAILURE_SYNTAX;
+	}
+
+	var response =
+		<ns:RequestCertificateResponse xmlns:ns={ns} xmlns:ns1={ns1}>
+			<Result>
+				<ns1:returnCode>{response}</ns1:returnCode>
+				<!--Optional:-->
+				<ns1:certificateSeq>
+					<!--Zero or more repetitions:-->
+				</ns1:certificateSeq>
+			</Result>
+		</ns:RequestCertificateResponse>
+	
+	var list = response.Result.ns1::certificateSeq;
+
+	for (var i = 0; i < certlist.length; i++) {
+		var cvc = certlist[i];
+		list.certificate += <ns1:certificate xmlns:ns1={ns1}>{cvc.getBytes().toString(BASE64)}</ns1:certificate>
+	}
+
+	return response;
 }
 
 

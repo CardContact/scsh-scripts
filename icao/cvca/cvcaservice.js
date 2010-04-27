@@ -429,7 +429,6 @@ CVCAService.prototype.GetCACertificates = function(soapBody) {
 	}
 
 	return response;
-	
 }
 
 

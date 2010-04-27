@@ -74,7 +74,7 @@ CommonUI.prototype.generateTemplate = function(url) {
 					<tr height="20"/>
 					<tr>
 						<td width="100" valign="top" align="left">
-							<p><b>CVCA</b></p>
+							<p><b>{this.service.type}</b></p>
 							<a href={prefix + url[0]}>Home</a><br/>
 							<br/>
 							<a href={prefix + url[0] + "/holderlist?path="}>Certificates</a><br/>

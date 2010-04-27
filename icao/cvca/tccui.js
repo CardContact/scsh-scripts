@@ -21,24 +21,24 @@
  *  along with OpenSCDP; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  * 
- * @fileoverview A simple DVCA web GUI
+ * @fileoverview A simple terminal control center (TCC) web GUI
  */
 
 
 
 /**
- * Create a DVCA web GUI
+ * Create a terminal control center (TCC) web GUI
  * 
- * @class Class implementing a simple DVCA web user interface
+ * @class Class implementing a simple TCC web user interface
  * @constructor
- * @param {DVCAService} service the service to which the GUI is attached
+ * @param {TCCService} service the service to which the GUI is attached
  */
-function DVCAUI(service) {
+function TCCUI(service) {
 	CommonUI.call(this, service);
 }
 
-DVCAUI.prototype = new CommonUI();
-DVCAUI.constructor = DVCAUI;
+TCCUI.prototype = new CommonUI();
+TCCUI.constructor = TCCUI;
 
 
 
@@ -51,7 +51,7 @@ DVCAUI.constructor = DVCAUI;
  * @param {HttpResponse} req the response object
  * @param {String[]} url array of URL path elements
  */
-DVCAUI.prototype.handleRequestCertificateOutboundRequestDetails = function(req, res, url) {
+TCCUI.prototype.handleRequestCertificateOutboundRequestDetails = function(req, res, url) {
 
 	var op = CertStoreBrowser.parseQueryString(req.queryString);
 	
@@ -75,135 +75,35 @@ DVCAUI.prototype.handleRequestCertificateOutboundRequestDetails = function(req, 
 
 
 /**
- * Serves a details page for pending GetCertifcate requests.
- *
- * <p>The URL processed has the format <caname>/getcert/<queueindex></p>
- *
- * @param {HttpRequest} req the request object
- * @param {HttpResponse} req the response object
- * @param {String[]} url array of URL path elements
- */
-DVCAUI.prototype.handleGetCertificateRequestDetails = function(req, res, url) {
-
-	var op = CertStoreBrowser.parseQueryString(req.queryString);
-	
-	var index = parseInt(op.index);
-	var sr = this.service.getInboundRequest(index);
-	
-	if (typeof(op.action) != "undefined") {
-		if (op.action == "delete") {
-			this.service.deleteInboundRequest(index);
-			this.serveRefreshPage(req, res, url);
-		} else {
-			sr.setStatusInfo(op.action);
-			this.service.processInboundRequest(index);
-			this.serveRefreshPage(req, res, url);
-		}
-	} else {
-		var page = 
-			<div>
-				<h1>Pending GetCertificates request</h1>
-				<p>  MessageID: {sr.getMessageID()}</p>
-				<p>  ResponseURL: {sr.getResponseURL()}</p>
-				<h2>Possible actions:</h2>
-				<ul>
-					<li><a href={"getcert?index=" + op.index + "&action=ok_cert_available"}>Respond</a> with "ok_cert_available"</li>
-					<li><a href={"getcert?index=" + op.index + "&action=failure_syntax"}>Respond</a> with "failure_syntax"</li>
-					<li><a href={"getcert?index=" + op.index + "&action=failure_request_not_accepted"}>Respond</a> with "failure_request_not_accepted"</li>
-					<li><a href={"getcert?index=" + op.index + "&action=delete"}>Delete</a> request without a response</li>
-				</ul>
-			</div>;
-
-		this.sendPage(req, res, url, page);
-	}
-}
-
-
-
-/**
- * Serves a details page for pending RequestCertificate requests.
- *
- * <p>The URL processed has the format <caname>/request/<queueindex></p>
- *
- * @param {HttpRequest} req the request object
- * @param {HttpResponse} req the response object
- * @param {String[]} url array of URL path elements
- */
-DVCAUI.prototype.handleRequestCertificateInboundRequestDetails = function(req, res, url) {
-
-	var op = CertStoreBrowser.parseQueryString(req.queryString);
-	
-	var index = parseInt(op.index);
-	var sr = this.service.getInboundRequest(index);
-	
-	var certreq = sr.getCertificateRequest();
-	certreq.decorate();
-	
-	if (typeof(op.action) != "undefined") {
-		if (op.action == "delete") {
-			this.service.deleteInboundRequest(index);
-			this.serveRefreshPage(req, res, url);
-		} else {
-			sr.setStatusInfo(op.action);
-			this.service.processInboundRequest(index);
-			this.serveRefreshPage(req, res, url);
-		}
-	} else {
-		var page = 
-			<div>
-				<h1>Pending RequestCertificate request</h1>
-				<p>  MessageID: {sr.getMessageID()}</p>
-				<p>  ResponseURL: {sr.getResponseURL()}</p>
-				<h2>Possible actions:</h2>
-				<ul>
-					<li><a href={"inrequest?index=" + op.index + "&action=ok_cert_available"}>Respond</a> with "ok_cert_available"</li>
-					<li><a href={"inrequest?index=" + op.index + "&action=failure_syntax"}>Respond</a> with "failure_syntax"</li>
-					<li><a href={"inrequest?index=" + op.index + "&action=failure_inner_signature"}>Respond</a> with "failure_inner_signature"</li>
-					<li><a href={"inrequest?index=" + op.index + "&action=failure_outer_signature"}>Respond</a> with "failure_outer_signature"</li>
-					<li><a href={"inrequest?index=" + op.index + "&action=failure_request_not_accepted"}>Respond</a> with "failure_request_not_accepted"</li>
-					<li><a href={"inrequest?index=" + op.index + "&action=delete"}>Delete</a> request without a response</li>
-				</ul>
-				<pre>{certreq.getASN1()}</pre>
-			</div>;
-
-		this.sendPage(req, res, url, page);
-	}
-}
-
-
-
-/**
  * Serve the status page
  *
  * @param {HttpRequest} req the request object
  * @param {HttpResponse} req the response object
  */
-DVCAUI.prototype.serveStatusPage = function(req, res, url) {
+TCCUI.prototype.serveStatusPage = function(req, res, url) {
 
 	// Handle status page
 	// ToDo: Refactor to getter
-	var status = this.service.dvca.isOperational() ? "operational" : "not operational";
+	var status = this.service.tcc.isOperational() ? "operational" : "not operational";
 
 	var page =
 		<div>
-			<h1>DVCA Service {status}</h1>
+			<h1>TCC Service {status}</h1>
 			<div id="activechain"/>
 			<div id="pendingoutboundrequests"/>
-			<div id="pendinginboundrequests"/>
 			<h2>Possible actions:</h2>
 			<ul>
-				<li><a href="?update">Update CVCA certificates synchronously</a></li>
-				<li><a href="?updateasync">Update CVCA certificates asynchronously</a></li>
+				<li><a href="?update">Update CVCA/DVCA certificates synchronously</a></li>
+				<li><a href="?updateasync">Update CVCA/DVCA certificates asynchronously</a></li>
 				<li><a href="?renew">Renew certificate synchronously</a></li>
 				<li><a href="?renewasync">Renew certificate asynchronously</a></li>
 				<li><a href="?initial">Request initial certificate synchronously</a></li>
 				<li><a href="?initialasync">Request initial certificate asynchronously</a></li>
 			</ul>
-			<p><a href={url[0] + "/holderlist?path=" + this.service.path }>Browse Terminals...</a></p>
 		</div>
-	
+
 	// ToDo: Refactor to getter
-	var certlist = this.service.dvca.getCertificateList();
+	var certlist = this.service.tcc.getCertificateList();
 	
 	if (certlist.length > 0) {
 		var t = <table class="content"/>;
@@ -214,7 +114,8 @@ DVCAUI.prototype.serveStatusPage = function(req, res, url) {
 		if (i <= 0) {
 			i = 0;
 		} else {
-			refurl = url[0] + "/certlist?path=/" + this.service.parent;
+			var ofs = this.service.path.substr(1).indexOf("/") + 1;
+			refurl = url[0] + "/certlist?path=" + this.service.path.substr(0, ofs);
 			t.tr += <tr><td><a href={refurl}>Older ...</a></td><td></td><td></td><td></td><td></td></tr>;
 		}
 		
@@ -223,8 +124,10 @@ DVCAUI.prototype.serveStatusPage = function(req, res, url) {
 			var chr = cvc.getCHR();
 			if (chr.getHolder().equals(this.service.name)) {
 				var path = this.service.path;
+			} else if (chr.getHolder().equals(this.service.parent)) {
+				var path = this.service.path.substr(0, this.service.path.lastIndexOf("/"));
 			} else {
-				var path = "/" + this.service.parent;
+				var path = "/" + chr.getHolder();
 			}
 			var selfsigned = cvc.getCHR().equals(cvc.getCAR());
 			var refurl = url[0] + "/cvc?" + 
@@ -245,6 +148,7 @@ DVCAUI.prototype.serveStatusPage = function(req, res, url) {
 		div.h2 = "Active certificate chain:";
 		div.appendChild(t);
 	}
+
 	
 	var queue = this.service.listOutboundRequests();
 	
@@ -290,46 +194,6 @@ DVCAUI.prototype.serveStatusPage = function(req, res, url) {
 		div.appendChild(t);
 	}
 
-	var queue = this.service.listInboundRequests();
-
-	if (queue.length > 0) {
-		var t = <table class="content"/>;
-
-		t.tr += <tr><th width="20%">MessageID</th><th>Request</th><th>Status</th><th>Final Status</th></tr>;
-
-		for (var i = 0; i < queue.length; i++) {
-			var sr = queue[i];
-
-			if (sr.isCertificateRequest()) {
-				var refurl = url[0] + "/inrequest?index=" + i;
-				var reqstr = sr.getCertificateRequest().toString();
-			} else {
-				var refurl = url[0] + "/getcert?index=" + i;
-				var reqstr = "GetCertificates";
-			}
-			var status = sr.getStatusInfo();
-			if (!status) {
-				status = "Undefined";
-			}
-			var finalStatus = sr.getFinalStatusInfo();
-			if (!finalStatus) {
-				finalStatus = "Not yet send";
-			}
-			t.tr += <tr>
-				<td><a href={refurl}>{sr.getMessageID()}</a></td>
-				<td>{reqstr}</td>
-				<td>{status}</td>
-				<td>{finalStatus}</td>
-			</tr>
-		}
-
-		// Pending requests list
-		var div = page.div.(@id == "pendinginboundrequests");
-		div.h2 = "Inbound requests:";
-		
-		div.appendChild(t);
-	}
-
 	this.sendPage(req, res, url, page);
 }
 
@@ -341,7 +205,7 @@ DVCAUI.prototype.serveStatusPage = function(req, res, url) {
  * @param {HttpRequest} req the request object
  * @param {HttpResponse} req the response object
  */
-DVCAUI.prototype.handleInquiry = function(req, res) {
+TCCUI.prototype.handleInquiry = function(req, res) {
 	// pathInfo always starts with an "/"
 	var url = req.pathInfo.substr(1).split("/");
 
@@ -361,9 +225,6 @@ DVCAUI.prototype.handleInquiry = function(req, res) {
 			break;
 		case "getcert":
 			this.handleGetCertificateRequestDetails(req, res, url);
-			break;
-		case "inrequest":
-			this.handleRequestCertificateInboundRequestDetails(req, res, url);
 			break;
 		case "outrequest":
 			this.handleRequestCertificateOutboundRequestDetails(req, res, url);
