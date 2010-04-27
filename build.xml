@@ -91,15 +91,6 @@
 				<exclude name="build.xml"/>
 				<exclude name="build/"/>
 				<exclude name="released/"/>
-				<exclude name="icao/chipauthentication.js"/>
-				<exclude name="icao/cvcertstore.js"/>
-				<exclude name="icao/doeac.js"/>
-				<exclude name="icao/EAC2CV*.js"/>
-				<exclude name="icao/eac20.js"/>
-				<exclude name="icao/eac20sim.js"/>
-				<exclude name="icao/fillcertstore.js"/>
-				<exclude name="icao/pace.js"/>
-				<exclude name="icao/pkcs8.js"/>
 			</fileset> 
 		</copy>
 

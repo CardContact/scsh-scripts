@@ -1,10 +1,33 @@
-defineClass("de.cardcontact.scdp.cms.JsCMSGenerator");
+/**
+ *  ---------
+ * |.##> <##.|  Open Smart Card Development Platform (www.openscdp.org)
+ * |#       #|  
+ * |#       #|  Copyright (c) 1999-2010 CardContact Software & System Consulting
+ * |'##> <##'|  Andreas Schwier, 32429 Minden, Germany (www.cardcontact.de)
+ *  --------- 
+ *
+ *  This file is part of OpenSCDP.
+ *
+ *  OpenSCDP is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License version 2 as
+ *  published by the Free Software Foundation.
+ *
+ *  OpenSCDP is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with OpenSCDP; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ * 
+ * @fileoverview Example black list generator
+ */
 
 load("BlackListGenerator.js");
 
 load("tools/x509certificategenerator.js");
-load("tools/oid/icao.js");
-load("tools/oid/pkix.js");
+
 
 /*
  * Write a byte string object to file
@@ -17,14 +40,14 @@ load("tools/oid/pkix.js");
  */
 function writeFileOnDisk(name, content) {
 
-	// Map filename
-	var filename = GPSystem.mapFilename(name, GPSystem.USR);
 	print("Writing " + filename);
 
 	var file = new java.io.FileOutputStream(filename);
 	file.write(content);
 	file.close();
 }
+
+
 
 // Create the crypto object
 var crypto = new Crypto();
@@ -119,4 +142,7 @@ cmsGenerator.addSigner(privKeyA, certA, new ByteString("id-sha1", OID), true);
 var contentOID = new ByteString("0.4.0.127.0.7.3.2.2", OID);
 var cms = cmsGenerator.generate(contentOID);
 
-writeFileOnDisk("blacklist.bin", cms);
+// Map filename
+var filename = GPSystem.mapFilename("blacklist.bin", GPSystem.USR);
+
+writeFileOnDisk(filename, cms);
