@@ -1,0 +1,118 @@
+<!-- #BeginTemplate "templatesubsubdir.dwt" -->
+<!doctype html public "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<!-- #BeginEditable "TITLE" -->
+<title>EMV Tutorial</title>
+<!-- #EndEditable -->
+<link rel=stylesheet type="text/css" href="../../style.css">
+<meta name="author" content="Andreas Schwier">
+</head>
+<body>
+<table border="0" cellpadding="0" cellspacing="0" width="750" align="center">
+  <tr>
+    <td height="80" colspan="5" class="pb"><div align="left"><a href="http://www.cardcontact.de"><img src="../../banner.jpg" width="750" height="80" border="0"></a></div></td>
+  </tr>
+  <tr height="20">
+  </tr>
+  <tr>
+    <td width="130" valign="top" align="left">
+    <br>
+    <p><b>Script Collection</b></p>
+    <a href="../../index.html">Home</a><br>
+    <a href="http://www.openscdp.org/scripts/download.html">Download</a><br>
+    <br>
+    <br>
+    <a href="../../eGK/index.html">German eGK</a><br>
+    <a href="../../HPC/index.html">German HPC</a><br>
+    <a href="../../kvk/index.html">German KVK</a><br><br>
+    <a href="../../icao/index.html">ICAO MRTD</a><br>
+    <a href="../../gp/index.html">GP Card</a><br>
+    <a href="../../musclecard/index.html">MuscleCard</a><br>
+    <a href="../../pkcs15/index.html">PKCS#15 Card</a><br>
+    <a href="../../emv/index.html">EMV</a><br>
+    <br>
+    <a href="../../tutorial/index.html">Tutorial</a><br>
+    <br>
+    <a href="http://www.openscdp.org">OpenSCDP</a><br>
+    <a href="http://www.cardcontact.de/company/contact.html">Contact</a><br>
+    </td>
+    <td width="630" align="left">
+    <br/>
+<!-- #BeginEditable "BODY" -->
+<h1>EMV Tutorial - Part 1</h1>
+<p>This EMV Tutorial will explain how to use the 
+<a href="http://www.openscdp.org/scsh3/index.html">Smart Card Shell</a> to explore an EMV chip card.</p>
+<h2>Reseting the card</h2>
+<p>First of all we create an object "card" and define the card reader.</p>
+<pre>
+var card = new <a href="http://www.openscdp.org/scsh3/card.html">Card</a>(_scsh3.reader);
+</pre>
+<p>Now we can start reseting the card. There are two ways of reseting.
+<br><b>Cold Reset:</b></br>
+The cold reset always starts by the first connection between card and card reader.
+At the beginning of the cold reset the card is cut off from the power supply. In the next step the card gets energy and a reset signal. The terminal is now waiting for an answer (ATR).
+<br><b>Warm Reset:</b></br>
+During the warm reset the terminal is sending a reset signal to the card without disconnecting the power supply. 
+</p>
+<pre>
+var <a href="http://www.openscdp.org/scsh3/atr.html">atr</a> = card.reset(Card.RESET_COLD);
+</pre>
+<h3>ATR - Answer to Reset</h3>
+<p>After the reset signal from the terminal the card will answer with a bytestring called ATR. This string contains certain informations about the card which are necessary for the communication between card and terminal. After a warm reset the card answers with a different ATR, e.g. to get a faster connection. </p>
+<p>To get the data the card was sending, we use the class atr.
+There are two methods to get the informations: "toByteString()" and "toString()".</p>
+<pre>
+var atrbin = atr.toByteString();
+
+print(atrbin);
+</pre>
+<p>Expample:</p>
+<pre>0000  3B FF 18 00 FF 81 31 FE 45 65 63 0D 02 50 02 80  ;.....1.Eec..P..
+0010  00 08 37 70 20 10 05 00 B2                       ..7p .... </pre>
+
+<p>To get more details use the method "toString()"</p>
+<pre>
+print(atr.toString());
+</pre>
+<p>Example:</p>
+<pre>TS  : 3B  Direct logic
+TO  : FF  K    =  15 byte [historical characters]
+TA1 : 18  Fi/f =  372/ 5  [clock rate conversion factor / max. frequency (MHz)]
+          Di   =  12      [bit rate conversion factor]
+TB1 : 00  pa   =   4 %    [programming voltage accurancy]
+          I    =  25 mA   [maximum current]
+          P    =   0 V    [programming voltage]
+TC1 : FF  N    = 255 etu  [extra guardtime]
+TD1 : 81  T    = T=1      [protocol type]
+TD2 : 31  T    = T=1      [protocol type]
+TA3 : FE  IFSC = 254      [information field size]
+TB3 : 45  CWT  =  43 etu  [character waiting time]
+          BWT  =  12 etu  [block waiting time]
+65630D025002800008377020100500 ec..P....7p ...</pre>
+<p>The first byte of the string is the initial character "T0". It defines which of the two transmission technique, "direct convention (3B)" or "indirect convention (3F)", should be used.
+ In this case we have the byte 3B and a direct convention. </p>
+ <p>The second Byte is the format character T0. Here we get the lenght of the historical charaters. In this ATR the last 15 bytes are the historical characters. It contains some informations e.g. the card's features and OS</p>
+ <p>TA1 to TC3 are interface characters. They are necessary for the transmission between card and terminal. They contains informations like voltage, speed and timeouts.</p>
+<p>TA3 determines the information field size. So the terminal know the max. size of a block which will be send to the terminal.  </p>
+<p>The Character TB3 is relevant for the character and block waiting time. The character waiting time is the max. timeout between one byte to another and the block waiting time between to blocks.
+If the waiting time is higher as determined, the terminal will issue an error message.</p>
+<!-- <h2>Header level 2</h2>
+<p>Bla Bla Bla</p>
+<ul>
+	<li>First entry</li>
+	<li>Second entry</li>
+</ul>
+<ol>
+	<li>First entry</li>
+	<li>Second entry</li>
+</ol> -->
+<!-- #EndEditable -->
+<br>
+<p class="copyright">&copy; Copyright 2003 - 2008 <a href="http://www.cardcontact.de">CardContact</a>
+Software & System Consulting, Minden, Germany</p>
+    </td>
+  </tr>
+</table>
+</body>
+</html><!-- #EndTemplate -->
