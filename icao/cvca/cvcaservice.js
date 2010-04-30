@@ -266,7 +266,7 @@ CVCAService.prototype.issueCertificate = function(req) {
 	var policy = this.getDVCertificatePolicyForCHR(req.getCHR());
 	var cert = this.cvca.generateCertificate(req, policy);
 
-	this.cvca.importCertificates([ cert ]);
+	this.cvca.storeCertificate(cert);
 
 	GPSystem.trace("CVCAService - Issued certificate: ");
 	GPSystem.trace(cert.getASN1());

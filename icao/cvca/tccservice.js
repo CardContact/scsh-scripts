@@ -24,6 +24,7 @@
  * @fileoverview A simple terminal control center (TCC) web service implementing TR-03129 web services
  */
 
+load("tools/eccutils.js");
 
 
 /**
@@ -365,5 +366,139 @@ TCCService.prototype.SendCertificates = function(soapBody) {
 			</Result>
 		</ns:SendCertificatesResponse>
 
+	return response;
+}
+
+
+
+/**
+ * Webservice that returns a list of certificates that resemble a valid certificate chain
+ * starting with a certificate issued by the trust anchor's public key reference provided
+ * a argument to the service invocation.
+ * 
+ * @param {XML} soapBody the body of the SOAP message
+ * @returns the soapBody of the response
+ * @type XML
+ */
+TCCService.prototype.GetCertificateChain = function(soapBody) {
+
+	// Create empty response
+	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/1.0");
+	var ns1 = new Namespace("uri:eacBT/1.0");
+
+	var chrstr = soapBody.keyNameMRTD;
+	
+	var returnCode = ServiceRequest.OK_CERT_AVAILABLE;
+	var certlist = [];
+	
+	try	{
+		var chrbin = new ByteString(chrstr, BASE64);
+		var chr = new PublicKeyReference(chrbin);
+	}
+	catch(e) {
+		GPSystem.trace("Error decoding requests CHR : " + chrstr);
+		var returnCode = ServiceRequest.FAILURE_SYNTAX;
+	}
+	
+	if (returnCode == ServiceRequest.OK_CERT_AVAILABLE) {
+		var cl = this.tcc.getCertificateList(chr);
+		if (cl == null) {
+			var returnCode = ServiceRequest.FAILURE_CAR_UNKNOWN;
+		} else {
+			certlist = cl;
+		}
+	}
+	
+	var response =
+		<ns:GetCertificateChain xmlns:ns={ns} xmlns:ns1={ns1}>
+			<Result>
+				<ns1:returnCode>{returnCode}</ns1:returnCode>
+				<!--Optional:-->
+				<ns1:certificateSeq>
+					<!--Zero or more repetitions:-->
+				</ns1:certificateSeq>
+			</Result>
+		</ns:GetCertificateChain>
+	
+	var list = response.Result.ns1::certificateSeq;
+
+	for (var i = 0; i < certlist.length; i++) {
+		var cvc = certlist[i];
+		list.certificate += <ns1:certificate xmlns:ns1={ns1}>{cvc.getBytes().toString(BASE64)}</ns1:certificate>
+	}
+
+	return response;
+}
+
+
+
+/**
+ * Webservice that signs a block of data or a hash to generate a signature suitable for
+ * external authentication against an MRTD
+ * 
+ * @param {XML} soapBody the body of the SOAP message
+ * @returns the soapBody of the response
+ * @type XML
+ */
+TCCService.prototype.GetTASignature = function(soapBody) {
+
+	// Create empty response
+	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/1.0");
+	var ns1 = new Namespace("uri:eacBT/1.0");
+
+	var returnCode = ServiceRequest.OK_SIGNATURE_AVAILABLE;
+	
+	var chrstr = soapBody.keyCHR.toString();
+	
+	try	{
+		var chrbin = new ByteString(chrstr, BASE64);
+		var chr = new PublicKeyReference(chrbin);
+	}
+	catch(e) {
+		GPSystem.trace("Error decoding requests CHR : " + chrstr);
+		var returnCode = ServiceRequest.FAILURE_SYNTAX;
+	}
+	
+	var hashstr = soapBody.hashTBS.ns1::binary.toString();
+	try	{
+		var hashbin = new ByteString(hashstr, BASE64);
+		assert(hashbin.length > 0);
+	}
+	catch(e) {
+		GPSystem.trace("Error decoding requests hashTBS : " + hashstr);
+		var returnCode = ServiceRequest.FAILURE_SYNTAX;
+	}
+
+	if (returnCode == ServiceRequest.OK_SIGNATURE_AVAILABLE) {
+		var prk = this.tcc.certstore.getPrivateKey(this.path, chr);
+		if (prk == null) {
+			var returnCode = ServiceRequest.FAILURE_CHR_UNKNOWN;
+		} else {
+			var cvc = this.tcc.certstore.getCertificate(this.path, chr);
+			
+			// ToDo: Check expiration of certificate
+			
+			var mech = CVC.getSignatureMech(cvc.getPublicKeyOID());
+			
+			var signature = this.crypto.sign(prk, Crypto.ECDSA, hashbin);
+			
+			var keylen = prk.getComponent(Key.ECC_P).length;
+			
+			var signature = ECCUtils.unwrapSignature(signature, keylen);
+		}
+	}
+	
+	var response =
+		<ns:GetTASignature xmlns:ns={ns} xmlns:ns1={ns1}>
+			<Result>
+				<ns1:returnCode>{returnCode}</ns1:returnCode>
+				<ns1:Signature></ns1:Signature>
+			</Result>
+		</ns:GetTASignature>
+	
+	if (returnCode == ServiceRequest.OK_SIGNATURE_AVAILABLE) {
+		response.Result.ns1::Signature =  <ns1:Signature xmlns:ns1={ns1}>{signature.toString(BASE64)}</ns1:Signature>
+	}
+	
 	return response;
 }

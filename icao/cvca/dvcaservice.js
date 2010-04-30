@@ -177,14 +177,14 @@ DVCAService.prototype.checkRequestSemantics = function(req) {
  * Check certificate request against policy
  *
  * @param {CVC} req the request
- * @param {String} response the proposed response string
+ * @param {String} returnCode the proposed return code string
  * @param {Boolean} callback the indicator if a call-back is possible
  * @returns one of the ServiceRequest status results (ok_cert_available if successful).
  * @type String
  */
-DVCAService.prototype.checkPolicy = function(req, response, callback) {
-	if (response != ServiceRequest.OK_CERT_AVAILABLE) {
-		return response;
+DVCAService.prototype.checkPolicy = function(req, returnCode, callback) {
+	if (returnCode != ServiceRequest.OK_CERT_AVAILABLE) {
+		return returnCode;
 	}
 	
 	var policy = this.getTerminalCertificatePolicyForCHR(req.getCHR());
@@ -226,7 +226,7 @@ DVCAService.prototype.issueCertificate = function(req) {
 	var policy = this.getTerminalCertificatePolicyForCHR(req.getCHR());
 	var cert = this.dvca.generateCertificate(req, policy);
 
-	this.dvca.importCertificates([ cert ]);
+	this.dvca.storeCertificate(cert );
 
 	GPSystem.trace("DVCAService - Issued certificate: ");
 	GPSystem.trace(cert.getASN1());
@@ -594,7 +594,7 @@ DVCAService.prototype.GetCACertificates = function(soapBody) {
 	var callback = soapBody.callbackIndicator;
 	
 	var certlist = [];
-	var response = ServiceRequest.OK_CERT_AVAILABLE;
+	var returnCode = ServiceRequest.OK_CERT_AVAILABLE;
 	
 	if (callback == "callback_possible") {
 		var asyncreq = new ServiceRequest(
@@ -602,7 +602,7 @@ DVCAService.prototype.GetCACertificates = function(soapBody) {
 							soapBody.responseURL.ns1::string);
 
 		this.inqueue.push(asyncreq);
-		var response = ServiceRequest.OK_SYNTAX;
+		var returnCode = ServiceRequest.OK_SYNTAX;
 	} else {
 		// Add certificate list to response
 		certlist = this.dvca.getCertificateList();
@@ -611,7 +611,7 @@ DVCAService.prototype.GetCACertificates = function(soapBody) {
 	var response =
 		<ns:GetCACertificatesResult xmlns:ns={ns} xmlns:ns1={ns1}>
 			<Result>
-				<ns1:returnCode>{response}</ns1:returnCode>
+				<ns1:returnCode>{returnCode}</ns1:returnCode>
 				<!--Optional:-->
 				<ns1:certificateSeq>
 					<!--Zero or more repetitions:-->
@@ -651,28 +651,28 @@ DVCAService.prototype.RequestCertificate = function(soapBody) {
 		var req = this.checkRequestSyntax(reqbin);
 
 		if (req == null) {
-			var response = ServiceRequest.FAILURE_SYNTAX;
+			var returnCode = ServiceRequest.FAILURE_SYNTAX;
 		} else {
 			GPSystem.trace("DVCAService - Received certificate request: ");
 			GPSystem.trace(req);
 	
-			var response = this.checkRequestSemantics(req);
+			var returnCode = this.checkRequestSemantics(req);
 
 			var callback = soapBody.callbackIndicator;
-			var response = this.checkPolicy(req, response, (callback == "callback_possible"));
+			var returnCode = this.checkPolicy(req, returnCode, (callback == "callback_possible"));
 
-			if (response == ServiceRequest.OK_SYNTAX) {
+			if (returnCode == ServiceRequest.OK_SYNTAX) {
 				var asyncreq = new ServiceRequest(
 								soapBody.messageID.ns1::messageID,
 								soapBody.responseURL.ns1::string,
 								req);
 
-				asyncreq.setStatusInfo(response);
+				asyncreq.setStatusInfo(returnCode);
 				this.inqueue.push(asyncreq);
 			} else {
 				certlist = this.dvca.getCertificateList();
 
-				if (response == ServiceRequest.OK_CERT_AVAILABLE) {
+				if (returnCode == ServiceRequest.OK_CERT_AVAILABLE) {
 					var cert = this.issueCertificate(req);
 					// Add certificate list to response
 					certlist.push(cert);
@@ -682,13 +682,13 @@ DVCAService.prototype.RequestCertificate = function(soapBody) {
 	}
 	catch(e) {
 		GPSystem.trace("DVCAService - Error decoding request in " + e.fileName + "#" + e.lineNumber + " : " + e);
-		var response = ServiceRequest.FAILURE_SYNTAX;
+		var returnCode = ServiceRequest.FAILURE_SYNTAX;
 	}
 
 	var response =
 		<ns:RequestCertificateResponse xmlns:ns={ns} xmlns:ns1={ns1}>
 			<Result>
-				<ns1:returnCode>{response}</ns1:returnCode>
+				<ns1:returnCode>{returnCode}</ns1:returnCode>
 				<!--Optional:-->
 				<ns1:certificateSeq>
 					<!--Zero or more repetitions:-->

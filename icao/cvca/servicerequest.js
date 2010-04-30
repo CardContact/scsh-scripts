@@ -51,6 +51,7 @@ ServiceRequest.OK_CERT_AVAILABLE							= "ok_cert_available";
 ServiceRequest.OK_SYNTAX									= "ok_syntax";
 ServiceRequest.OK_RECEIVED_CORRECTLY						= "ok_received_correctly";
 ServiceRequest.OK_RECEPTION_ACK								= "ok_reception_ack";
+ServiceRequest.OK_SIGNATURE_AVAILABLE						= "ok_signature_available";
 ServiceRequest.FAILURE_SYNTAX								= "failure_syntax";
 ServiceRequest.FAILURE_INNER_SIGNATURE						= "failure_inner_signature";
 ServiceRequest.FAILURE_OUTER_SIGNATURE						= "failure_outer_signature";
@@ -60,7 +61,8 @@ ServiceRequest.FAILURE_NOT_FORWARDED						= "failure_not_forwarded";
 ServiceRequest.FAILURE_REQUEST_NOT_ACCEPTED_FOREIGN			= "failure_request_not_accepted_foreign";
 ServiceRequest.FAILURE_MESSAGEID_UNKNOWN					= "failure_messageID_unknown";
 ServiceRequest.FAILURE_SYNCHRONOUS_PROCESSING_NOT_POSSIBLE	= "failure_synchronous_processing_not_possible";
-
+ServiceRequest.FAILURE_CAR_UNKNOWN							= "failure_CAR_unknown";
+ServiceRequest.FAILURE_CHR_UNKNOWN							= "failure_CHR_unknown";
 
 /**
  * Returns true if this is a certificate request

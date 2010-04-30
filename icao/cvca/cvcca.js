@@ -70,7 +70,7 @@ function CVCCA(crypto, certstore, holderId, parentId, path) {
 		}
 	}
 	this.keyspec = new Key();
-	this.keyspec.setComponent(Key.ECC_CURVE_OID, new ByteString("brainpoolP256t1", OID));
+	this.keyspec.setComponent(Key.ECC_CURVE_OID, new ByteString("brainpoolP256r1", OID));
 	this.taAlgorithmIdentifier = new ByteString("id-TA-ECDSA-SHA-256", OID);
 }
 
@@ -219,7 +219,20 @@ CVCCA.prototype.generateCertificate = function(req, policy) {
 	generator.setExtensions(policy.extensions);
 	var prk = this.certstore.getPrivateKey(this.path, car);
 	var cvc = generator.generateCVCertificate(prk, Crypto.ECDSA_SHA256);
+	
 	return cvc;
+}
+
+
+
+/**
+ * Store issued certificate
+ *
+ * @param {CVC} cert a newly issued certificate
+ */
+CVCCA.prototype.storeCertificate = function(cert) {
+	var chrHolder = cert.getCHR().getHolder();
+	this.certstore.storeCertificate(this.path + "/" + chrHolder, cert, false);
 }
 
 
@@ -293,8 +306,9 @@ CVCCA.prototype.importCertificates = function(certs) {
  * <p>If the CA is a DVCA, then all certificates of the associated root and the current
  *    DVCA certificate is returned.</p>
  *
+ * @param {PublicKeyReference} fromCAR the optional starting point for the list if not a root CA
  */
-CVCCA.prototype.getCertificateList = function() {
+CVCCA.prototype.getCertificateList = function(fromCAR) {
 	var list;
 	
 	if (this.isRootCA()) {
@@ -313,7 +327,7 @@ CVCCA.prototype.getCertificateList = function() {
 					continue;
 				}
 			} else {
-				list = this.certstore.getCertificateChain(path, chr);
+				list = this.certstore.getCertificateChain(path, chr, fromCAR);
 			}
 			break;
 		}
@@ -399,7 +413,7 @@ CVCCA.test = function() {
 	print(cert.getASN1());
 
 	// Import certificate into store, making it the most current certificate
-	cvca.importCertificate(cert);
+	cvca.storeCertificate(cert);
 	
 	// Generate additional self-signed root certificate
 	// This must be done after the link certificate has been imported
@@ -413,6 +427,8 @@ CVCCA.test = function() {
 	print("Certificate: " + cert);
 	print(cert.getASN1());
 
+	// Import certificate into store, making it the most current certificate
+	cvca.storeCertificate(cert);
 
 	var ss = new CVCertificateStore(CVCCA.testPath + "/dvca");
 	var dvca = new CVCCA(crypto, ss, null, null, "/UTCVCA/UTDVCA");
@@ -443,6 +459,8 @@ CVCCA.test = function() {
 	var cert = cvca.generateCertificate(req, policy);
 	print("Certificate: " + cert);
 	print(cert.getASN1());
+
+	cvca.storeCertificate(cert);
 	dvca.importCertificate(cert);
 
 
@@ -477,6 +495,8 @@ CVCCA.test = function() {
 	var cert = dvca.generateCertificate(req, policy);
 	print("Certificate: " + cert);
 	print(cert.getASN1());
+
+	dvca.storeCertificate(cert);
 	term.importCertificate(cert);
 }
 

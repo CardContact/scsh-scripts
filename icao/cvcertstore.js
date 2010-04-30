@@ -401,7 +401,7 @@ CVCertificateStore.prototype.getCertificate = function(path, chr, selfsigned) {
  * @param {PublicKeyReference} tochr the public key reference for the certificate at the end of the chain
  * @param {PublicKeyReference} fromcar the public key reference for the certificate to start with or root if undefined
  * @returns the list of certificates starting with a self signed root certificate (fromcar undefined) a certificate
- *          issued by fromcar up to an including the certificate referenced by tochr
+ *          issued by fromcar up to an including the certificate referenced by tochr. Return null if fromcar is not found.
  * @type CVC[]
  */
 CVCertificateStore.prototype.getCertificateChain = function(path, tochr, fromcar) {
@@ -421,6 +421,9 @@ CVCertificateStore.prototype.getCertificateChain = function(path, tochr, fromcar
 		} else {
 			if (cvc.getCAR().equals(fromcar)) {
 				break;
+			}
+			if (cvc.getCAR().equals(cvc.getCHR())) {
+				return null;	// fromcar not found along the chain
 			}
 		}
 		var ofs = path.lastIndexOf("/");
