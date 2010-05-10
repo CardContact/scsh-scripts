@@ -162,11 +162,12 @@ TCCService.prototype.renewCertificate = function(async, forceinitial) {
 
 	var dp = this.ss.getDefaultDomainParameter(this.path);
 	var algo = this.ss.getDefaultPublicKeyOID(this.path);
-	
+	var car = this.ss.getCurrentCHR(CVCertificateStore.parentPathOf(this.path));
+
 	this.tcc.setKeySpec(dp, algo);
 	
 	// Create a new request
-	var req = this.tcc.generateRequest(forceinitial);
+	var req = this.tcc.generateRequest(car, forceinitial);
 	print("Request: " + req);
 	print(req.getASN1());
 
@@ -180,6 +181,10 @@ TCCService.prototype.renewCertificate = function(async, forceinitial) {
 	this.addOutboundRequest(sr);
 	
 	var certlist = this.requestCertificateFromDVCA(sr);
+	
+	if (certlist.length > 0) {
+		sr.setFinalStatusInfo("" + certlist.length + " certificates received");
+	}
 	
 	var list = this.tcc.importCertificates(certlist);
 

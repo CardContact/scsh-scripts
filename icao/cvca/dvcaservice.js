@@ -142,6 +142,7 @@ DVCAService.prototype.checkRequestSyntax = function(reqbin) {
  * @type String
  */
 DVCAService.prototype.checkRequestSemantics = function(req) {
+	// Check inner signature
 	try	{
 		var puk = req.getPublicKey();
 	}
@@ -153,6 +154,31 @@ DVCAService.prototype.checkRequestSemantics = function(req) {
 	if (!req.verifyWith(this.crypto, puk)) {
 		GPSystem.trace("Error verifying inner signature");
 		return ServiceRequest.FAILURE_INNER_SIGNATURE;
+	}
+	
+	// Check that request key algorithm matches the algorithm for the current certificate
+	var chr = this.ss.getCurrentCHR(this.path);
+	var cvc = this.ss.getCertificate(this.path, chr);
+	var oid = cvc.getPublicKeyOID();
+	var reqoid = req.getPublicKeyOID();
+	
+	if (!reqoid.equals(oid)) {
+		GPSystem.trace("Public key algorithm " + reqoid.toString(OID) + " in request does not match current public key algorithm " + oid.toString(OID));
+		return ServiceRequest.FAILURE_SYNTAX;
+	}
+	
+	// Check that request key domain parameter match current domain parameter
+	var dp = this.ss.getDomainParameter(this.path, chr);
+	
+	if (!puk.getComponent(Key.ECC_P).equals(dp.getComponent(Key.ECC_P)) ||
+		!puk.getComponent(Key.ECC_A).equals(dp.getComponent(Key.ECC_A)) ||
+		!puk.getComponent(Key.ECC_B).equals(dp.getComponent(Key.ECC_B)) ||
+		!puk.getComponent(Key.ECC_GX).equals(dp.getComponent(Key.ECC_GX)) ||
+		!puk.getComponent(Key.ECC_GY).equals(dp.getComponent(Key.ECC_GY)) ||
+		!puk.getComponent(Key.ECC_N).equals(dp.getComponent(Key.ECC_N)) ||
+		!puk.getComponent(Key.ECC_H).equals(dp.getComponent(Key.ECC_H))) {
+		GPSystem.trace("Domain parameter in request do not match current domain parameter");
+		return ServiceRequest.FAILURE_SYNTAX;
 	}
 	
 	if (req.isAuthenticatedRequest()) {
@@ -215,7 +241,7 @@ DVCAService.prototype.checkPolicy = function(req, returnCode, callback) {
 
 
 /**
- * Issue certificate for subordinate CA
+ * Issue certificate for subordinate terminal
  *
  * @param {CVC} req the request
  * @returns the certificate
@@ -316,17 +342,28 @@ DVCAService.prototype.getInboundRequest = function(index) {
 DVCAService.prototype.processInboundRequest = function(index) {
 	var sr = this.inqueue[index];
 
-	if (sr.getStatusInfo().substr(0, 3) == "ok_") {
-		certlist = this.dvca.getCertificateList();
-	} else {
-		certlist = [];
-	}
+	var certlist = [];
 	
-	if (sr.isCertificateRequest() && (sr.getStatusInfo() == ServiceRequest.OK_CERT_AVAILABLE)) {
-		var cert = this.issueCertificate(sr.getCertificateRequest());
-		certlist.push(cert);
+	if (sr.isCertificateRequest()) {		// RequestCertificate
+		if (sr.getStatusInfo() == ServiceRequest.OK_CERT_AVAILABLE) {
+			var req = sr.getCertificateRequest();
+			var response = this.checkRequestSemantics(req);	// Check request a second time
+
+			if (response == ServiceRequest.OK_CERT_AVAILABLE) {		// Still valid
+				certlist = this.determineCertificateList(req);
+				var cert = this.issueCertificate(req);
+				certlist.push(cert);
+			} else {
+				GPSystem.trace("Request " + req + " failed secondary check");
+				sr.setStatusInfo(response);
+			}
+		}
+	} else {								// GetCertificates
+		if (sr.getStatusInfo().substr(0, 3) == "ok_") {
+			certlist = this.dvca.getCertificateList();
+		}
 	}
-	
+
 	this.sendCertificates(sr, certlist);
 }
 
@@ -339,6 +376,26 @@ DVCAService.prototype.processInboundRequest = function(index) {
  */
 DVCAService.prototype.deleteInboundRequest = function(index) {
 	this.inqueue.splice(index, 1);
+}
+
+
+
+/**
+ * Determine the list of certificates to send to the client as part of the certificate request response
+ *
+ * @param {CVC} req the request
+ * @returns the certificate list
+ * @type CVC[]
+ */
+DVCAService.prototype.determineCertificateList = function(req) {
+	var car = req.getCAR();
+	var chr = this.ss.getCurrentCHR(this.path);
+	
+	if ((car != null) && car.equals(chr)) {
+		return [];
+	}
+	
+	return this.dvca.getCertificateList();
 }
 
 
@@ -424,11 +481,12 @@ DVCAService.prototype.renewCertificate = function(async, forceinitial) {
 
 	var dp = this.ss.getDefaultDomainParameter(this.path);
 	var algo = this.ss.getDefaultPublicKeyOID(this.path);
+	var car = this.ss.getCurrentCHR(CVCertificateStore.parentPathOf(this.path));
 	
 	this.dvca.setKeySpec(dp, algo);
 	
 	// Create a new request
-	var req = this.dvca.generateRequest(forceinitial);
+	var req = this.dvca.generateRequest(car, forceinitial);
 	print("Request: " + req);
 	print(req.getASN1());
 
@@ -440,8 +498,12 @@ DVCAService.prototype.renewCertificate = function(async, forceinitial) {
 
 	var sr = new ServiceRequest(msgid, this.myURL, req);
 	this.addOutboundRequest(sr);
-	
+
 	var certlist = this.requestCertificateFromCVCA(sr);
+
+	if (certlist.length > 0) {
+		sr.setFinalStatusInfo("" + certlist.length + " certificates received");
+	}
 	
 	var list = this.dvca.importCertificates(certlist);
 
@@ -560,7 +622,7 @@ DVCAService.prototype.requestCertificateFromCVCA = function(sr) {
 		GPSystem.trace("SOAP call to " + this.parentURL + " failed : " + e);
 		throw new GPError("DVCAService", GPError.DEVICE_ERROR, 0, "RequestCertificate failed with : " + e);
 	}
-	
+
 	sr.setStatusInfo(response.Result.ns1::returnCode.toString());
 	var certlist = [];
 
@@ -670,9 +732,9 @@ DVCAService.prototype.RequestCertificate = function(soapBody) {
 				asyncreq.setStatusInfo(returnCode);
 				this.inqueue.push(asyncreq);
 			} else {
-				certlist = this.dvca.getCertificateList();
-
 				if (returnCode == ServiceRequest.OK_CERT_AVAILABLE) {
+					certlist = this.determineCertificateList(req);
+
 					var cert = this.issueCertificate(req);
 					// Add certificate list to response
 					certlist.push(cert);

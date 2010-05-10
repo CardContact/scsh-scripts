@@ -74,12 +74,14 @@ var dVPolicy = { certificateValidityDays: 1,
 // Policy for UTDVCA
 cvca.setDVCertificatePolicy(dVPolicy, /^UTDVCA.*$/);
 
+
 /*
 // Set signature key specification
 var key = new Key();
 key.setComponent(Key.ECC_CURVE_OID, new ByteString("brainpoolP384t1", OID));
 cvca.setKeySpec(key, new ByteString("id-TA-ECDSA-SHA-384", OID));
 */
+
 
 
 // Create GUI

@@ -148,6 +148,23 @@ CVCertificateStore.saveXMLFile = function(filename, xml) {
 
 
 /**
+ * Strip the last element of the path, effectively defining the parent within the path
+ *
+ * @param {String} path the path to strip the last element from
+ * @returns the parent path or null for the root
+ * @type String
+ */
+CVCertificateStore.parentPathOf = function(path) {
+	var ofs = path.lastIndexOf("/");
+	if (ofs <= 0) {
+		return null;
+	}
+	return path.substr(0, ofs);
+}
+
+
+
+/**
  * Returns the current terminal certificate for a given CVCA reference.
  *
  * @param {PublicKeyReference} cvcaref the public key reference (CHR) of the root CA.
@@ -395,7 +412,7 @@ CVCertificateStore.prototype.getCertificate = function(path, chr, selfsigned) {
 
 
 /**
- * Return a chain of certificates starting resembling a path from root to end.
+ * Return a chain of certificates resembling a path from root to end entity.
  *
  * @param {String} path the relative path of the PKI element (e.g. "/UTCVCA1/UTDVCA1/UTTERM")
  * @param {PublicKeyReference} tochr the public key reference for the certificate at the end of the chain

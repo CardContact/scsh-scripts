@@ -117,11 +117,12 @@ CVCCA.prototype.setKeySpec = function(keyparam, algorithm) {
 /**
  * Generate a certificate request
  *
+ * @param {PublicKeyReference} car the CA at which this request is addressed
  * @param {boolean} forceInitial force an initial request, even if a current certificate is available
  * @return the certificate request
  * @type CVC
  */
-CVCCA.prototype.generateRequest = function(forceinitial) {
+CVCCA.prototype.generateRequest = function(car, forceinitial) {
 
 	// Obtain key parameter
 
@@ -155,6 +156,10 @@ CVCCA.prototype.generateRequest = function(forceinitial) {
 	// Set CHR for the request
 	reqGenerator.setCHR(nextchr);
 
+	if ((typeof(car) != "undefined") && (car != null)) {
+		reqGenerator.setCAR(car);
+	}
+	
 	if ((currentchr != null) && !forceinitial) {
 		var previousprk = this.certstore.getPrivateKey(this.path, currentchr);
 		var req = reqGenerator.generateAuthenticatedCVRequest(prk, previousprk, currentchr);
@@ -395,7 +400,7 @@ CVCCA.test = function() {
 	var cvca = new CVCCA(crypto, ss, null, null, "/UTCVCA");
 	
 	// Create a new request
-	var req = cvca.generateRequest();
+	var req = cvca.generateRequest(null, false);
 	print("Request: " + req);
 	print(req.getASN1());
 	
@@ -444,7 +449,7 @@ CVCCA.test = function() {
 	}
 
 	// Create a new request
-	var req = dvca.generateRequest(false);
+	var req = dvca.generateRequest(null, false);
 	print("Request: " + req);
 	print(req.getASN1());
 	
@@ -480,7 +485,7 @@ CVCCA.test = function() {
 	}
 
 	// Create a new request
-	var req = term.generateRequest(false);
+	var req = term.generateRequest(null, false);
 	print("Request: " + req);
 	print(req.getASN1());
 	
