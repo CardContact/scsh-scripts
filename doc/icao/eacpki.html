@@ -1,0 +1,191 @@
+<!-- #BeginTemplate "templatesubdir.dwt" -->
+<!doctype html public "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<!-- #BeginEditable "TITLE" -->
+<title>EAC-PKI for Testing</title>
+<!-- #EndEditable -->
+<link rel=stylesheet type="text/css" href="../style.css">
+<meta name="author" content="Andreas Schwier">
+</head>
+<body>
+<table border="0" cellpadding="0" cellspacing="0" width="750" align="center">
+  <tr>
+    <td height="80" colspan="5" class="pb"><div align="left"><a href="http://www.cardcontact.de"><img src="../banner.jpg" width="750" height="80" border="0"></a></div></td>
+  </tr>
+  <tr height="20">
+  </tr>
+  <tr>
+    <td width="130" valign="top" align="left">
+    <br>
+    <p><b>Script Collection</b></p>
+    <a href="../index.html">Home</a><br>
+    <a href="http://www.openscdp.org/scripts/download.html">Download</a><br>
+    <br>
+    <br>
+    <a href="../eGK/index.html">German eGK</a><br>
+    <a href="../HPC/index.html">German HPC</a><br>
+    <a href="../kvk/index.html">German KVK</a><br><br>
+    <a href="../icao/index.html">ICAO MRTD</a><br>
+    <a href="../gp/index.html">GP Card</a><br>
+    <a href="../musclecard/index.html">MuscleCard</a><br>
+    <a href="../pkcs15/index.html">PKCS#15 Card</a><br>
+    <a href="../emv/index.html">EMV</a><br>
+    <br>
+    <a href="../tutorial/index.html">Tutorial</a><br>
+    <br>
+    <a href="http://www.openscdp.org">OpenSCDP</a><br>
+    <a href="http://www.cardcontact.de/company/contact.html">Contact</a><br>
+    </td>
+    <td width="630" align="left">
+    <br/>
+<!-- #BeginEditable "BODY" -->
+<h1>Setting up an EAC-PKI for Testing</h1>
+<p>This document explains how to set up an Extended Access Control Public Key Infrastructure (EAC-PKI) for
+   development and testing purposes.<p>
+<p>EAC-PKIs are used for Machine Readable Travel Documents (MRTD), some national identification cards and electronic
+   drivers licenses. As the name implies, it is used to control which terminal is allowed to access certain data
+   on the chip embedded in an identification document.</p>
+<h2>Overview</h2>
+<p>An EAC-PKI consists of a three layer PKI:</p>
+<ol>
+	<li>The Country Verifying Certification Authority (CVCA),</li>
+	<li>the Document Verifier (DV) and</li>
+	<li>the Inspection System (IS).
+</ol>
+<p>The CVCA is at the root of the PKI. It issues self-signed certificates as trust anchors and link certificates
+   to connect subsequent trust anchors. The CVCA certifies subordinate Document Verifier.</p>
+<p>A Document Verifier is responsible for terminals of a certain control sector. Beside other functional 
+   components, it contains the Document Verifier Certification Authority (DVCA) that issues certificates 
+   for inspections systems requiring access to data stored in the chip of the identification document.</p>
+<p>Terminals hold a private key to authenticate against the chip in an identification document. To
+   prove the authenticity of the key, it must present a chain of certificates, starting with a certificate
+   issued by the trust anchor on the chip up to and including the terminals certificate.</p>
+<p>Terminals can either be integrated or distributed. In an integrated terminal, the private key is stored in
+   a secure cryptographic module integrated in the terminal. In a distributed terminal, the key is stored in a secure
+   cryptographic module located in a terminal control center (TCC) to which terminals are attached.</p>
+<p>An EAC-PKI uses self-descriptive Card Verifiable Certificates (CVC) rather than X.509 certificates. 
+   CVCs are much smaller than X.509 certificates. They are specifically designed for chips with 
+   limited memory and computing power. CVCs can be used with ECDSA and RSA, whereby ECDSA is more common
+   due to its faster processing in the chip as well as the reduced size of signatures and public keys.</p>
+<h2>The Development and Test EAC-PKI</h2>
+<p>The EAC-PKI supplied as part of the script bundle in the OpenSCDP project implements a CVCA, a DVCA and a terminal
+   control center. It supports synchronous and asynchronous web services as defined in TR-03129 to request
+   certificates and to sign requests for terminal authentication. It has a web interface for user interaction
+   and automation of tests.</p>
+<h2>Installation</h2>
+<p>The EAC-PKI requires the <a href="http://www.openscdp.org/scriptingserver/index.html">Scripting Server</a>
+   runtime environment. For download and installation follow the instructions.</p>
+<p>The EAC-PKI can be deployed on a running Scripting Server using the loadserver.cmd batch file supplied in the
+   icao/cvca directory. The batch file is configured for installations on localhost. It installs all three components
+   (CVCA, DVCA and TCC) on the same machine.</p>
+<h2>Usage</h2>
+<p>Each service offers a web user interface at the same URL at which the service responds to web service requests.</p>
+<p>In the default configuration,<p>
+<ul>
+<li>the CVCA is located at <a href="http://localhost:8080/se/cvca">http://localhost:8080/se/cvca</a>,</li>
+<li>the DVCA is located at <a href="http://localhost:8080/se/dvca">http://localhost:8080/se/dvca</a> and</li>
+<li>the TCC is located at <a href="http://localhost:8080/se/tcc">http://localhost:8080/se/tcc</a>.</li>
+</ul>
+<p>In an initial workflow you will need to</p>
+<ul>
+<li>Generate a root certificate at the CVCA</li>
+<li>Update CVCA certificates at the DVCA using a synchronous request</li>
+<li>Request an initial certificate asynchronously at the DVCA</li>
+<li>Press the refresh button on the CVCA page to see the pending request</li>
+<li>Select the request and respond with "ok_cert_available"</li>
+<li>Press the refresh button on the DVCA page to see the new certificate</li>
+<li>Update CVCA and DVCA certificates at the TCC using a synchronous request</li>
+<li>Request an initial certificate asynchronously at the TCC</li>
+<li>Press the refresh button on the DVCA page to see the pending request</li>
+<li>Select the request and respond with "ok_cert_available"</li>
+<li>Press the refresh button on the TCC page to see the new certificate</li>
+</ul>
+<p>The EAC-PKI is now operational and will accept requests to obtain a signature for terminal authentication.</p>
+<p>This can be tested using the tccconnection.js script located in the /icao directory. The script
+   can be executed with the <a href="http://www.openscdp.org/scsh3/index.html">Smart Card Shell</a> or 
+   using the <a href="http://www.openscdp.org/sse4e/index.html">Eclipse Plug-In</a>. The scripts declares
+   a class implementing the web service call. A simple test is performed by entering<p>
+<pre>
+&gt;load("icao/tccconnection.js");
+&gt;TCCConnection.test();
+</pre>
+<p>If all is configured well, then the output should be:</p>
+<pre>
+Received certificates:
+CVC id-IS DV (official domestic) CAR=UTCVCA00001 CHR=UTDVCA00001 CED=27. Mai 2010 CXD=30. Mai 2010 
+CVC id-IS Terminal CAR=UTDVCA00001 CHR=UTTERM00001 CED=27. Mai 2010 CXD=28. Mai 2010 
+Signature: 0D 44 A2 1F 10 1A 34 C2 65 FB 68 01 9A 1A E4 58 F9 73 41 76 B7 81 30 F7 ...
+Message: 48 65 6C 6C 6F 20 57 6F 72 6C 64
+Hash: A5 91 A6 D4 0B F4 20 40 4A 01 17 33 CF B7 B1 90 D6 2C 65 BF 0B CD A3 2B 57 B2 77 D9 AD 9F 14 6E
+Signature: 30 46 02 21 00 0D 44 A2 1F 10 1A 34 C2 65 FB 68 01 9A 1A E4 58 F9 73 41 ...
+Signature verification: true
+</pre>
+<h2>Configuration</h2>
+<p>The default configuration provides for a reasonable setup for testing on localhost. It uses short certificate
+   expiration times and maximum rights.</p>
+<p>All configuration is done in the configureservices.js script. The script is run on the server as part of the deployment
+   process and creates the requires services.</p>
+<p>To create your own configuration, you will need to create your own configuration script and adapt the loadserver.cmd
+   batch file accordingly.</p>
+<p>The default configuration contains four sections,
+   a global settings section and one section for CVCA, DVCA and TCC.</p>
+<h3>Global settings</h3>
+<p>The datadir variable defines the directory that is used to store persistent data. It is set to
+   c:\data\eacpki by default. Each service instance uses it's own directory starting with this base name.</p>
+<p>The url variable defines the base URL at which services are available. It is set to http://localhost:8080 in
+   the default configuration.</p>
+<h3>CVCA section</h3>
+<p>A CVCA (or DVCA/TCC) service is created using the three lines
+<pre>
+var cvca = new CVCAService(datadir +  "/cvca", "UTCVCA");
+var cvcaui = new CVCAUI(cvca);
+SOAPServer.registerService("cvca", cvca, cvcaui);
+</pre>
+<p>The first statement creates a CVCA service with the certificate holder name "UTCVCA", storing data
+   in the /cvca directory of the data store.</p>
+<p>The second statement creates a user interface for this service.</p>
+<p>The final statement registers the service and it's user interface with the
+   SOAPServer under the relative URL "cvca". The SOAP server is a Scripting Server
+   component listening at http://localhost:8080/se for incoming requests.</p>
+<p>To issue certificates, a CVCA requires three policies, one for self-signed root certificates,
+   one for link certificates and a finale one for DV certificates.</p>
+<p>A certificate policy is defined as JavaScript object using the following notation:</p>
+<pre>
+// The policy used to issue DV certificates
+var dVPolicy = { certificateValidityDays: 4,
+				   chatRoleOID: new ByteString("id-IS", OID),
+				   chatRights: new ByteString("A3", HEX),
+				   includeDomainParameter: false,
+				   extensions: null,
+				   authenticatedRequestsApproved: false,
+				   initialRequestsApproved: false,
+				   declineExpiredAuthenticatedRequest: true
+				 };
+</pre>
+<p><code>certificateValidityDays</code> defines the number of days a newly issued certificate will be valid,
+   starting this the current date.</p>
+<p><code>chatRoleOID</code> is a ByteString containing the object identifier to be used in the Certificate
+   Holder Authorization Template (CHAT) to identify the terminal type and format of the template.</p>
+<p><code>chatRights</code> is a ByteString containing the object identifier to be used in the Certificate
+   Holder Authorization Template (CHAT) to identity the role and rights of the entity to which the
+   certificate is issued.</p>
+<p><code>includeDomainParameter</code> selects whether domain parameters are included as part of the public key or not.</p>
+<p><code>extensions</code> is an array of ASN1 objects that are added as Certificate Extensions.</p>
+<p><code>authenticatedRequestsApproved</code> allows to select, if authenticated certificate requests (requests signed by the
+   valid current key of the subordinate instance) are automatically approved and certified. If not approved and
+   if asynchronous processing is allowed, such requests are added to a list of pending requests and
+   need explicit approval by an operator.</p>
+<p><code>initialRequestsApproved</code> allows to select, if initial requests are approved without operator action.</p>
+<p><code>declineExpiredAuthenticatedRequests</code> allows to select, if authenticated requests with a signature based
+   on an expired certificate should be declined. If set to false, such requests are added to the
+   pending requests list and can be approved manually.</p>
+<!-- #EndEditable -->
+<br>
+<p class="copyright">&copy; Copyright 2003 - 2008 <a href="http://www.cardcontact.de">CardContact</a>
+Software & System Consulting, Minden, Germany</p>
+    </td>
+  </tr>
+</table>
+</body>
+</html><!-- #EndTemplate -->

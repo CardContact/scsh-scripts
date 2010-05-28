@@ -24,13 +24,24 @@
  * @fileoverview Configure services
  */
 
+// --- Global settings ---
 
+// The base URL at which services respond to webservice requests
 var url = "http://localhost:8080";
+// var url = "https://localhost:8443";
 
-// Create CA service
-var cvca = new CVCAService("c:/tmp/eacpki/cvca", "UTCVCA");
+// The data directory for keys, requests, certificates and configurations
+var datadir = "c:/data/eacpki";
 
-var rootPolicy = { certificateValidityDays: 2,
+
+
+// --- CVCA section ---
+
+// Create an CVCA service
+var cvca = new CVCAService(datadir +  "/cvca", "UTCVCA");
+
+// The policy used to issue self-signed root certificates
+var rootPolicy = { certificateValidityDays: 6,
 				   chatRoleOID: new ByteString("id-IS", OID),
 				   chatRights: new ByteString("E3", HEX),
 				   includeDomainParameter: true,
@@ -39,7 +50,8 @@ var rootPolicy = { certificateValidityDays: 2,
 
 cvca.setRootCertificatePolicy(rootPolicy);
 
-var linkPolicy = { certificateValidityDays: 2,
+// The policy used to issue link certificates
+var linkPolicy = { certificateValidityDays: 6,
 				   chatRoleOID: new ByteString("id-IS", OID),
 				   chatRights: new ByteString("E3", HEX),
 				   includeDomainParameter: true,
@@ -48,7 +60,8 @@ var linkPolicy = { certificateValidityDays: 2,
 
 cvca.setLinkCertificatePolicy(linkPolicy);
 
-var dVPolicy = { certificateValidityDays: 2,
+// The policy used to issue DV certificates
+var dVPolicy = { certificateValidityDays: 4,
 				   chatRoleOID: new ByteString("id-IS", OID),
 				   chatRights: new ByteString("A3", HEX),
 				   includeDomainParameter: false,
@@ -61,7 +74,7 @@ var dVPolicy = { certificateValidityDays: 2,
 // Default policy
 cvca.setDVCertificatePolicy(dVPolicy);
 
-var dVPolicy = { certificateValidityDays: 1,
+var dVPolicy = { certificateValidityDays: 4,
 				   chatRoleOID: new ByteString("id-IS", OID),
 				   chatRights: new ByteString("A3", HEX),
 				   includeDomainParameter: false,
@@ -83,17 +96,21 @@ cvca.setKeySpec(key, new ByteString("id-TA-ECDSA-SHA-384", OID));
 */
 
 
-
 // Create GUI
 var cvcaui = new CVCAUI(cvca);
 
 SOAPServer.registerService("cvca", cvca, cvcaui);
 
 
-var dvca = new DVCAService("c:/tmp/eacpki/dvca", "UTDVCA", "UTCVCA", url + "/se/cvca");
+
+// --- DVCA section ---
+
+// Create a DVCA service
+
+var dvca = new DVCAService(datadir + "/dvca", "UTDVCA", "UTCVCA", url + "/se/cvca");
 dvca.setSendCertificateURL(url + "/se/dvca");
 
-var terminalPolicy = { certificateValidityDays: 1,
+var terminalPolicy = { certificateValidityDays: 2,
 				   chatRoleOID: new ByteString("id-IS", OID),
 				   chatRights: new ByteString("23", HEX),
 				   includeDomainParameter: false,
@@ -111,7 +128,11 @@ var dvcaui = new DVCAUI(dvca);
 SOAPServer.registerService("dvca", dvca, dvcaui);
 
 
-var tcc = new TCCService("c:/tmp/eacpki/tcc", "/UTCVCA/UTDVCA/UTTERM", url + "/se/dvca");
+
+// --- TCC section ---
+
+// Create TCC service
+var tcc = new TCCService(datadir + "/tcc", "/UTCVCA/UTDVCA/UTTERM", url + "/se/dvca");
 tcc.setSendCertificateURL(url + "/se/tcc");
 
 // Create GUI

@@ -169,7 +169,7 @@ CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 	if (this.service.cvca.isOperational()) {
 		l.li += <li><a href="?link">Generate link certificate without domain parameter</a></li>
 		l.li += <li><a href="?linkdp">Generate link certificate with domain parameter</a></li>
-		l.li += <li><a href="?linkdp100">Generate 100 link certificate with domain parameter</a></li>
+		l.li += <li><a href="?linkdp100">Generate 100 link certificates with domain parameter</a></li>
 	} else {
 		l.li += <li><a href="?linkdp">Generate root certificate</a></li>
 	}
