@@ -197,12 +197,18 @@ CVCCA.prototype.generateRequest = function(car, forceinitial) {
  */
 CVCCA.prototype.generateCertificate = function(req, policy) {
 	var car = this.certstore.getCurrentCHR(this.path);
+	var maxExpDate = null;
 	
 	if (car == null) {				// No CA certificate found
 		if (this.isRootCA()) {
 			car = req.getCHR();		// Generate a self-signed root certificate
 		} else {
 			throw new GPError("CVCCA", GPError.INVALID_DATA, 0, "No current certificate found");
+		}
+	} else {
+		if (policy.shellModelForExpirationDate) {
+			var cacvc = this.certstore.getCertificate(this.path, car);
+			maxExpDate = cacvc.getCXD();
 		}
 	}
 	
@@ -213,6 +219,12 @@ CVCCA.prototype.generateCertificate = function(req, policy) {
 	effDate.setHours(12, 0, 0, 0);
 	var expDate = new Date((policy.certificateValidityDays - 1) * (1000 * 60 * 60 * 24) + effDate.getTime());
 	expDate.setHours(12, 0, 0, 0);
+
+	// Expiration date of issued certificate must not exceed expiration date of issuing CA
+	if ((maxExpDate != null) && (expDate.getTime() > maxExpDate.getTime())) {
+		expDate = maxExpDate;
+	}
+	
 	generator.setEffectiveDate(effDate);
 	generator.setExpiryDate(expDate);
 	generator.setChatOID(policy.chatRoleOID);

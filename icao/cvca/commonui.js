@@ -37,6 +37,7 @@ function CommonUI(service) {
 	if (service) {
 		this.service = service;
 		this.certstorebrowser = new CertStoreBrowser(service.ss);
+		this.bookmarks = [];
 	}
 }
 
@@ -78,6 +79,8 @@ CommonUI.prototype.generateTemplate = function(url) {
 							<a href={prefix + url[0]}>Home</a><br/>
 							<br/>
 							<a href={prefix + url[0] + "/holderlist?path="}>Certificates</a><br/>
+							<br/>
+							<div id="bookmarks"/>
 						</td>
 						<td width="650" align="left">
 							<div id="content"/>
@@ -107,7 +110,29 @@ CommonUI.prototype.sendPage = function(req, res, url, page) {
 	var c = t..div.(@id == "content");
 	c.div = page;
 	
+	var bml = <div/>;
+	for (var i = 0; i < this.bookmarks.length; i++) {
+		var bm = this.bookmarks[i];
+		bml.appendChild(<a href={bm.url}>{bm.name}</a>);
+		bml.appendChild(<br/>);
+	}
+	var c = t..div.(@id == "bookmarks");
+	c.div = bml;
+	
 	res.print(t.toXMLString());
+}
+
+
+
+/**
+ * Add a bookmark shown on the navigation panel
+ *
+ * @param {String} name the name to display
+ * @param {String} url the URL for this bookmark
+ */
+CommonUI.prototype.addBookmark = function(name, url) {
+	var m = { name: name, url: url };
+	this.bookmarks.push(m);
 }
 
 

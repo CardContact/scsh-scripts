@@ -45,6 +45,7 @@ var rootPolicy = { certificateValidityDays: 6,
 				   chatRoleOID: new ByteString("id-IS", OID),
 				   chatRights: new ByteString("E3", HEX),
 				   includeDomainParameter: true,
+				   shellModelForExpirationDate: false,
 				   extensions: null
 				 };
 
@@ -55,6 +56,7 @@ var linkPolicy = { certificateValidityDays: 6,
 				   chatRoleOID: new ByteString("id-IS", OID),
 				   chatRights: new ByteString("E3", HEX),
 				   includeDomainParameter: true,
+				   shellModelForExpirationDate: false,
 				   extensions: null
 				 };
 
@@ -65,6 +67,7 @@ var dVPolicy = { certificateValidityDays: 4,
 				   chatRoleOID: new ByteString("id-IS", OID),
 				   chatRights: new ByteString("A3", HEX),
 				   includeDomainParameter: false,
+				   shellModelForExpirationDate: true,
 				   extensions: null,
 				   authenticatedRequestsApproved: false,
 				   initialRequestsApproved: false,
@@ -78,6 +81,7 @@ var dVPolicy = { certificateValidityDays: 4,
 				   chatRoleOID: new ByteString("id-IS", OID),
 				   chatRights: new ByteString("A3", HEX),
 				   includeDomainParameter: false,
+				   shellModelForExpirationDate: true,
 				   extensions: null,
 				   authenticatedRequestsApproved: true,
 				   initialRequestsApproved: false,
@@ -98,6 +102,9 @@ cvca.setKeySpec(key, new ByteString("id-TA-ECDSA-SHA-384", OID));
 
 // Create GUI
 var cvcaui = new CVCAUI(cvca);
+cvcaui.addBookmark(">CVCA", "http://localhost:8080/se/cvca");
+cvcaui.addBookmark("DVCA", "http://localhost:8080/se/dvca");
+cvcaui.addBookmark("TCC", "http://localhost:8080/se/tcc");
 
 SOAPServer.registerService("cvca", cvca, cvcaui);
 
@@ -110,10 +117,11 @@ SOAPServer.registerService("cvca", cvca, cvcaui);
 var dvca = new DVCAService(datadir + "/dvca", "UTDVCA", "UTCVCA", url + "/se/cvca");
 dvca.setSendCertificateURL(url + "/se/dvca");
 
-var terminalPolicy = { certificateValidityDays: 2,
+var terminalPolicy = { certificateValidityDays: 6,
 				   chatRoleOID: new ByteString("id-IS", OID),
 				   chatRights: new ByteString("23", HEX),
 				   includeDomainParameter: false,
+				   shellModelForExpirationDate: true,
 				   extensions: null,
 				   authenticatedRequestsApproved: true,
 				   initialRequestsApproved: false,
@@ -124,6 +132,9 @@ dvca.setTerminalCertificatePolicy(terminalPolicy);
 
 // Create GUI
 var dvcaui = new DVCAUI(dvca);
+dvcaui.addBookmark("CVCA", "http://localhost:8080/se/cvca");
+dvcaui.addBookmark(">DVCA", "http://localhost:8080/se/dvca");
+dvcaui.addBookmark("TCC", "http://localhost:8080/se/tcc");
 
 SOAPServer.registerService("dvca", dvca, dvcaui);
 
@@ -137,5 +148,8 @@ tcc.setSendCertificateURL(url + "/se/tcc");
 
 // Create GUI
 var tccui = new TCCUI(tcc);
+tccui.addBookmark("CVCA", "http://localhost:8080/se/cvca");
+tccui.addBookmark("DVCA", "http://localhost:8080/se/dvca");
+tccui.addBookmark(">TCC", "http://localhost:8080/se/tcc");
 
 SOAPServer.registerService("tcc", tcc, tccui);
