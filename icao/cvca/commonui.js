@@ -57,6 +57,7 @@ CommonUI.prototype.generateTemplate = function(url) {
 		prefix += "../";
 	}
 	
+/*
 	var pagetemplate = 
 		<html>
 			<head>
@@ -88,6 +89,31 @@ CommonUI.prototype.generateTemplate = function(url) {
 						</td>
 					</tr>
 				</table>
+			</body>
+		</html>
+*/
+	var pagetemplate = 
+		<html>
+			<head>
+				<title>{this.service.type + " " + this.service.name}</title>
+				<link rel="stylesheet" type="text/css" href={prefix + "../css/style.css"}/>
+			</head>
+			<body>
+				<div align="left">
+					<a href="http://www.cardcontact.de"><img src={prefix + "../images/banner.jpg"} width="750" height="80" border="0"/></a>
+				</div>
+				<div id="navigator">
+					<p><b>{this.service.type}</b></p>
+					<a href={prefix + url[0]}>Home</a><br/>
+					<br/>
+					<a href={prefix + url[0] + "/holderlist?path="}>Certificates</a><br/>
+					<br/>
+					<div id="bookmarks"/>
+				</div>
+				<div id="main">
+					<div id="content"/>
+					<p class="copyright">(c) Copyright 2003 - 2010 <a href="http://www.cardcontact.de">CardContact</a> Software &amp; System Consulting, Minden, Germany</p>
+				</div>
 			</body>
 		</html>
 	return pagetemplate;
@@ -157,27 +183,38 @@ CommonUI.prototype.handleCertificateDetails = function(req, res, url) {
 	
 	var chr = new PublicKeyReference(op.chr);
 	
-	var cert = this.service.ss.getCertificate(op.path, chr, ss);
-	cert.decorate();
+	if (typeof(op.op) != "undefined") {
+		var cert = this.service.ss.getCertificateBinary(op.path, chr, ss);
+		res.setContentType("application/octet-stream");
+		res.setContentLength(cert.length);
+		var filename = op.chr + ".cvcert";
+		// ToDo: Remove nativeResponse once addHeader is provided in host class
+		res.nativeResponse.addHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+		res.write(cert);
+	} else {
+		var cert = this.service.ss.getCertificate(op.path, chr, ss);
+		cert.decorate();
 	
-	var page = 
-		<div>
-			<h1>Certificate Details</h1>
-			<p>{cert.toString()}</p>
-			<ul/>
-			<pre>
-				{cert.getASN1().toString()}
-			</pre>
-		</div>;
+		var page = 
+			<div>
+				<h1>Certificate Details</h1>
+				<a href={url[url.length - 1] + "?" + req.queryString + "&op=download"}>Download...</a>
+				<p>{cert.toString()}</p>
+				<ul/>
+				<pre>
+					{cert.getASN1().toString()}
+				</pre>
+			</div>;
 
-	var l = page.ul;
-	var rights = cert.getRightsAsList();
-
-	for (var i = 0; i < rights.length; i++) {
-		l.li += <li>{rights[i]}</li>
+		var l = page.ul;
+		var rights = cert.getRightsAsList();
+	
+		for (var i = 0; i < rights.length; i++) {
+			l.li += <li>{rights[i]}</li>
+		}
+	
+		this.sendPage(req, res, url, page);
 	}
-	
-	this.sendPage(req, res, url, page);
 }
 
 

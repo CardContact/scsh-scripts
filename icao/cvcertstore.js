@@ -374,6 +374,43 @@ CVCertificateStore.prototype.storeCertificate = function(path, cert, makeCurrent
 
 
 /**
+ * Return certificate for a given CHR in binary format
+ *
+ * <p>This method returns a self-signed root certificate if the selfsigned
+ *    parameter is set. If not set or set to false, then matching link certificate,
+ *    if any, is returned rather than the self-signed certificate.</p>
+ *
+ * @param {String} path the relative path of the PKI element (e.g. "/UTCVCA1/UTDVCA1/UTTERM")
+ * @param {PublicKeyReference} chr the public key reference for the certificate
+ * @param {boolean} selfsigned return the self-signed root certificate rather than a link certificate
+ * @returns the certificate or null if not found
+ * @type ByteString
+ */
+CVCertificateStore.prototype.getCertificateBinary = function(path, chr, selfsigned) {
+	if (selfsigned) {
+		fn = this.path + path + "/" + chr.toString() + ".selfsigned.cvcert";
+	} else {
+		var fn = this.path + path + "/" + chr.toString() + ".cvcert";
+
+		var f = new java.io.File(fn);
+		if (!f.exists()) {
+			fn = this.path + path + "/" + chr.toString() + ".selfsigned.cvcert";
+		}
+	}
+	
+	var bin = null;
+	try	{
+		bin = CVCertificateStore.loadBinaryFile(fn);
+	}
+	catch (e) {
+		GPSystem.trace(e);
+	}
+	return bin;
+}
+
+
+
+/**
  * Return certificate for a given CHR
  *
  * <p>This method returns a self-signed root certificate if the selfsigned
@@ -387,20 +424,14 @@ CVCertificateStore.prototype.storeCertificate = function(path, cert, makeCurrent
  * @type CVC
  */
 CVCertificateStore.prototype.getCertificate = function(path, chr, selfsigned) {
-	if (selfsigned) {
-		fn = this.path + path + "/" + chr.toString() + ".selfsigned.cvcert";
-	} else {
-		var fn = this.path + path + "/" + chr.toString() + ".cvcert";
-
-		var f = new java.io.File(fn);
-		if (!f.exists()) {
-			fn = this.path + path + "/" + chr.toString() + ".selfsigned.cvcert";
-		}
+	var bin = this.getCertificateBinary(path, chr, selfsigned);
+	
+	if (bin == null) {
+		return null;
 	}
 	
 	var cvc = null;
 	try	{
-		var bin = CVCertificateStore.loadBinaryFile(fn);
 		cvc = new CVC(bin);
 	}
 	catch (e) {

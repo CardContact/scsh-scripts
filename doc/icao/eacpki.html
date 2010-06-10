@@ -170,6 +170,7 @@ var dVPolicy = { certificateValidityDays: 4,
 <p><code>chatRights</code> is a ByteString containing the object identifier to be used in the Certificate
    Holder Authorization Template (CHAT) to identity the role and rights of the entity to which the
    certificate is issued.</p>
+<p><code>shellModelForExpirationDate</code> limits expiration date of issued certificate to expiration date of issuing certificate.</p>
 <p><code>includeDomainParameter</code> selects whether domain parameters are included as part of the public key or not.</p>
 <p><code>extensions</code> is an array of ASN1 objects that are added as Certificate Extensions.</p>
 <p><code>authenticatedRequestsApproved</code> allows to select, if authenticated certificate requests (requests signed by the
@@ -180,6 +181,8 @@ var dVPolicy = { certificateValidityDays: 4,
 <p><code>declineExpiredAuthenticatedRequests</code> allows to select, if authenticated requests with a signature based
    on an expired certificate should be declined. If set to false, such requests are added to the
    pending requests list and can be approved manually.</p>
+<p><code>shellModelForExpirationDate</code></p>
+
 <!-- #EndEditable -->
 <br>
 <p class="copyright">&copy; Copyright 2003 - 2008 <a href="http://www.cardcontact.de">CardContact</a>
