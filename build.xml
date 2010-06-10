@@ -32,6 +32,7 @@
 				<include name="**/*.js"/>
 				<exclude name="nPA/**"/>
 				<exclude name="icao/**"/>
+				<exclude name="cardsim/**"/>
 				<exclude name="build/**"/>
 				<exclude name="tutorial/**"/>
 				<exclude name=".settings.js"/>
@@ -70,9 +71,14 @@
 
 	<target name="jsdoc">
 		<apply executable="perl" addsourcefile="true" dir="${basedir}/icao" parallel="true" relative="true">
-			<arg line="${jsdoc} --no-sources --directory ${doc}/icao/jsdoc" />
+			<arg line="${jsdoc} --directory ${doc}/icao/jsdoc" />
 			<!-- Collect the JS-files -->
 			<fileset dir="${basedir}/icao" includes="**/*.js"/>
+		</apply>
+		<apply executable="perl" addsourcefile="true" dir="${basedir}/cardsim" parallel="true" relative="true">
+			<arg line="${jsdoc} --directory ${doc}/cardsim/jsdoc" />
+			<!-- Collect the JS-files -->
+			<fileset dir="${basedir}/cardsim" includes="**/*.js"/>
 		</apply>
 	</target>
 
