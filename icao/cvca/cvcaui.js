@@ -77,7 +77,7 @@ CVCAUI.prototype.handleGetCertificateRequestDetails = function(req, res, url) {
 				<ul>
 					<li><a href={"getcert?index=" + op.index + "&action=ok_cert_available"}>Respond</a> with "ok_cert_available"</li>
 					<li><a href={"getcert?index=" + op.index + "&action=failure_syntax"}>Respond</a> with "failure_syntax"</li>
-					<li><a href={"getcert?index=" + op.index + "&action=failure_request_not_accepted"}>Respond</a> with "failure_request_not_accepted"</li>
+					<li><a href={"getcert?index=" + op.index + "&action=failure_internal_error"}>Respond</a> with "failure_internal_error"</li>
 					<li><a href={"getcert?index=" + op.index + "&action=delete"}>Delete</a> request without a response</li>
 				</ul>
 			</div>;
@@ -128,7 +128,10 @@ CVCAUI.prototype.handleRequestCertificateRequestDetails = function(req, res, url
 					<li><a href={"request?index=" + op.index + "&action=failure_syntax"}>Respond</a> with "failure_syntax"</li>
 					<li><a href={"request?index=" + op.index + "&action=failure_inner_signature"}>Respond</a> with "failure_inner_signature"</li>
 					<li><a href={"request?index=" + op.index + "&action=failure_outer_signature"}>Respond</a> with "failure_outer_signature"</li>
+					<li><a href={"request?index=" + op.index + "&action=failure_expired"}>Respond</a> with "failure_expired"</li>
+					<li><a href={"request?index=" + op.index + "&action=failure_domain_parameter"}>Respond</a> with "failure_domain_parameter"</li>
 					<li><a href={"request?index=" + op.index + "&action=failure_request_not_accepted"}>Respond</a> with "failure_request_not_accepted"</li>
+					<li><a href={"request?index=" + op.index + "&action=failure_internal_error"}>Respond</a> with "failure_internal_error"</li>
 					<li><a href={"request?index=" + op.index + "&action=delete"}>Delete</a> request without a response</li>
 				</ul>
 				<pre>{certreq.getASN1()}</pre>
@@ -169,7 +172,7 @@ CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 	if (this.service.cvca.isOperational()) {
 		l.li += <li><a href="?link">Generate link certificate without domain parameter</a></li>
 		l.li += <li><a href="?linkdp">Generate link certificate with domain parameter</a></li>
-		l.li += <li><a href="?linkdp100">Generate 100 link certificates with domain parameter</a></li>
+		l.li += <li><a href="?linkdp10">Generate 10 link certificates with domain parameter</a></li>
 	} else {
 		l.li += <li><a href="?linkdp">Generate root certificate</a></li>
 	}
@@ -303,8 +306,8 @@ CVCAUI.prototype.handleInquiry = function(req, res) {
 			this.service.generateLinkCertificate(true);
 			this.serveRefreshPage(req, res, url);
 			break;
-		case "linkdp100":
-			for (var i = 0; i < 100; i++) {
+		case "linkdp10":
+			for (var i = 0; i < 10; i++) {
 				this.service.generateLinkCertificate(true);
 			}
 			this.serveRefreshPage(req, res, url);

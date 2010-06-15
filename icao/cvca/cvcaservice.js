@@ -218,7 +218,7 @@ CVCAService.prototype.checkRequestSemantics = function(req) {
 		!puk.getComponent(Key.ECC_N).equals(dp.getComponent(Key.ECC_N)) ||
 		!puk.getComponent(Key.ECC_H).equals(dp.getComponent(Key.ECC_H))) {
 		GPSystem.trace("Domain parameter in request do not match current domain parameter");
-		return ServiceRequest.FAILURE_SYNTAX;
+		return ServiceRequest.FAILURE_DOMAIN_PARAMETER;
 	}
 	
 	if (req.isAuthenticatedRequest()) {
@@ -262,7 +262,7 @@ CVCAService.prototype.checkPolicy = function(req, returnCode, callback) {
 		if (now.valueOf() > cvc.getCXD().valueOf()) {
 			GPSystem.trace("Certificate " + cvc.toString() + " is expired");
 			if (policy.declineExpiredAuthenticatedRequest) {
-				return ServiceRequest.FAILURE_OUTER_SIGNATURE;
+				return ServiceRequest.FAILURE_EXPIRED;
 			}
 		} else {
 			if (policy.authenticatedRequestsApproved) {

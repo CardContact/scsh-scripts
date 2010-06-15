@@ -392,6 +392,9 @@ TCCService.prototype.GetCertificateChain = function(soapBody) {
 	var ns1 = new Namespace("uri:eacBT/1.0");
 
 	var chrstr = soapBody.keyNameMRTD;
+	if (typeof(chrstr) == "undefined") {
+		chrstr = soapBody.keyCAR;
+	}
 	
 	var returnCode = ServiceRequest.OK_CERT_AVAILABLE;
 	var certlist = [];

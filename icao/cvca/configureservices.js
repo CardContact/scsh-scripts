@@ -85,7 +85,7 @@ var dVPolicy = { certificateValidityDays: 4,
 				   extensions: null,
 				   authenticatedRequestsApproved: true,
 				   initialRequestsApproved: false,
-				   declineExpiredAuthenticatedRequest: false
+				   declineExpiredAuthenticatedRequest: true
 				 };
 
 // Policy for UTDVCA
@@ -125,7 +125,7 @@ var terminalPolicy = { certificateValidityDays: 6,
 				   extensions: null,
 				   authenticatedRequestsApproved: true,
 				   initialRequestsApproved: false,
-				   declineExpiredAuthenticatedRequest: false
+				   declineExpiredAuthenticatedRequest: true
 				 };
 
 dvca.setTerminalCertificatePolicy(terminalPolicy);
