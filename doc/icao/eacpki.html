@@ -92,12 +92,12 @@
 <li>Generate a root certificate at the CVCA</li>
 <li>Update CVCA certificates at the DVCA using a synchronous request</li>
 <li>Request an initial certificate asynchronously at the DVCA</li>
-<li>Press the refresh button on the CVCA page to see the pending request</li>
+<li>Change to the CVCA page to see the pending request</li>
 <li>Select the request and respond with "ok_cert_available"</li>
-<li>Press the refresh button on the DVCA page to see the new certificate</li>
+<li>Change to the DVCA page to see the new certificate</li>
 <li>Update CVCA and DVCA certificates at the TCC using a synchronous request</li>
 <li>Request an initial certificate asynchronously at the TCC</li>
-<li>Press the refresh button on the DVCA page to see the pending request</li>
+<li>Change to the DVCA page to see the pending request</li>
 <li>Select the request and respond with "ok_cert_available"</li>
 <li>Press the refresh button on the TCC page to see the new certificate</li>
 </ul>
@@ -179,9 +179,11 @@ var dVPolicy = { certificateValidityDays: 4,
    need explicit approval by an operator.</p>
 <p><code>initialRequestsApproved</code> allows to select, if initial requests are approved without operator action.</p>
 <p><code>declineExpiredAuthenticatedRequests</code> allows to select, if authenticated requests with a signature based
-   on an expired certificate should be declined. If set to false, such requests are added to the
+   on an expired certificate should be declined (failure_expired). If set to false, such requests are added to the
    pending requests list and can be approved manually.</p>
-<p><code>shellModelForExpirationDate</code></p>
+<p><code>shellModelForExpirationDate</code> if set to true, then the expiration date of a certificate issued
+   by this CA will be limited to the expiration date of the CA's certificate. This must be set to false for
+   issuing root or link certificates.</p>
 
 <!-- #EndEditable -->
 <br>
