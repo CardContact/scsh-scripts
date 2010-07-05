@@ -35,7 +35,15 @@ function EMV(card, crypto) {
 	this.cardDE = new Array();
 	this.terminalDE = new Array();
 	
-//	this.terminalDE[] = crypto.generateRandom(4);
+	this.terminalDE[EMV.UN] = crypto.generateRandom(4);
+}
+
+
+/**
+ * Return cardDE
+ */
+EMV.prototype.getCardDataElements = function() {
+	return this.cardDE;
 }
 
 
@@ -72,7 +80,11 @@ EMV.prototype.readRecord = function(sfi, recno) {
  * 
  */
 EMV.prototype.getProcessingOptions = function(pdol) {
-	var pdol = new ByteString("8300", HEX);
+	if (pdol == null) {
+		//var pdol = new ByteString("8300", HEX);						// OTHER
+		var pdol = new ByteString("830B0000000000000000000000", HEX);	// VISA
+		
+	}
 	var data = this.card.sendApdu(0x80, 0xA8, 0x00, 0x00, pdol, 0);
 	
 	return(data);
@@ -87,7 +99,7 @@ EMV.prototype.getProcessingOptions = function(pdol) {
 EMV.prototype.selectPSE = function(contactless) {
 	this.PSE = null;
 
-	var dfname = (contactless ? EMV.prototype.PSE2 : EMV.prototype.PSE1);
+	var dfname = (contactless ? EMV.PSE2 : EMV.PSE1);
 	var fci = this.select(dfname, true);
 	print(fci);
 	if (fci.length == 0) {
@@ -98,23 +110,23 @@ EMV.prototype.selectPSE = function(contactless) {
 	// Decode FCI Template
 	var tl = new TLVList(fci, TLV.EMV);
 	var t = tl.index(0);
-	assert(t.getTag() == EMV.prototype.FCI);
+	assert(t.getTag() == EMV.FCI);
 	var tl = new TLVList(t.getValue(), TLV.EMV);
 	assert(tl.length >= 2);
 	
 	// Decode DF Name
 	t = tl.index(0);
-	assert(t.getTag() == EMV.prototype.DFNAME);
+	assert(t.getTag() == EMV.DFNAME);
 	
 	// Decode FCI Proprietary Template
 	t = tl.index(1);
-	assert(t.getTag() == EMV.prototype.FCI_ISSUER);
+	assert(t.getTag() == EMV.FCI_ISSUER);
 	
 	var tl = new TLVList(t.getValue(), TLV.EMV);
 	
 	// Decode SFI of the Directory Elementary File
 	t = tl.index(0);
-	assert(t.getTag() == EMV.prototype.SFI);
+	assert(t.getTag() == EMV.SFI);
 	var sfi = t.getValue();
 	assert(sfi.length == 1);
 	sfi = sfi.byteAt(0);
@@ -129,7 +141,7 @@ EMV.prototype.selectPSE = function(contactless) {
 			var tl = new TLVList(data, TLV.EMV);
 			assert(tl.length == 1);
 			var t = tl.index(0);
-			assert(t.getTag() == EMV.prototype.TEMPLATE);
+			assert(t.getTag() == EMV.TEMPLATE);
 			var tl = new TLVList(t.getValue(), TLV.EMV);
 			assert(tl.length >= 1);
 			for (var i = 0; i < tl.length; i++) {
@@ -165,17 +177,17 @@ EMV.prototype.getAID = function() {
 	}
 	// Iterate through PSE entries
 	for (var i = 0; i < pse.length; i++) {
-		var t = pse[i].find(EMV.prototype.AID);
+		var t = pse[i].find(EMV.AID);
 		assert(t != null);
 		var entryAid = t.getValue();
 		print(entryAid);
 
-		var t = pse[i].find(EMV.prototype.LABEL);
+		var t = pse[i].find(EMV.LABEL);
 		assert(t != null);
 		print(t.getValue().toString(ASCII));
 
 		var entryPrio = 0xFFFE;
-		var t = pse[i].find(EMV.prototype.PRIORITY);
+		var t = pse[i].find(EMV.PRIORITY);
 		if (t != null) {
 			entryPrio = t.getValue().toUnsigned();
 			entryPrio &= 0x0F;
@@ -185,6 +197,7 @@ EMV.prototype.getAID = function() {
 			aid = entryAid;
 		}
 	}
+	this.cardDE[EMV.AID] = aid;
 	return aid;
 }
 
@@ -196,7 +209,9 @@ EMV.prototype.getAID = function() {
 EMV.prototype.selectADF = function(aid) {
 	var fci = this.select(aid, true);
 	print(fci);
-	
+	// FCI dekodieren
+	// DE aus FCI in this.cardDE aufnehmen
+	this.cardDE[EMV.AID] = aid;
 }
 
 
@@ -205,12 +220,13 @@ EMV.prototype.selectADF = function(aid) {
  * Try a list of predefined AID in order to select an application
  */
 EMV.prototype.tryAID = function() {
-	for (var i = 0; i < EMV.prototype.AIDLIST.length; i++) {
-		var le = EMV.prototype.AIDLIST[i];
+	for (var i = 0; i < EMV.AIDLIST.length; i++) {
+		var le = EMV.AIDLIST[i];
 		var aid = new ByteString(le.aid, HEX);
 		var fci = this.select(aid, true);
 		
 		if (fci.length > 0) {
+			this.cardDE[EMV.AID] = aid;
 			return;
 		}
 	}
@@ -229,16 +245,17 @@ EMV.prototype.addCardDEFromList = function(tlvlist) {
 
 
 EMV.prototype.initApplProc = function() {
+	// Create PDOL
 	var data = this.getProcessingOptions(null);
 	print(data);
 	var tl = new TLVList(data, TLV.EMV);
 	assert(tl.length == 1);
 	var t = tl.index(0);
-	if (t.getTag() == EMV.prototype.RMTF1) {	// Format 1
-		this.cardDE[EMV.prototype.AIP] = t.getValue().left(2);
-		this.cardDE[EMV.prototype.AFL] = t.getValue().bytes(2);
+	if (t.getTag() == EMV.RMTF1) {	// Format 1
+		this.cardDE[EMV.AIP] = t.getValue().left(2);
+		this.cardDE[EMV.AFL] = t.getValue().bytes(2);
 	} else {
-		assert(t.getTag() == EMV.prototype.RMTF2);
+		assert(t.getTag() == EMV.RMTF2);
 		tl = new TLVList(t.getValue(), TLV.EMV);
 		assert(tl.length >= 2);
 		this.addCardDEFromList(tl);
@@ -254,8 +271,8 @@ EMV.prototype.initApplProc = function() {
  */
 EMV.prototype.readApplData = function() {
 	// Application File Locator must exist
-	assert(typeof(this.cardDE[EMV.prototype.AFL]) != "undefined");
-	var afl = this.cardDE[EMV.prototype.AFL];
+	assert(typeof(this.cardDE[EMV.AFL]) != "undefined");
+	var afl = this.cardDE[EMV.AFL];
 	
 	// Must be a multiple of 4
 	assert((afl.length & 0x03) == 0);
@@ -278,7 +295,7 @@ EMV.prototype.readApplData = function() {
 			var tl = new TLVList(data, TLV.EMV);
 			assert(tl.length == 1);
 			var t = tl.index(0);
-			assert(t.getTag() == EMV.prototype.TEMPLATE);
+			assert(t.getTag() == EMV.TEMPLATE);
 
 			// Add data authentication input			
 			if (dar > 0) {
@@ -312,59 +329,49 @@ EMV.prototype.processDOL = function(dol) {
 
 // Constants
 
-EMV.prototype.PSE1 = new ByteString("1PAY.SYS.DDF01", ASCII);
-EMV.prototype.PSE2 = new ByteString("2PAY.SYS.DDF01", ASCII);
+EMV.PSE1 = new ByteString("1PAY.SYS.DDF01", ASCII);
+EMV.PSE2 = new ByteString("2PAY.SYS.DDF01", ASCII);
 
-EMV.prototype.AID = 0x4F;
-EMV.prototype.LABEL = 0x50;
-EMV.prototype.FCI = 0x6F;
-EMV.prototype.TEMPLATE = 0x70;
-EMV.prototype.RMTF2 = 0x77;
-EMV.prototype.RMTF1 = 0x80;
-EMV.prototype.AIP = 0x82;
-EMV.prototype.DFNAME = 0x84;
-EMV.prototype.PRIORITY = 0x87;
-EMV.prototype.SFI = 0x88;
-EMV.prototype.CDOL1 = 0x8C;
-EMV.prototype.CDOL2 = 0x8D;
-EMV.prototype.CAPKI = 0x8F;
-EMV.prototype.AFL = 0x94;
-EMV.prototype.FCI_ISSUER = 0xA5;
-EMV.prototype.UN = 0x9F36;
-EMV.prototype.SDATL = 0x9F4A;
+EMV.AID = 0x4F;
+EMV.LABEL = 0x50;
+EMV.FCI = 0x6F;
+EMV.TEMPLATE = 0x70;
+EMV.RMTF2 = 0x77;
+EMV.RMTF1 = 0x80;
+EMV.AIP = 0x82;
+EMV.DFNAME = 0x84;
+EMV.PRIORITY = 0x87;
+EMV.SFI = 0x88;
+EMV.CDOL1 = 0x8C;
+EMV.CDOL2 = 0x8D;
+EMV.CAPKI = 0x8F;
+EMV.AFL = 0x94;
+EMV.FCI_ISSUER = 0xA5;
+EMV.UN = 0x9F37;
+EMV.SDATL = 0x9F4A;
 
-EMV.prototype.AIDLIST = new Array();
-EMV.prototype.AIDLIST[0] = { aid : "A00000002501", partial : true, name : "AMEX" };
-EMV.prototype.AIDLIST[1] = { aid : "A0000000031010", partial : false, name : "VISA" };
-EMV.prototype.AIDLIST[2] = { aid : "A0000000041010", partial : false, name : "MC" };
+EMV.AIDLIST = new Array();
+EMV.AIDLIST[0] = { aid : "A00000002501", partial : true, name : "AMEX" };
+EMV.AIDLIST[1] = { aid : "A0000000031010", partial : false, name : "VISA" };
+EMV.AIDLIST[2] = { aid : "A0000000041010", partial : false, name : "MC" };
 
-EMV.prototype.TAGLIST = new Array();
-EMV.prototype.TAGLIST[EMV.prototype.UN] = { name : "Unpredictable Number" };
-EMV.prototype.TAGLIST[EMV.prototype.CAPKI] = { name : "Certification Authority Public Key Index" };
-EMV.prototype.TAGLIST[EMV.prototype.SDATL] = { name : "Static Data Authentication Tag List" };
-EMV.prototype.TAGLIST[EMV.prototype.CDOL1] = { name : "Card Risk Management Data Object List 1" };
-EMV.prototype.TAGLIST[EMV.prototype.CDOL2] = { name : "Card Risk Management Data Object List 2" };
+EMV.TAGLIST = new Array();
+EMV.TAGLIST[EMV.UN] = { name : "Unpredictable Number" };
+EMV.TAGLIST[EMV.CAPKI] = { name : "Certification Authority Public Key Index" };
+EMV.TAGLIST[EMV.SDATL] = { name : "Static Data Authentication Tag List" };
+EMV.TAGLIST[EMV.CDOL1] = { name : "Card Risk Management Data Object List 1" };
+EMV.TAGLIST[EMV.CDOL2] = { name : "Card Risk Management Data Object List 2" };
 
+//EMV.pdol = 0x9F38179F1A0200009F33030000009F3501009F40050000000000;
 
-// Example code
-var card = new Card(_scsh3.reader);
-card.reset(Card.RESET_COLD);
+/*
+EMV.terminalDE[0x9F1A] = "9F1A020000";
+this.terminalDE[0x9F33] = "9F3303000000";
+this.terminalDE[0x9F35] = "9F350100";
+this.terminalDE[0x9F40] = "9F40050000000000";
 
-var crypto = new Crypto();
-
-var e = new EMV(card, crypto);
-
-e.selectPSE(false);
-
-var aid = e.getAID();
-
-if (aid != null) {
-	e.selectADF(aid);
-} else {
-	e.tryAID();
-}
-
-e.initApplProc();
-e.readApplData();
-
-card.close();
+this.terminalDE[0x9F1A] = new ByteString("9F1A020000", HEX);
+this.terminalDE[0x9F33] = new ByteString("9F3303000000", HEX);
+this.terminalDE[0x9F35] = new ByteString("9F350100", HEX);
+this.terminalDE[0x9F40] = new ByteString("9F40050000000000", HEX);
+*/
