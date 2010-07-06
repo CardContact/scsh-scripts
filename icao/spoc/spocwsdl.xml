@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wsdl:definitions 
+	xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+	xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+	xmlns:xs="http://www.w3.org/2001/XMLSchema"
+	xmlns:SPOC="http://namespaces.unmz.cz/csn369791"
+	targetNamespace="http://namespaces.unmz.cz/csn369791">
+	<wsdl:types>
+		<xs:schema>
+			<xs:element name="certificateSequence">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="certificate" type="xs:base64Binary" minOccurs="1" maxOccurs="unbounded"></xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="RequestCertificateRequest">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="callerID" type="xs:string">
+						</xs:element>
+						<xs:element name="messageID" type="xs:string">
+						</xs:element>
+						<xs:element name="certificateRequest" type="xs:base64Binary">
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="RequestCertificateResponse">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element ref="certificateSequence" minOccurs="0" maxOccurs="1">
+						</xs:element>
+						<xs:element name="result">
+							<xs:simpleType>
+								<xs:restriction base="xs:string">
+									<xs:enumeration value="ok_cert_available"></xs:enumeration>
+									<xs:enumeration value="ok_reception_ack"></xs:enumeration>
+									<xs:enumeration value="failure_inner_signature"></xs:enumeration>
+									<xs:enumeration value="failure_outer_signature"></xs:enumeration>
+									<xs:enumeration value="failure_syntax"></xs:enumeration>
+									<xs:enumeration value="failure_request_not_accepted"></xs:enumeration>
+									<xs:enumeration value="failure_internal_error"></xs:enumeration>
+								</xs:restriction>
+							</xs:simpleType>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="SendCertificatesRequest">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="callerID" type="xs:string">
+						</xs:element>
+						<xs:element name="messageID" type="xs:string" minOccurs="0" maxOccurs="1">
+						</xs:element>
+						<xs:element minOccurs="0" maxOccurs="1" ref="certificateSequence">
+						</xs:element>
+						<xs:element name="statusInfo">
+							<xs:simpleType>
+								<xs:restriction base="xs:string">
+									<xs:enumeration value="new_cer_available_notification"></xs:enumeration>
+									<xs:enumeration value="ok_cert_available"></xs:enumeration>
+									<xs:enumeration value="failure_inner_signature"></xs:enumeration>
+									<xs:enumeration value="failure_outer_signature"></xs:enumeration>
+									<xs:enumeration value="failure_syntax"></xs:enumeration>
+									<xs:enumeration value="failure_request_not_accepted"></xs:enumeration>
+									<xs:enumeration value="failure_internal_error"></xs:enumeration>
+								</xs:restriction>
+							</xs:simpleType>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="SendCertificatesResponse">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="result">
+							<xs:simpleType>
+								<xs:restriction base="xs:string">
+									<xs:enumeration value="ok_received_correctly"></xs:enumeration>
+									<xs:enumeration value="failure_syntax"></xs:enumeration>
+									<xs:enumeration value="failure_messageID_unknown"></xs:enumeration>
+									<xs:enumeration value="failure_internal_error"></xs:enumeration>
+								</xs:restriction>
+							</xs:simpleType>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="GetCACertificatesRequest">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="callerID" type="xs:string">
+						</xs:element>
+						<xs:element name="messageID" type="xs:string">
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="GetCACertificatesResponse">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element ref="certificateSequence" minOccurs="0" maxOccurs="1">
+						</xs:element>
+						<xs:element name="result">
+							<xs:simpleType>
+								<xs:restriction base="xs:string">
+									<xs:enumeration value="ok_cert_available"></xs:enumeration>
+									<xs:enumeration value="ok_reception_ack"></xs:enumeration>
+									<xs:enumeration value="failure_request_not_accepted"></xs:enumeration>
+									<xs:enumeration value="failure_internal_error"></xs:enumeration>
+								</xs:restriction>
+							</xs:simpleType>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="GeneralMessageRequest">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="callerID" type="xs:string">
+						</xs:element>
+						<xs:element name="messageID" type="xs:string">
+						</xs:element>
+						<xs:element name="subject" type="xs:string">
+						</xs:element>
+						<xs:element name="body" type="xs:string">
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="GeneralMessageResponse">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="result">
+							<xs:simpleType>
+								<xs:restriction base="xs:string">
+									<xs:enumeration value="ok"></xs:enumeration>
+									<xs:enumeration value="failure_internal_error"></xs:enumeration>
+								</xs:restriction>
+							</xs:simpleType>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+		</xs:schema>
+	</wsdl:types>
+	<wsdl:message name="RequestCertificateRequest">
+		<wsdl:part name="RequestCertificateRequest" element="SPOC:RequestCertificateRequest"></wsdl:part>
+	</wsdl:message>
+	<wsdl:message name="RequestCertificateResponse">
+		<wsdl:part name="RequestCertificateResponse" element="SPOC:RequestCertificateResponse"></wsdl:part>
+	</wsdl:message>
+	<wsdl:message name="SendCertificatesRequest">
+		<wsdl:part name="SendCertificatesRequest" element="SPOC:SendCertificatesRequest"></wsdl:part>
+	</wsdl:message>
+	<wsdl:message name="SendCertificatesResponse">
+		<wsdl:part name="SendCertificatesResponse" element="SPOC:SendCertificatesResponse"></wsdl:part>
+	</wsdl:message>
+	<wsdl:message name="GetCACertificatesRequest">
+		<wsdl:part name="GetCACertificatesRequest" element="SPOC:GetCACertificatesRequest"></wsdl:part>
+	</wsdl:message>
+	<wsdl:message name="GetCACertificatesResponse">
+		<wsdl:part name="GetCACertificatesResponse" element="SPOC:GetCACertificatesResponse"></wsdl:part>
+	</wsdl:message>
+	<wsdl:message name="GeneralMessageRequest">
+		<wsdl:part name="GeneralMessageRequest" element="SPOC:GeneralMessageRequest"></wsdl:part>
+	</wsdl:message>
+	<wsdl:message name="GeneralMessageResponse">
+		<wsdl:part name="GeneralMessageResponse" element="SPOC:GeneralMessageResponse"></wsdl:part>
+	</wsdl:message>
+	<wsdl:portType name="SPOCPortType">
+		<wsdl:operation name="RequestCertificate">
+			<wsdl:input message="SPOC:RequestCertificateRequest"></wsdl:input>
+			<wsdl:output message="SPOC:RequestCertificateResponse"></wsdl:output>			
+		</wsdl:operation>
+		<wsdl:operation name="SendCertificates">
+			<wsdl:input message="SPOC:SendCertificateRequest"></wsdl:input>
+			<wsdl:output message="SPOC:SendCertificateResponse"></wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="GetCACertificates">
+			<wsdl:input message="SPOC:GetCACertificatesRequest"></wsdl:input>
+			<wsdl:output message="SPOC:GetCACertificatesResponse"></wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="GeneralMessage">
+			<wsdl:input message="SPOC:GeneralMessageRequest"></wsdl:input>
+			<wsdl:output message="SPOC:GeneralMessageResponse"></wsdl:output>
+		</wsdl:operation>
+	</wsdl:portType>
+	<wsdl:binding name="SPOCSOAPBinding" type="SPOC:SPOCPortType">
+		<soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+		<wsdl:operation name="RequestCertificate">
+			<soap:operation soapAction="RequestCertificate"/>
+			<wsdl:input>
+				<soap:body parts="RequestCertificateRequest" use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body parts="RequestCertificateResponse" use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="SendCertificates">
+			<soap:operation soapAction="SendCertificates"/>
+			<wsdl:input>
+				<soap:body parts="SendCertificatesRequest" use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body parts="SendCertificatesResponse" use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="GetCACertificates">
+			<soap:operation soapAction="GetCACertificates"/>
+			<wsdl:input>
+				<soap:body parts="GetCACertificatesRequest" use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body parts="GetCACertificatesResponse" use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="GeneralMessage">
+			<soap:operation soapAction="GeneralMessage"/>
+			<wsdl:input>
+				<soap:body parts="GeneralMessageRequest" use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body parts="GeneralMessageResponse" use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+	</wsdl:binding>
+	<wsdl:service name="SPOC">
+		<wsdl:port name="SPOCPort" binding="SPOC:SPOCSOAPBinding">
+			<soap:address location="http://spoc-server/SPOC"/>
+		</wsdl:port>
+	</wsdl:service>
+</wsdl:definitions>
