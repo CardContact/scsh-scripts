@@ -6,7 +6,10 @@
 	xmlns:SPOC="http://namespaces.unmz.cz/csn369791"
 	targetNamespace="http://namespaces.unmz.cz/csn369791">
 	<wsdl:types>
-		<xs:schema>
+		<xs:schema xmlns="http://namespaces.unmz.cz/csn369791"
+			targetNamespace="http://namespaces.unmz.cz/csn369791"
+			elementFormDefault="qualified"
+			attributeFormDefault="unqualified">
 			<xs:element name="certificateSequence">
 				<xs:complexType>
 					<xs:sequence>
