@@ -119,10 +119,11 @@ CVCCA.prototype.setKeySpec = function(keyparam, algorithm) {
  *
  * @param {PublicKeyReference} car the CA at which this request is addressed
  * @param {boolean} forceInitial force an initial request, even if a current certificate is available
+ * @param {boolean} signedInitial sign with initial key (sequence = 00000)
  * @return the certificate request
  * @type CVC
  */
-CVCCA.prototype.generateRequest = function(car, forceinitial) {
+CVCCA.prototype.generateRequest = function(car, forceinitial, signinitial) {
 
 	// Obtain key parameter
 
@@ -165,7 +166,13 @@ CVCCA.prototype.generateRequest = function(car, forceinitial) {
 		var req = reqGenerator.generateAuthenticatedCVRequest(prk, previousprk, currentchr);
 	} else {
 		// Generate the request
-		var req = reqGenerator.generateCVRequest(prk);
+		if (signinitial) {
+			var initialchr = new PublicKeyReference(nextchr.getHolder() + "00000");
+			var firstprk = this.certstore.getPrivateKey(this.path, initialchr);
+			var req = reqGenerator.generateAuthenticatedCVRequest(prk, firstprk, initialchr);
+		} else {
+			var req = reqGenerator.generateCVRequest(prk);
+		}
 	}
 	
 	req = new CVC(req);
@@ -173,6 +180,32 @@ CVCCA.prototype.generateRequest = function(car, forceinitial) {
 	this.certstore.storeRequest(this.path, req);
 	
 	return req;
+}
+
+
+
+/**
+ * Generate an initial certificate request
+ *
+ * @param {PublicKeyReference} car the CA at which this request is addressed
+ * @return the certificate request
+ * @type CVC
+ */
+CVCCA.prototype.generateInitialRequest = function(car) {
+	return this.generateRequest(car, true, false);
+}
+
+
+
+/**
+ * Generate a signed initial certificate request
+ *
+ * @param {PublicKeyReference} car the CA at which this request is addressed
+ * @return the certificate request
+ * @type CVC
+ */
+CVCCA.prototype.generateSignedInitialRequest = function(car) {
+	return this.generateRequest(car, true, true);
 }
 
 
@@ -385,6 +418,10 @@ CVCCA.prototype.getIssuedCertificate = function(chr) {
  */
 CVCCA.prototype.getAuthenticPublicKey = function(chr) {
 	var cvc = this.getIssuedCertificate(chr);
+	
+	if (cvc == null) {
+		return null;
+	}
 	
 	if (this.isRootCA()) {
 		var dp = this.certstore.getDomainParameter(cvc.getCAR());
