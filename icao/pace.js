@@ -124,7 +124,13 @@ function PACEDomainParameterInfo(tlv) {
 		
 		var t = tlv.get(i++);
 		assert(t.tag == ASN1.SEQUENCE);
-		this.domainParameter = ECCUtils.decodeECParameters(t.get(1));
+		
+		if (t.elements > 0) {
+			this.domainParameter = ECCUtils.decodeECParameters(t.get(1));
+		} else {
+			this.domainParameter = new Key();
+			this.domainParameter.setComponent(Key.ECC_CURVE_OID, new ByteString("brainpoolP256r1", OID));
+		}
 		
 		if (i < tlv.elements) {
 			var t = tlv.get(i++);
@@ -148,6 +154,7 @@ PACEDomainParameterInfo.prototype.toTLV = function() {
 	
 	t.add(new ASN1(ASN1.OBJECT_IDENTIFIER, this.protocol));
 	
+	t.add(new ASN1(ASN1.SEQUENCE));
 	// TODO domainParameter
 	
 	if (typeof(this.parameterId) != "undefined") {

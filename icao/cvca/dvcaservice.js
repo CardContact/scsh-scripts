@@ -408,7 +408,7 @@ DVCAService.prototype.determineCertificateList = function(req) {
  */
 DVCAService.prototype.sendCertificates = function(serviceRequest, certificates) {
 
-	var soapConnection = new SOAPConnection();
+	var soapConnection = new SOAPConnection(SOAPConnection.SOAP11);
 
 	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/1.0");
 	var ns1 = new Namespace("uri:eacBT/1.0");
@@ -546,7 +546,7 @@ DVCAService.prototype.importCertificates = function(certlist) {
  */
 DVCAService.prototype.getCACertificatesFromCVCA = function(sr) {
 
-	var soapConnection = new SOAPConnection();
+	var soapConnection = new SOAPConnection(SOAPConnection.SOAP11);
 
 	var ns = new Namespace("uri:EAC-PKI-CVCA-Protocol/1.0");
 	var ns1 = new Namespace("uri:eacBT/1.0");
@@ -594,7 +594,7 @@ DVCAService.prototype.getCACertificatesFromCVCA = function(sr) {
  */
 DVCAService.prototype.requestCertificateFromCVCA = function(sr) {
 
-	var soapConnection = new SOAPConnection();
+	var soapConnection = new SOAPConnection(SOAPConnection.SOAP11);
 
 	var ns = new Namespace("uri:EAC-PKI-CVCA-Protocol/1.0");
 	var ns1 = new Namespace("uri:eacBT/1.0");

@@ -124,7 +124,7 @@ EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
 		} else if (oid.value.startsWith(id_CA) == id_CA.length) {
 			if (oid.value.equals(id_CA_DH) ||
 				oid.value.equals(id_CA_ECDH)) {
-//				print("ChipAuthenticationDomainParameterInfo : " + o);
+				print("ChipAuthenticationDomainParameterInfo : " + o);
 				
 				var cadpi = new ChipAuthenticationDomainParameterInfo(o);
 //				print(cadpi);
@@ -141,7 +141,7 @@ EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
 				
 				this.CADPs[id] = cadpi;
 			} else {
-//				print("ChipAuthenticationInfo : " + o);
+				print("ChipAuthenticationInfo : " + o);
 
 				var cai = new ChipAuthenticationInfo(o);
 //				print(cai);

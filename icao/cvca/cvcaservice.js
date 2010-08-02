@@ -400,7 +400,7 @@ CVCAService.prototype.deleteRequest = function(index) {
  */
 CVCAService.prototype.sendCertificates = function(serviceRequest, certificates) {
 
-	var soapConnection = new SOAPConnection();
+	var soapConnection = new SOAPConnection(SOAPConnection.SOAP11);
 
 	var ns = new Namespace("uri:EAC-PKI-DV-Protocol/1.0");
 	var ns1 = new Namespace("uri:eacBT/1.0");

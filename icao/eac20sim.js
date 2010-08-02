@@ -28,7 +28,7 @@ load("pace.js");
 
 
 /**
- * Create a EAC 2.0 simulation object
+ * Create an EAC 2.0 simulation object
  * @class Class implementing a EAC simulator
  *
  * @constructor

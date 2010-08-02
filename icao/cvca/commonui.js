@@ -273,8 +273,9 @@ CommonUI.prototype.handleCertificateHolderList = function(req, res, url) {
  * @param {HttpRequest} req the request object
  * @param {HttpResponse} req the response object
  * @param {String} refreshUrl the redirect URL
+ * @param {String} statusMessage the status message or undefined
  */
-CommonUI.prototype.serveRefreshPage = function(req, res, url) {
+CommonUI.prototype.serveRefreshPage = function(req, res, url, statusMessage) {
 
 	var prefix = "";
 	for (var i = 1; i < url.length; i++) {
@@ -283,10 +284,15 @@ CommonUI.prototype.serveRefreshPage = function(req, res, url) {
 
 	var page = this.generateTemplate(url);
 	
+	if ((typeof(statusMessage) == "undefined") || (statusMessage == null)) {
+		statusMessage = "Operation completed";
+	}
+	
 	page.head.meta = <meta http-equiv="Refresh" content={"1; url=" + prefix + url[0]}/>;
 	
 	var c = page..div.(@id == "content");
-	c.div = <p>Operation completed</p>;
+
+	c.div = <p>{statusMessage}</p>
 	
 	res.print(page.toXMLString());
 }

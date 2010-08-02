@@ -21,25 +21,25 @@
  *  along with OpenSCDP; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  * 
- * @fileoverview A simple terminal control center (TCC) web service implementing TR-03129 web services
+ * @fileoverview A virtual terminal simulator used to perform load tests on document verifier
  */
 
 load("tools/eccutils.js");
 
 
 /**
- * Create a terminal control center (TCC) instance with web services
+ * Create a cluster of virtual terminals
  *
  * @param {String} certstorepath the path to the certificate store
- * @param {String} path the PKI path for this service (e.g. "/UTCVCA/UTDVCA/UTTERM")
+ * @param {String} path the PKI path for the DVCA service (e.g. "/UTCVCA/UTDVCA")
  * @param {String} parentURL the URL of the parent CA's webservice
  */ 
-function TCCService(certstorepath, path, parentURL) {
+function VTermService(certstorepath, path, parentURL) {
 	var pe = path.substr(1).split("/");
-	assert(pe.length == 3);
+	assert(pe.length == 2);
 
-	this.name = pe[2];
-	this.type = "TCC";
+	this.name = "UT";
+	this.type = "VTERM";
 	
 	this.path = path;
 	this.parent = pe[1];
@@ -48,7 +48,7 @@ function TCCService(certstorepath, path, parentURL) {
 	this.crypto = new Crypto();
 	
 	this.ss = new CVCertificateStore(certstorepath);
-	this.tcc = new CVCCA(this.crypto, this.ss, this.name, this.parent, path);
+//	this.tcc = new CVCCA(this.crypto, this.ss, this.name, this.parent, path);
 	this.outqueue = [];
 	this.outqueuemap = [];
 }
@@ -60,7 +60,7 @@ function TCCService(certstorepath, path, parentURL) {
  * 
  * @param {String} url
  */
-TCCService.prototype.setSendCertificateURL = function(url) {
+VTermService.prototype.setSendCertificateURL = function(url) {
 	this.myURL = url;
 }
 
@@ -72,7 +72,7 @@ TCCService.prototype.setSendCertificateURL = function(url) {
  * @param {Key} keyparam a key object containing key parameters (e.g. EC Curve)
  * @param {ByteString} algorithm the terminal authentication algorithm object identifier
  */
-TCCService.prototype.setKeySpec = function(keyparam, algorithm) {
+VTermService.prototype.setKeySpec = function(keyparam, algorithm) {
 	this.cvca.setKeySpec(keyparam, algorithm);
 }
 
@@ -84,7 +84,7 @@ TCCService.prototype.setKeySpec = function(keyparam, algorithm) {
  * @returns the pending service requests
  * @type ServiceRequest[]
  */
-TCCService.prototype.listOutboundRequests = function() {
+VTermService.prototype.listOutboundRequests = function() {
 	return this.outqueue;
 }
 
@@ -97,7 +97,7 @@ TCCService.prototype.listOutboundRequests = function() {
  * @returns the indexed request
  * @type ServiceRequest
  */
-TCCService.prototype.getOutboundRequest = function(index) {
+VTermService.prototype.getOutboundRequest = function(index) {
 	return this.outqueue[index];
 }
 
@@ -109,7 +109,7 @@ TCCService.prototype.getOutboundRequest = function(index) {
  *
  * @param {ServiceRequest} sr the service request
  */
-TCCService.prototype.addOutboundRequest = function(sr) {
+VTermService.prototype.addOutboundRequest = function(sr) {
 	if (this.outqueue.length >= 10) {
 		var oldsr = this.outqueue.shift();
 		var msgid = oldsr.getMessageID();
@@ -130,7 +130,7 @@ TCCService.prototype.addOutboundRequest = function(sr) {
  * Update certificate list from parent CA
  *
  */
-TCCService.prototype.updateCACertificates = function(async) {
+VTermService.prototype.updateCACertificates = function(async) {
 
 	var msgid = null;
 	
@@ -140,16 +140,20 @@ TCCService.prototype.updateCACertificates = function(async) {
 
 	var sr = new ServiceRequest(msgid, this.myURL);
 	this.addOutboundRequest(sr);
-	
+
 	var certlist = this.getCACertificatesFromDVCA(sr);
-	var list = this.tcc.importCertificates(certlist);
+
+	var list = this.ss.insertCertificates(this.crypto, certlist, true);
 
 	if (list.length > 0) {
 		print("Warning: Could not import the following certificates");
 		for (var i = 0; i < list.length; i++) {
 			print(list[i]);
 		}
+		return "Not all certificates could be imported. See log for details.";
 	}
+	
+	return sr.getStatusInfo();
 }
 
 
@@ -158,16 +162,18 @@ TCCService.prototype.updateCACertificates = function(async) {
  * Renew certificate through parent CA
  *
  */
-TCCService.prototype.renewCertificate = function(async, forceinitial) {
+VTermService.prototype.renewCertificate = function(async, forceinitial, holderID) {
 
 	var dp = this.ss.getDefaultDomainParameter(this.path);
 	var algo = this.ss.getDefaultPublicKeyOID(this.path);
-	var car = this.ss.getCurrentCHR(CVCertificateStore.parentPathOf(this.path));
+	var car = this.ss.getCurrentCHR(this.path);
 
-	this.tcc.setKeySpec(dp, algo);
+	var tcc = new CVCCA(this.crypto, this.ss, null, null, this.path + "/" + holderID);
+	
+	tcc.setKeySpec(dp, algo);
 	
 	// Create a new request
-	var req = this.tcc.generateRequest(car, forceinitial);
+	var req = tcc.generateRequest(car, forceinitial);
 	print("Request: " + req);
 	print(req.getASN1());
 
@@ -179,21 +185,24 @@ TCCService.prototype.renewCertificate = function(async, forceinitial) {
 
 	var sr = new ServiceRequest(msgid, this.myURL, req);
 	this.addOutboundRequest(sr);
-	
+
 	var certlist = this.requestCertificateFromDVCA(sr);
-	
+
 	if (certlist.length > 0) {
 		sr.setFinalStatusInfo("" + certlist.length + " certificates received");
 	}
-	
-	var list = this.tcc.importCertificates(certlist);
+
+	var list = tcc.importCertificates(certlist);
 
 	if (list.length > 0) {
 		print("Warning: Could not import the following certificates");
 		for (var i = 0; i < list.length; i++) {
 			print(list[i]);
 		}
+		return "Not all certificates could be imported. See log for details.";
 	}
+
+	return sr.getStatusInfo();
 }
 
 
@@ -204,9 +213,9 @@ TCCService.prototype.renewCertificate = function(async, forceinitial) {
  * @param {CVC[]} certlist the list of certificates
  *
  */
-TCCService.prototype.importCertificates = function(certlist) {
+VTermService.prototype.importCertificates = function(certlist) {
 
-	var list = this.tcc.importCertificates(certlist);
+	var list = this.ss.insertCertificates(this.crypto, certlist, true);
 
 	if (list.length > 0) {
 		print("Warning: Could not import the following certificates");
@@ -225,7 +234,7 @@ TCCService.prototype.importCertificates = function(certlist) {
  * @returns a list of certificates
  * @type CVC[]
  */
-TCCService.prototype.getCACertificatesFromDVCA = function(sr) {
+VTermService.prototype.getCACertificatesFromDVCA = function(sr) {
 
 	var soapConnection = new SOAPConnection(SOAPConnection.SOAP11);
 
@@ -273,7 +282,7 @@ TCCService.prototype.getCACertificatesFromDVCA = function(sr) {
  * @returns the new certificates
  * @type CVC[]
  */
-TCCService.prototype.requestCertificateFromDVCA = function(sr) {
+VTermService.prototype.requestCertificateFromDVCA = function(sr) {
 
 	var soapConnection = new SOAPConnection(SOAPConnection.SOAP11);
 
@@ -301,7 +310,7 @@ TCCService.prototype.requestCertificateFromDVCA = function(sr) {
 	}
 	catch(e) {
 		GPSystem.trace("SOAP call to " + this.parentURL + " failed : " + e);
-		throw new GPError("TCCService", GPError.DEVICE_ERROR, 0, "RequestCertificate failed with : " + e);
+		throw new GPError("VTermService", GPError.DEVICE_ERROR, 0, "RequestCertificate failed with : " + e);
 	}
 
 	sr.setStatusInfo(response.Result.ns1::returnCode.toString());
@@ -328,7 +337,7 @@ TCCService.prototype.requestCertificateFromDVCA = function(sr) {
  * @returns the soapBody of the response
  * @type XML
  */
-TCCService.prototype.SendCertificates = function(soapBody) {
+VTermService.prototype.SendCertificates = function(soapBody) {
 	
 	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/1.0");
 	var ns1 = new Namespace("uri:eacBT/1.0");
@@ -385,7 +394,7 @@ TCCService.prototype.SendCertificates = function(soapBody) {
  * @returns the soapBody of the response
  * @type XML
  */
-TCCService.prototype.GetCertificateChain = function(soapBody) {
+VTermService.prototype.GetCertificateChain = function(soapBody) {
 
 	// Create empty response
 	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/1.0");
@@ -448,7 +457,7 @@ TCCService.prototype.GetCertificateChain = function(soapBody) {
  * @returns the soapBody of the response
  * @type XML
  */
-TCCService.prototype.GetTASignature = function(soapBody) {
+VTermService.prototype.GetTASignature = function(soapBody) {
 
 	// Create empty response
 	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/1.0");

@@ -105,6 +105,7 @@ var cvcaui = new CVCAUI(cvca);
 cvcaui.addBookmark(">CVCA", "http://localhost:8080/se/cvca");
 cvcaui.addBookmark("DVCA", "http://localhost:8080/se/dvca");
 cvcaui.addBookmark("TCC", "http://localhost:8080/se/tcc");
+cvcaui.addBookmark("VT", "http://localhost:8080/se/vt");
 
 SOAPServer.registerService("cvca", cvca, cvcaui);
 
@@ -130,11 +131,25 @@ var terminalPolicy = { certificateValidityDays: 6,
 
 dvca.setTerminalCertificatePolicy(terminalPolicy);
 
+var terminalPolicyVT = { certificateValidityDays: 6,
+				   chatRoleOID: new ByteString("id-IS", OID),
+				   chatRights: new ByteString("23", HEX),
+				   includeDomainParameter: false,
+				   shellModelForExpirationDate: true,
+				   extensions: null,
+				   authenticatedRequestsApproved: true,
+				   initialRequestsApproved: true,
+				   declineExpiredAuthenticatedRequest: true
+				 };
+
+dvca.setTerminalCertificatePolicy(terminalPolicyVT, /UTVT/);
+
 // Create GUI
 var dvcaui = new DVCAUI(dvca);
 dvcaui.addBookmark("CVCA", "http://localhost:8080/se/cvca");
 dvcaui.addBookmark(">DVCA", "http://localhost:8080/se/dvca");
 dvcaui.addBookmark("TCC", "http://localhost:8080/se/tcc");
+dvcaui.addBookmark("VT", "http://localhost:8080/se/vt");
 
 SOAPServer.registerService("dvca", dvca, dvcaui);
 
@@ -151,5 +166,23 @@ var tccui = new TCCUI(tcc);
 tccui.addBookmark("CVCA", "http://localhost:8080/se/cvca");
 tccui.addBookmark("DVCA", "http://localhost:8080/se/dvca");
 tccui.addBookmark(">TCC", "http://localhost:8080/se/tcc");
+tccui.addBookmark("VT", "http://localhost:8080/se/vt");
 
 SOAPServer.registerService("tcc", tcc, tccui);
+
+
+
+// --- VTerm section ---
+
+// Create a virtual terminal service
+var vt = new VTermService(datadir + "/vt", "/UTCVCA/UTDVCA", url + "/se/dvca");
+vt.setSendCertificateURL(url + "/se/vt");
+
+// Create GUI
+var vtui = new VTermUI(vt);
+vtui.addBookmark("CVCA", "http://localhost:8080/se/cvca");
+vtui.addBookmark("DVCA", "http://localhost:8080/se/dvca");
+vtui.addBookmark("TCC", "http://localhost:8080/se/tcc");
+vtui.addBookmark(">VT", "http://localhost:8080/se/vt");
+
+SOAPServer.registerService("vt", vt, vtui);
