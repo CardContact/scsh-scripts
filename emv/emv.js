@@ -319,6 +319,12 @@ EMV.prototype.readApplData = function() {
 	print(this.daInput);
 }
 
+/**
+ * Return daInput
+ */
+EMV.prototype.getDAInput = function() {
+	return this.daInput;
+}
 
 
 EMV.prototype.processDOL = function(dol) {
@@ -363,6 +369,8 @@ EMV.TAGLIST[EMV.CDOL1] = { name : "Card Risk Management Data Object List 1" };
 EMV.TAGLIST[EMV.CDOL2] = { name : "Card Risk Management Data Object List 2" };
 
 //EMV.pdol = 0x9F38179F1A0200009F33030000009F3501009F40050000000000;
+
+
 
 /*
 EMV.terminalDE[0x9F1A] = "9F1A020000";

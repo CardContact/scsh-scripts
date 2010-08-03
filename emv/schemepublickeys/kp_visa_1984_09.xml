@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<gp:KeyProfile xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://namespaces.globalplatform.org/systems-profiles/1.1.0 http://namespaces.globalplatform.org/systems-profiles/1.1.0/GP.systems.profiles.1.1.0.KeyProfile.xsd"
+    xmlns:gp="http://namespaces.globalplatform.org/systems-profiles/1.1.0"
+    UniqueID="2B0601040181C31F100008" ProfileVersion="1.1.0" ErrataVersion="0">
+    <gp:Description>1984-Bit VSDC CA Public Key</gp:Description>
+    <gp:Revisions arrayElement="Revision" arrayIndex="#">
+        <gp:Revision Version="1.0.0" Date="2005-12-09" Time="00:00:00" By="www.openscdp.org"
+            Digest="00000000"/>
+    </gp:Revisions>
+    <gp:KeyInfo Name="RSAPublic" Type="PUBLIC" SubType="RSA" Size="1984" Mode="PROD"/>
+    <gp:Attribute Sensitive="false" Importable="true" Exportable="true"/>
+    <gp:Usage Encrypt="false" Decrypt="true" DecryptEncrypt="false" Sign="false" Verify="false"
+        Wrap="false" Unwrap="false" UnwrapWrap="false" Derive="false"/>
+    <gp:Value Format="MOD_EXP" arrayElement="Component" arrayIndex="#">
+        <gp:Component Name="MODULUS" Encoding="HEX" Value="9D912248DE0A4E39C1A7DDE3F6D2588992C1A4095AFBD1824D1BA74847F2BC4926D2EFD904B4B54954CD189A54C5D1179654F8F9B0D2AB5F0357EB642FEDA95D3912C6576945FAB897E7062CAA44A4AA06B8FE6E3DBA18AF6AE3738E30429EE9BE03427C9D64F695FA8CAB4BFE376853EA34AD1D76BFCAD15908C077FFE6DC5521ECEF5D278A96E26F57359FFAEDA19434B937F1AD999DC5C41EB11935B44C18100E857F431A4A5A6BB65114F174C2D7B59FDF237D6BB1DD0916E644D709DED56481477C75D95CDD68254615F7740EC07F330AC5D67BCD75BF23D28A140826C026DBDE971A37CD3EF9B8DF644AC385010501EFC6509D7A41"></gp:Component>
+        <gp:Component Name="EXPONENT" Encoding="HEX" Value="03"></gp:Component>
+    </gp:Value>
+</gp:KeyProfile>

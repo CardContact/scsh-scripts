@@ -27,7 +27,7 @@
 
 load("emv.js");
 load("emvview.js");
-load("sda.js");
+load("dataAuthentication.js");
 
 // Example code
 var card = new Card(_scsh3.reader);
@@ -38,8 +38,12 @@ var crypto = new Crypto();
 var e = new EMV(card, crypto);
 var v = new EMVView(e);
 
-var s = new SDA(e);
-s.addSchemePublicKey(new ByteString("A000000003", HEX), 1, new Key("schemepublickeys/kp_visa_1024_01.xml"));
+var d = new DataAuthentication(e);
+d.addSchemePublicKey(new ByteString("A000000003", HEX), 1, new Key("schemepublickeys/kp_visa_1024_01.xml"));
+d.addSchemePublicKey(new ByteString("A000000003", HEX), 7, new Key("schemepublickeys/kp_visa_1152_07.xml"));
+d.addSchemePublicKey(new ByteString("A000000003", HEX), 8, new Key("schemepublickeys/kp_visa_1408_08.xml"));
+d.addSchemePublicKey(new ByteString("A000000003", HEX), 9, new Key("schemepublickeys/kp_visa_1984_09.xml"));
+
 
 e.selectPSE(false);
 
@@ -57,7 +61,13 @@ e.readApplData();
 
 v.displayDataElements();
 
-var ipk = s.decryptIssuerPKCertificate();
-print(ipk);
-s.authenticate();
-card.close();
+d.decryptIssuerPKCertificate();
+
+var issuerPublicKeyModulus = d.retrievalIssuerPublicKey();
+
+d.verifySSAD(issuerPublicKeyModulus);
+
+var  iccPublicKeyModulus = d.retrievalICCPublicKey(issuerPublicKeyModulus);
+d.dynamicDataAuthentication(iccPublicKeyModulus);
+
+//card.close();

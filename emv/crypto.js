@@ -47,6 +47,21 @@ print(plain);
 assert(plain.equals(inp));
 
 */
+
+/*
+SDA.schemePublicKeyTable = [];
+SDA.schemePublicKeyTable["A000000003"] = [];
+SDA.schemePublicKeyTable["A000000003"][0x01] = new Key("schemepublickeys/kp_visa_1024_01.xml");
+*/
+
+/*
+VisaPublicKey = [];
+VisaPublicKey[1] = {
+					modulus: new ByteString("C696034213D7D8546984579D1D0F0EA519CFF8DEFFC429354CF3A871A6F7183F1228DA5C7470C055387100CB935A712C4E2864DF5D64BA93FE7E63E71F25B1E5F5298575EBE1C63AA617706917911DC2A75AC28B251C7EF40F2365912490B939BCA2124A30A28F54402C34AECA331AB67E1E79B285DD5771B5D9FF79EA630B75", HEX),
+					exponent: new ByteString("03", HEX)
+				};
+*/	
+
 var crypto = new Crypto();
 
 var rsapukey = new Key();
