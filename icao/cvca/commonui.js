@@ -145,6 +145,7 @@ CommonUI.prototype.sendPage = function(req, res, url, page) {
 	var c = t..div.(@id == "bookmarks");
 	c.div = bml;
 	
+	res.setContentType("text/html");
 	res.print(t.toXMLString());
 }
 
@@ -294,5 +295,6 @@ CommonUI.prototype.serveRefreshPage = function(req, res, url, statusMessage) {
 
 	c.div = <p>{statusMessage}</p>
 	
+	res.setContentType("text/html");
 	res.print(page.toXMLString());
 }

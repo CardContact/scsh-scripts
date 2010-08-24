@@ -35,6 +35,8 @@
  */
 function VTermUI(service) {
 	CommonUI.call(this, service);
+	
+	this.defaultHolderID = "UTVT1234567";
 }
 
 VTermUI.prototype = new CommonUI();
@@ -88,17 +90,20 @@ VTermUI.prototype.serveStatusPage = function(req, res, url) {
 
 	var page =
 		<div>
-			<h1>VT Service</h1>
+			<h1>Virtual Terminal Service</h1>
 			<div id="activechain"/>
 			<div id="pendingoutboundrequests"/>
 			<h2>Possible actions:</h2>
+			<form action="" method="get">
+				HolderID<input name="op" type="hidden" value="change"/><input name="holderID" size="11" maxlength="11" value={this.defaultHolderID}/><button type="submit">Change</button>
+			</form>
 			<ul>
-				<li><a href="?op=update">Update CVCA/DVCA certificates synchronously</a></li>
-				<li><a href="?op=updateasync&amp;holderID=UT123456789">Update CVCA/DVCA certificates asynchronously</a></li>
-				<li><a href="?op=renew&amp;holderID=UT123456789">Renew certificate synchronously</a></li>
-				<li><a href="?op=renewasync&amp;holderID=UT123456789">Renew certificate asynchronously</a></li>
-				<li><a href="?op=initial&amp;holderID=UT123456789">Request initial certificate synchronously</a></li>
-				<li><a href="?op=initialasync&amp;holderID=UT123456789">Request initial certificate asynchronously</a></li>
+				<li><a href={"?op=update"}>Update CVCA/DVCA certificates synchronously</a></li>
+				<li><a href={"?op=updateasync&holderID=" + this.defaultHolderID}>Update CVCA/DVCA certificates asynchronously</a></li>
+				<li><a href={"?op=renew&holderID=" + this.defaultHolderID}>Renew certificate synchronously</a></li>
+<!--				<li><a href={"?op=renewasync&holderID=" + this.defaultHolderID}>Renew certificate asynchronously</a></li> -->
+				<li><a href={"?op=initial&holderID=" + this.defaultHolderID}>Request initial certificate synchronously</a></li>
+<!--				<li><a href={"?op=initialasync&holderID=" + this.defaultHolderID}>Request initial certificate asynchronously</a></li> -->
 			</ul>
 		</div>
 
@@ -239,6 +244,10 @@ VTermUI.prototype.handleInquiry = function(req, res) {
 			var operation = CertStoreBrowser.parseQueryString(req.queryString);
 
 			switch(operation.op) {
+			case "change":
+				this.defaultHolderID = operation.holderID;
+				this.serveStatusPage(req, res, url);
+				break;
 			case "update":
 				var status = this.service.updateCACertificates(false);
 				this.serveRefreshPage(req, res, url, status);
