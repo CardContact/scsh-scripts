@@ -115,6 +115,17 @@ CVCCA.prototype.setKeySpec = function(keyparam, algorithm) {
 
 
 /**
+ * Set flags that controls the removal of the previous key if the certificate for the new key is imported
+ *
+ * @param {boolean} removePreviousKey true to remove, false to keep
+ */
+CVCCA.prototype.setRemovePreviousKey = function(removePreviousKey) {
+	this.removePreviousKey = removePreviousKey;
+}
+
+
+
+/**
  * Generate a certificate request
  *
  * @param {PublicKeyReference} car the CA at which this request is addressed
@@ -293,9 +304,10 @@ CVCCA.prototype.storeCertificate = function(cert) {
  * @param {CVC} cert the certificate
  */
 CVCCA.prototype.importCertificate = function(cert) {
-	var prk = this.certstore.getPrivateKey(this.path, cert.getCHR());
+	var chr = cert.getCHR();
+	var prk = this.certstore.getPrivateKey(this.path, chr);
 	if (prk == null) {
-		throw new GPError("CVCCA", GPError.INVALID_DATA, 0, "Invalid certificate");
+		throw new GPError("CVCCA", GPError.INVALID_DATA, 0, "Invalid certificate, not matching private key");
 	}
 	var c = this.certstore.getCertificate(this.path, cert.getCHR());
 	this.certstore.storeCertificate(this.path, cert, (c == null));
@@ -340,6 +352,17 @@ CVCCA.prototype.importCertificates = function(certs) {
 				GPSystem.trace("We do not have a key for " + cert.toString() + " - ignored...");
 			} else {
 				this.certstore.storeCertificate(this.path, cert, true);
+					
+				if (this.removePreviousKey) {
+					var req = this.certstore.getRequest(this.path, chr);
+					var previous = req.getOuterCAR();
+					print("Previous key: " + previous);
+					if (previous != null) {
+						this.certstore.deleteCertificate(this.path, previous, false);
+						this.certstore.deleteRequest(this.path, previous);
+						this.certstore.deletePrivateKey(this.path, previous);
+					}
+				}
 			}
 		}
 	}

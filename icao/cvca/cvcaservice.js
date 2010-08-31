@@ -468,7 +468,7 @@ CVCAService.prototype.GetCACertificates = function(soapBody) {
 	}
 	
 	var response =
-		<ns:GetCACertificatesResult xmlns:ns={ns} xmlns:ns1={ns1}>
+		<ns:GetCACertificatesResponse xmlns:ns={ns} xmlns:ns1={ns1}>
 			<Result>
 				<ns1:returnCode>{response}</ns1:returnCode>
 				<!--Optional:-->
@@ -476,7 +476,7 @@ CVCAService.prototype.GetCACertificates = function(soapBody) {
 					<!--Zero or more repetitions:-->
 				</ns1:certificateSeq>
 			</Result>
-		</ns:GetCACertificatesResult>
+		</ns:GetCACertificatesResponse>
 	
 	var list = response.Result.ns1::certificateSeq;
 

@@ -51,6 +51,8 @@ function VTermService(certstorepath, path, parentURL) {
 //	this.tcc = new CVCCA(this.crypto, this.ss, this.name, this.parent, path);
 	this.outqueue = [];
 	this.outqueuemap = [];
+	
+	this.lock = new java.util.concurrent.locks.ReentrantLock(true);
 }
 
 
@@ -110,17 +112,24 @@ VTermService.prototype.getOutboundRequest = function(index) {
  * @param {ServiceRequest} sr the service request
  */
 VTermService.prototype.addOutboundRequest = function(sr) {
-	if (this.outqueue.length >= 10) {
-		var oldsr = this.outqueue.shift();
-		var msgid = oldsr.getMessageID();
+	this.lock.lock();
+	
+	try	{
+		if (this.outqueue.length >= 10) {
+			var oldsr = this.outqueue.shift();
+			var msgid = oldsr.getMessageID();
+			if (msgid) {
+				delete(this.outqueuemap[msgid]);
+			}
+		}
+		this.outqueue.push(sr);
+		var msgid = sr.getMessageID();
 		if (msgid) {
-			delete(this.outqueuemap[msgid]);
+			this.outqueuemap[msgid] = sr;
 		}
 	}
-	this.outqueue.push(sr);
-	var msgid = sr.getMessageID();
-	if (msgid) {
-		this.outqueuemap[msgid] = sr;
+	finally {
+		this.lock.unlock();
 	}
 }
 
@@ -170,13 +179,14 @@ VTermService.prototype.renewCertificate = function(async, forceinitial, holderID
 
 	var tcc = new CVCCA(this.crypto, this.ss, null, null, this.path + "/" + holderID);
 	
+	tcc.setRemovePreviousKey(true);
 	tcc.setKeySpec(dp, algo);
 	
 	// Create a new request
 	var req = tcc.generateRequest(car, forceinitial);
 	print("Request: " + req);
 	print(req.getASN1());
-
+	
 	var msgid = null;
 	
 	if (async) {

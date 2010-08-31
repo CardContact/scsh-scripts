@@ -35,6 +35,18 @@ var datadir = "c:/data/eacpki";
 
 
 
+var bookmarkservicelist = ["CVCA", "DVCA", "TCC", "VT"];
+
+function createBookmarks(ui, myself)  {
+	for (var i = 0; i < bookmarkservicelist.length; i++) {
+		var sn = bookmarkservicelist[i];
+		var bm = myself == sn ? ">" + sn : sn;
+		ui.addBookmark(bm, "http://localhost:8080/se/" + sn.toLowerCase());
+	}
+}
+
+
+
 // --- CVCA section ---
 
 // Create an CVCA service
@@ -102,10 +114,7 @@ cvca.setKeySpec(key, new ByteString("id-TA-ECDSA-SHA-384", OID));
 
 // Create GUI
 var cvcaui = new CVCAUI(cvca);
-cvcaui.addBookmark(">CVCA", "http://localhost:8080/se/cvca");
-cvcaui.addBookmark("DVCA", "http://localhost:8080/se/dvca");
-cvcaui.addBookmark("TCC", "http://localhost:8080/se/tcc");
-cvcaui.addBookmark("VT", "http://localhost:8080/se/vt");
+createBookmarks(cvcaui, "CVCA");
 
 SOAPServer.registerService("cvca", cvca, cvcaui);
 
@@ -116,6 +125,7 @@ SOAPServer.registerService("cvca", cvca, cvcaui);
 // Create a DVCA service
 
 var dvca = new DVCAService(datadir + "/dvca", "UTDVCA", "UTCVCA", url + "/se/cvca");
+// var dvca = new DVCAService(datadir + "/dvca", "UTDVCA", "UTCVCA");
 dvca.setSendCertificateURL(url + "/se/dvca");
 
 var terminalPolicy = { certificateValidityDays: 6,
@@ -146,10 +156,7 @@ dvca.setTerminalCertificatePolicy(terminalPolicyVT, /UTVT/);
 
 // Create GUI
 var dvcaui = new DVCAUI(dvca);
-dvcaui.addBookmark("CVCA", "http://localhost:8080/se/cvca");
-dvcaui.addBookmark(">DVCA", "http://localhost:8080/se/dvca");
-dvcaui.addBookmark("TCC", "http://localhost:8080/se/tcc");
-dvcaui.addBookmark("VT", "http://localhost:8080/se/vt");
+createBookmarks(dvcaui, "DVCA");
 
 SOAPServer.registerService("dvca", dvca, dvcaui);
 
@@ -163,10 +170,7 @@ tcc.setSendCertificateURL(url + "/se/tcc");
 
 // Create GUI
 var tccui = new TCCUI(tcc);
-tccui.addBookmark("CVCA", "http://localhost:8080/se/cvca");
-tccui.addBookmark("DVCA", "http://localhost:8080/se/dvca");
-tccui.addBookmark(">TCC", "http://localhost:8080/se/tcc");
-tccui.addBookmark("VT", "http://localhost:8080/se/vt");
+createBookmarks(tccui, "TCC");
 
 SOAPServer.registerService("tcc", tcc, tccui);
 
@@ -175,14 +179,12 @@ SOAPServer.registerService("tcc", tcc, tccui);
 // --- VTerm section ---
 
 // Create a virtual terminal service
-var vt = new VTermService(datadir + "/vt", "/UTCVCA/UTDVCA", url + "/se/dvca");
+// var vt = new VTermService(datadir + "/vt", "/UTCVCA/UTDVCA", url + "/se/dvca");
+var vt = new VTermService(datadir + "/vt", "/UTCVCA/UTDVCA", "http://calzone:8080/se/dvca");
 vt.setSendCertificateURL(url + "/se/vt");
 
 // Create GUI
 var vtui = new VTermUI(vt);
-vtui.addBookmark("CVCA", "http://localhost:8080/se/cvca");
-vtui.addBookmark("DVCA", "http://localhost:8080/se/dvca");
-vtui.addBookmark("TCC", "http://localhost:8080/se/tcc");
-vtui.addBookmark(">VT", "http://localhost:8080/se/vt");
+createBookmarks(vtui, "VT");
 
 SOAPServer.registerService("vt", vt, vtui);

@@ -57,19 +57,32 @@ DVCAUI.prototype.handleRequestCertificateOutboundRequestDetails = function(req, 
 	
 	var index = parseInt(op.index);
 	var sr = this.service.getOutboundRequest(index);
-	
 	var certreq = sr.getCertificateRequest();
-	certreq.decorate();
 	
-	var page = 
-		<div>
-			<h1>Outbound RequestCertificate request</h1>
-			<p>  MessageID: {sr.getMessageID()}</p>
-			<p>  ResponseURL: {sr.getResponseURL()}</p>
-			<pre>{certreq.getASN1()}</pre>
-		</div>;
+	if (typeof(op.op) != "undefined") {
+		reqbin = certreq.getBytes();
+		print(reqbin);
+		res.setContentType("application/octet-stream");
+		res.setContentLength(reqbin.length);
+		var filename = certreq.getCHR().toString() + ".cvreq";
+		print(filename);
+		// ToDo: Remove nativeResponse once addHeader is provided in host class
+		res.nativeResponse.addHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+		res.write(reqbin);
+	} else {
+		certreq.decorate();
+	
+		var page = 
+			<div>
+				<h1>Outbound RequestCertificate request</h1>
+				<p>  MessageID: {sr.getMessageID()}</p>
+				<p>  ResponseURL: {sr.getResponseURL()}</p>
+				<a href={url[url.length - 1] + "?" + req.queryString + "&op=download"}>Download...</a>
+				<pre>{certreq.getASN1()}</pre>
+			</div>;
 
-	this.sendPage(req, res, url, page);
+		this.sendPage(req, res, url, page);
+	}
 }
 
 
@@ -380,28 +393,28 @@ DVCAUI.prototype.handleInquiry = function(req, res) {
 
 		switch(operation) {
 		case "update":
-			this.service.updateCACertificates(false);
-			this.serveRefreshPage(req, res, url);
+			var status = this.service.updateCACertificates(false);
+			this.serveRefreshPage(req, res, url, status);
 			break;
 		case "updateasync":
-			this.service.updateCACertificates(true);
-			this.serveRefreshPage(req, res, url);
+			var status = this.service.updateCACertificates(true);
+			this.serveRefreshPage(req, res, url, status);
 			break;
 		case "renew":
-			this.service.renewCertificate(false, false);
-			this.serveRefreshPage(req, res, url);
+			var status = this.service.renewCertificate(false, false);
+			this.serveRefreshPage(req, res, url, status);
 			break;
 		case "renewasync":
-			this.service.renewCertificate(true, false);
-			this.serveRefreshPage(req, res, url);
+			var status = this.service.renewCertificate(true, false);
+			this.serveRefreshPage(req, res, url, status);
 			break;
 		case "initial":
-			this.service.renewCertificate(false, true);
-			this.serveRefreshPage(req, res, url);
+			var status = this.service.renewCertificate(false, true);
+			this.serveRefreshPage(req, res, url, status);
 			break;
 		case "initialasync":
-			this.service.renewCertificate(true, true);
-			this.serveRefreshPage(req, res, url);
+			var status = this.service.renewCertificate(true, true);
+			this.serveRefreshPage(req, res, url, status);
 			break;
 		default:
 			this.serveStatusPage(req, res, url);

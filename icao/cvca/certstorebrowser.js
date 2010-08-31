@@ -181,8 +181,12 @@ CertStoreBrowser.prototype.generateHierachieNavigator = function(urlprefixholder
 		var newpath = "";
 		for (var i = 0; i < elem.length; i++) {
 			newpath += "/" + elem[i];
-			nav += "<a href=\"" + urlprefixlists + "?path=" + newpath + "\">" + elem[i] + "</a>";
-			nav += " <a href=\"" + urlprefixholder + "?path=" + newpath + "\">&gt;&gt;</a> ";
+			if (i < 2) {
+				nav += "<a href=\"" + urlprefixlists + "?path=" + newpath + "\">" + elem[i] + "</a>";
+				nav += " <a href=\"" + urlprefixholder + "?path=" + newpath + "\">&gt;&gt;&gt;</a> ";
+			} else {
+				nav += "<a href=\"" + urlprefixlists + "?path=" + newpath + "\">" + elem[i] + "</a>";
+			}
 		}
 	}
 	
@@ -297,7 +301,7 @@ CertStoreBrowser.prototype.generateCertificateHolderList = function(operation, u
 
 	var t = <table class="content"/>;
 	
-	t.tr += <tr><th>Holder</th><th>Certificates</th></tr>
+	t.tr += <tr><th>Holder</th><th>Childs</th></tr>
 	for (var i = 0; i < cnt; i++) {
 		var holder = holderlist[start + i];
 		var refurl = urlprefixholder + "?" +
@@ -306,8 +310,8 @@ CertStoreBrowser.prototype.generateCertificateHolderList = function(operation, u
 		             "path=" + op.path + "/" + holder;
 		
 		t.tr += <tr>
-				<td><a href={refurl}>{holder}</a></td>
-				<td><a href={certurl}>...</a></td>
+				<td><a href={certurl}>{holder}</a></td>
+				<td><a href={refurl}>&gt;&gt;&gt;</a></td>
 				</tr>
 	}
 	

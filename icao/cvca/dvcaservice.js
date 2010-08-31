@@ -66,6 +66,18 @@ DVCAService.prototype.setSendCertificateURL = function(url) {
 
 
 /**
+ * Gets the URL of the associated CVCA
+ *
+ * @type String
+ * @return the URL or null or undefined
+ */
+DVCAService.prototype.getCVCAURL = function() {
+	return this.parentURL;
+}
+
+
+
+/**
  * Sets the key specification for generating requests
  *
  * @param {Key} keyparam a key object containing key parameters (e.g. EC Curve)
@@ -499,20 +511,26 @@ DVCAService.prototype.renewCertificate = function(async, forceinitial) {
 	var sr = new ServiceRequest(msgid, this.myURL, req);
 	this.addOutboundRequest(sr);
 
-	var certlist = this.requestCertificateFromCVCA(sr);
+	if (this.parentURL) {
+		var certlist = this.requestCertificateFromCVCA(sr);
 
-	if (certlist.length > 0) {
-		sr.setFinalStatusInfo("" + certlist.length + " certificates received");
+		if (certlist.length > 0) {
+			sr.setFinalStatusInfo("" + certlist.length + " certificates received");
+		}
+	
+		var list = this.dvca.importCertificates(certlist);
+
+		if (list.length > 0) {
+			print("Warning: Could not import the following certificates");
+			for (var i = 0; i < list.length; i++) {
+				print(list[i]);
+			}
+		}
+	} else {
+		sr.setStatusInfo("Local request");
 	}
 	
-	var list = this.dvca.importCertificates(certlist);
-
-	if (list.length > 0) {
-		print("Warning: Could not import the following certificates");
-		for (var i = 0; i < list.length; i++) {
-			print(list[i]);
-		}
-	}
+	return sr.getStatusInfo();
 }
 
 
@@ -671,7 +689,7 @@ DVCAService.prototype.GetCACertificates = function(soapBody) {
 	}
 	
 	var response =
-		<ns:GetCACertificatesResult xmlns:ns={ns} xmlns:ns1={ns1}>
+		<ns:GetCACertificatesResponse xmlns:ns={ns} xmlns:ns1={ns1}>
 			<Result>
 				<ns1:returnCode>{returnCode}</ns1:returnCode>
 				<!--Optional:-->
@@ -679,7 +697,7 @@ DVCAService.prototype.GetCACertificates = function(soapBody) {
 					<!--Zero or more repetitions:-->
 				</ns1:certificateSeq>
 			</Result>
-		</ns:GetCACertificatesResult>
+		</ns:GetCACertificatesResponse>
 	
 	var list = response.Result.ns1::certificateSeq;
 
@@ -785,7 +803,12 @@ DVCAService.prototype.SendCertificates = function(soapBody) {
 	var statusInfo = soapBody.statusInfo.toString();
 	var msgid = soapBody.messageID.toString();
 	
-	var sr = this.outqueuemap[msgid];
+	if (msgid == "Synchronous") {		// Special handling for posts from the command line
+		var sr = new ServiceRequest();
+	} else {
+		var sr = this.outqueuemap[msgid];
+	}
+	
 	if (sr) {
 		sr.setStatusInfo(statusInfo);
 		var returnCode = ServiceRequest.OK_RECEIVED_CORRECTLY;
