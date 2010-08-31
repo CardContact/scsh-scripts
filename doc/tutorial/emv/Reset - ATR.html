@@ -9,15 +9,11 @@
 <meta name="author" content="Andreas Schwier">
 </head>
 <body>
-<table border="0" cellpadding="0" cellspacing="0" width="750" align="center">
-  <tr>
-    <td height="80" colspan="5" class="pb"><div align="left"><a href="http://www.cardcontact.de"><img src="../../banner.jpg" width="750" height="80" border="0"></a></div></td>
-  </tr>
-  <tr height="20">
-  </tr>
-  <tr>
-    <td width="130" valign="top" align="left">
-    <br>
+
+
+<div align="left"><a href="http://www.cardcontact.de"><img src="../../banner.jpg" width="750" height="80" border="0"></a></div></td>
+<div id="navigator">
+<br>
     <p><b>Script Collection</b></p>
     <a href="../../index.html">Home</a><br>
     <a href="http://www.openscdp.org/scripts/download.html">Download</a><br>
@@ -25,6 +21,7 @@
     <br>
     <a href="../../eGK/index.html">German eGK</a><br>
     <a href="../../HPC/index.html">German HPC</a><br>
+
     <a href="../../kvk/index.html">German KVK</a><br><br>
     <a href="../../icao/index.html">ICAO MRTD</a><br>
     <a href="../../gp/index.html">GP Card</a><br>
@@ -36,22 +33,21 @@
     <br>
     <a href="http://www.openscdp.org">OpenSCDP</a><br>
     <a href="http://www.cardcontact.de/company/contact.html">Contact</a><br>
-    </td>
-    <td width="630" align="left">
-    <br/>
+    </div>
+<div id="main">
 <!-- #BeginEditable "BODY" -->
-<h1>EMV Tutorial - Part 1</h1>
-<p>This EMV Tutorial will explain how to use the 
-<a href="http://www.openscdp.org/scsh3/index.html">Smart Card Shell</a> to explore an EMV chip card.</p>
-<h2>Reseting the card</h2>
+<h1>Answer to Reset</h1>
+<p></p>
+<h2>Resetting the card</h2>
 <p>First of all we create an object "card" and define the card reader.</p>
 <pre>
 var card = new <a href="http://www.openscdp.org/scsh3/card.html">Card</a>(_scsh3.reader);
 </pre>
-<p>Now we can start reseting the card. There are two ways of reseting.
+<p>Now we can start to reset the card. There are two ways of resetting.
 <br><b>Cold Reset:</b></br>
 The cold reset always starts by the first connection between card and card reader.
-At the beginning of the cold reset the card is cut off from the power supply. In the next step the card gets energy and a reset signal. The terminal is now waiting for an answer (ATR).
+At the beginning of the cold reset the card is cut off from the power supply. 
+In the next step the card gets energy and a reset signal. The terminal is now waiting for an answer (ATR).
 <br><b>Warm Reset:</b></br>
 During the warm reset the terminal is sending a reset signal to the card without disconnecting the power supply. 
 </p>
@@ -59,9 +55,11 @@ During the warm reset the terminal is sending a reset signal to the card without
 var <a href="http://www.openscdp.org/scsh3/atr.html">atr</a> = card.reset(Card.RESET_COLD);
 </pre>
 <h3>ATR - Answer to Reset</h3>
-<p>After the reset signal from the terminal the card will answer with a bytestring called ATR. This string contains certain informations about the card which are necessary for the communication between card and terminal. After a warm reset the card answers with a different ATR, e.g. to get a faster connection. </p>
-<p>To get the data the card was sending, we use the class atr.
-There are two methods to get the informations: "toByteString()" and "toString()".</p>
+<p>After the reset signal from the terminal the card will answer with a bytestring called ATR. 
+This string contains certain informations about the card which are necessary for the communication between card and terminal. 
+After a warm reset the card answers with a different ATR, e.g. to get a faster connection. </p>
+<p>To get the data the card was sending, we use the class <a href="http://www.openscdp.org/scsh3/atr.html">atr</a>.
+There are two methods to get the informations: "<a href="http://www.openscdp.org/scsh3/atr.html#toByteString">toByteString</a>()" and "<a href="http://www.openscdp.org/scsh3/atr.html#toString">toString</a>()".</p>
 <pre>
 var atrbin = atr.toByteString();
 
@@ -97,22 +95,11 @@ TB3 : 45  CWT  =  43 etu  [character waiting time]
 <p>TA3 determines the information field size. So the terminal know the max. size of a block which will be send to the terminal.  </p>
 <p>The Character TB3 is relevant for the character and block waiting time. The character waiting time is the max. timeout between one byte to another and the block waiting time between to blocks.
 If the waiting time is higher as determined, the terminal will issue an error message.</p>
-<!-- <h2>Header level 2</h2>
-<p>Bla Bla Bla</p>
-<ul>
-	<li>First entry</li>
-	<li>Second entry</li>
-</ul>
-<ol>
-	<li>First entry</li>
-	<li>Second entry</li>
-</ol> -->
+<p><a href="Read EMV.html">next</a></p>
 <!-- #EndEditable -->
 <br>
-<p class="copyright">&copy; Copyright 2003 - 2008 <a href="http://www.cardcontact.de">CardContact</a>
+<p class="copyright">&copy; Copyright 2003 - 2010 <a href="http://www.cardcontact.de">CardContact</a>
 Software & System Consulting, Minden, Germany</p>
-    </td>
-  </tr>
-</table>
+</div>
 </body>
 </html><!-- #EndTemplate -->
