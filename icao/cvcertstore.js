@@ -326,6 +326,22 @@ CVCertificateStore.prototype.getPrivateKey = function(path, chr) {
 
 
 /**
+ * Remove private key
+ *
+ * @param {String} path the relative path of the PKI element (e.g. "/UTCVCA1/UTDVCA1/UTTERM")
+ * @param {PublicKeyReference} chr the public key reference for this key
+ * @returns true is deleted
+ * @type boolean
+ */
+CVCertificateStore.prototype.deletePrivateKey = function(path, chr) {
+	var fn = this.path + path + "/" + chr.toString() + ".pkcs8";
+	var f = new java.io.File(fn);
+	return f["delete"]();		// delete is a reserved keyword
+}
+
+
+
+/**
  * Store a certificate request in the certificate store
  *
  * @param {String} path the relative path of the PKI element (e.g. "/UTCVCA1/UTDVCA1/UTTERM")
@@ -336,6 +352,45 @@ CVCertificateStore.prototype.storeRequest = function(path, req) {
 	var fn = this.path + path + "/" + chr.toString() + ".cvreq";
 	GPSystem.trace("Saving request to " + fn);
 	CVCertificateStore.saveBinaryFile(fn, req.getBytes());
+}
+
+
+
+/**
+ * Return request for given CHR
+ *
+ * @param {String} path the relative path of the PKI element (e.g. "/UTCVCA1/UTDVCA1/UTTERM")
+ * @param {PublicKeyReference} chr the public key reference for the certificate
+ * @type CVC
+ * @return the request or null
+ */
+CVCertificateStore.prototype.getRequest = function(path, chr) {
+	var fn = this.path + path + "/" + chr.toString() + ".cvreq";
+	var bin = null;
+	
+	try	{
+		bin = CVCertificateStore.loadBinaryFile(fn);
+	}
+	catch (e) {
+		GPSystem.trace(e);
+	}
+	return new CVC(bin);
+}
+
+
+
+/**
+ * Remove request
+ *
+ * @param {String} path the relative path of the PKI element (e.g. "/UTCVCA1/UTDVCA1/UTTERM")
+ * @param {PublicKeyReference} chr the public key reference for this request
+ * @returns true is deleted
+ * @type boolean
+ */
+CVCertificateStore.prototype.deleteRequest = function(path, chr) {
+	var fn = this.path + path + "/" + chr.toString() + ".cvreq";
+	var f = new java.io.File(fn);
+	return f["delete"]();		// delete is a reserved keyword
 }
 
 
@@ -369,6 +424,27 @@ CVCertificateStore.prototype.storeCertificate = function(path, cert, makeCurrent
 		cfg.sequence.currentCHR = chr.toString();
 		this.saveConfig(path, cfg);
 	}
+}
+
+
+
+/**
+ * Remove certificate
+ *
+ * @param {String} path the relative path of the PKI element (e.g. "/UTCVCA1/UTDVCA1/UTTERM")
+ * @param {PublicKeyReference} chr the public key reference for this certificate
+ * @param {boolean} selfsigned delete the self-signed root certificate rather than a link certificate
+ * @returns true is deleted
+ * @type boolean
+ */
+CVCertificateStore.prototype.deleteCertificate = function(path, chr, selfsigned) {
+	if (selfsigned) {
+		fn = this.path + path + "/" + chr.toString() + ".selfsigned.cvcert";
+	} else {
+		var fn = this.path + path + "/" + chr.toString() + ".cvcert";
+	}
+	var f = new java.io.File(fn);
+	return f["delete"]();		// delete is a reserved keyword
 }
 
 

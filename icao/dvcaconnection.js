@@ -124,7 +124,7 @@ DVCAConnection.prototype.getCACertificates = function() {
 /**
  * Request a certificate from the parent CA using a web service
  *
- * @param {ServiceRequest} serviceRequest the underlying request
+ * @param {CVC} certreq the certificate request
  * @returns the new certificates
  * @type CVC[]
  */
@@ -173,6 +173,55 @@ DVCAConnection.prototype.requestCertificate = function(certreq) {
 	}
 
 	return certlist;
+}
+
+
+
+/**
+ * Send a certificate to the DVCA
+ *
+ * @param {CVC[]} cert the list of certificates to post
+ */
+DVCAConnection.prototype.sendCertificates = function(certificates, messageID, statusInfo) {
+
+	var soapConnection = new SOAPConnection();
+
+	var ns = new Namespace("uri:EAC-PKI-DV-Protocol/1.0");
+	var ns1 = new Namespace("uri:eacBT/1.0");
+
+	var request =
+		<ns:SendCertificates xmlns:ns={ns} xmlns:ns1={ns1}>
+			<messageID>{messageID}</messageID>
+			<statusInfo>{statusInfo}</statusInfo>
+			<certificateSeq>
+			</certificateSeq>
+		</ns:SendCertificates>;
+
+	var list = request.certificateSeq;
+
+	for (var i = 0; i < certificates.length; i++) {
+		var cvc = certificates[i];
+		list.certificate += <ns1:certificate xmlns:ns1={ns1}>{cvc.getBytes().toString(BASE64)}</ns1:certificate>
+	}
+
+	if (this.verbose) {
+		GPSystem.trace(request.toXMLString());
+	}
+
+	try	{
+		var response = this.soapcon.call(this.url, request);
+		if (this.verbose) {
+			GPSystem.trace(response.toXMLString());
+		}
+	}
+	catch(e) {
+		GPSystem.trace("SOAP call to " + this.url + " failed : " + e);
+		throw new GPError("DVCAConnection", GPError.DEVICE_ERROR, 0, "SendCertificates failed with : " + e);
+	}
+
+	if (response.Result.ns1::returnCode.substr(0, 3) != "ok_") {
+		this.lastError = response.Result.ns1::returnCode.toString();
+	}
 }
 
 
