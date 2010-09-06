@@ -183,6 +183,7 @@ CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 	if (certlist.length > 0) {
 		var t = <table class="content"/>;
 
+		t.colgroup += <colgroup><col width="24"/><col width="24"/><col width="20"/><col width="16"/><col width="16"/></colgroup>
 		t.tr += <tr><th>CHR</th><th>CAR</th><th>Type</th><th>Effective</th><th>Expiration</th></tr>;
 
 		var i = certlist.length - 6;
@@ -204,11 +205,12 @@ CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 				<td><a href={refurl}>{cvc.getCHR().toString()}</a></td>
 				<td>{cvc.getCAR().toString()}</td>
 				<td>{cvc.getType()}</td>
-				<td>{cvc.getCED().toLocaleDateString()}</td>
-				<td>{cvc.getCXD().toLocaleDateString()}</td>
+				<td>{CommonUI.dateString(cvc.getCED())}</td>
+				<td>{CommonUI.dateString(cvc.getCXD())}</td>
 			</tr>
 		}
 	
+
 		// Certificate list
 		var div = page.div.(@id == "activechain");
 		div.h2 = "Active certificate chain:";

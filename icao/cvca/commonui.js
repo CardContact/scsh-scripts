@@ -44,6 +44,19 @@ function CommonUI(service) {
 
 
 /**
+ * Create a date string for a given date object in the format YYYY-MM-DD
+ *
+ * @param {Date} date the date object
+ * @type String
+ * @return the date string
+ */
+CommonUI.dateString = function(date) {
+	return date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate();
+}
+
+
+
+/**
  * Generate a HTML template
  *
  * @param {String[]} url the array of URL elements
