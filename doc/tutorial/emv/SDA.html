@@ -3,7 +3,7 @@
 <html>
 <head>
 <!-- #BeginEditable "TITLE" -->
-<title>EMV Tutorial</title>
+<title>EMV - SDA</title>
 <!-- #EndEditable -->
 <link rel=stylesheet type="text/css" href="../../style.css">
 <meta name="author" content="Andreas Schwier">
@@ -36,7 +36,7 @@
     </div>
 <div id="main">
 <!-- #BeginEditable "BODY" -->
-<p><a href="Read Application Data.html">< back</a> <a href="Overview.html">index</a></p>
+<p><a href="Read Application Data.html">< back</a> <a href="Overview.html">index</a> <a href="DDA.html">next ></a></p>
 
 <h1>Static Data Authentication (SDA)</h1>
 <p>
@@ -62,12 +62,12 @@ To verify that S1 and P1 are made by the Issuer, the Issuer PK Certificate is si
 The Certification Authority Public Key (PCA) is stored in the IC Terminal.
 </p>
 <p>
-For SDA the terminal decrypt the Issuer PK Certificate with the PCA key. 
-If the decryption was successful, the terminal extract the P1 key to decrypt the SSAD. 
+For SDA the terminals decrypt the Issuer PK Certificate with the PCA key. 
+If the decryption was successful, the terminal extracts the P1 key to decrypt the SSAD. 
 SDA was successful if the IC Terminal verifies the SSAD.
 </p>
 
-<h2>Retrieval of Certification Authority Public Key</h2>
+<h2 id="retrievalCA">Retrieval of Certification Authority Public Key</h2>
 <p>
 For SDA we need first the Registered Application Provider Identifier (RID) to recognize whether we have a MasterCard or Visa Card because both have different public keys.
 To get the RID we extract the first five bytes of the Application Identifier (AID).
@@ -121,7 +121,7 @@ SDA.prototype.getSchemePublicKey = function() {
 }
 </pre>
 
-<h2>Retrieval of Issuer Public Key</h2>
+<h2 id="retrievalIssuerPK">Retrieval of Issuer Public Key</h2>
 <p>With the Certification Authority Public Key we decode the Issuer PK Certificate on the condition that both have the same length.
 </p>
 <pre>
@@ -439,7 +439,7 @@ SDA.prototype.verifySSAD = function(issuerPublicKeyModulus) {
 }
 </pre>
 
-<p><a href="Read Application Data.html">< back</a> <a href="Overview.html">index</a></p>
+<p><a href="Read Application Data.html">< back</a> <a href="Overview.html">index</a> <a href="DDA.html">next ></a></p>
 <!-- #EndEditable -->
 <br>
 <p class="copyright">&copy; Copyright 2003 - 2010 <a href="http://www.cardcontact.de">CardContact</a>
