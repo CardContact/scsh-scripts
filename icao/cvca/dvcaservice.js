@@ -858,114 +858,218 @@ DVCAService.prototype.GetWSDL = function(req, res) {
 	switch(req.queryString) {
 	case "wsdl":
 		var xml = 
-		<definitions name="EAC-PKI-DV" targetNamespace="uri:EAC-PKI-DV-Protocol/1.0" xmlns:SOAP="http://xxx" xmlns:xsi="http://xsi"
-				xsi:schemaLocation="http://schemas.xmlsoap.org/wsdl/ http://schemas.xmlsoap.org/wsdl/2003-02-11.xsd">
+		<definitions
+			name="EAC-PKI-CVCA"
+			targetNamespace="uri:EAC-PKI-CVCA-Protocol/1.0"
+			xmlns:tns="uri:EAC-PKI-CVCA-Protocol/1.0"
+
+			xmlns:ns="uri:eacBT/1.0"
+
+			xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+			xsi:schemaLocation="http://schemas.xmlsoap.org/wsdl/ http://schemas.xmlsoap.org/wsdl/2003-02-11.xsd"
+
+			xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+			xmlns:SOAP="http://schemas.xmlsoap.org/wsdl/soap/"
+			xmlns="http://schemas.xmlsoap.org/wsdl/">
+    
 			<types>
-				<schema>
+				<schema xmlns="http://www.w3.org/2001/XMLSchema">
 					<import namespace="http://www.w3.org/2001/XMLSchema"/>
-					<import namespace="uri:eacBT/1.0" schemaLocation="http://localhost:8080/se/dvca?xsd=./BasicTypes_DV_TerminalAuth.xsd"/>
-				</schema>
+					<import namespace="uri:eacBT/1.0" schemaLocation="dvca?xsd=./BasicTypes_CVCA_TerminalAuth.xsd"/>
+				</schema> 
 			</types>
-
-			<message name="RequestCertificate_Res">
-				<part name="Result" type="ns:RequestCertificateResult"></part>
-			</message>
-
-			<message name="GetCACertificates_Req">
-				<part name="callbackIndicator" type="ns:CallbackIndicatorType"></part>
-				<part name="messageID" type="ns:OptionalMessageIDType"></part>
-				<part name="responseURL" type="ns:OptionalStringType"></part>
-			</message>
-
-			<message name="SendCertificates_Req">
-				<part name="messageID" type="ns:MessageIDType"></part>
-				<part name="statusInfo" type="ns:SendCertificates_statusInfoType"></part>
-				<part name="certificateSeq" type="ns:CertificateSeqType"></part>
-			</message>
-
-			<message name="SendCertificates_Res">
-				<part name="Result" type="ns:SendCertificatesResult"></part>
-			</message>
-
-			<message name="GetCACertificates_Res">
-				<part name="Result" type="ns:GetCACertificatesResult"></part>
-			</message>
-
+	
+			<!-- Definition of the messages of the protocol -->
+			<!-- message RequestCertificate -->
 			<message name="RequestCertificate_Req">
-				<part name="callbackIndicator" type="ns:CallbackIndicatorType"></part>
-				<part name="messageID" type="ns:OptionalMessageIDType"></part>
-				<part name="responseURL" type="ns:OptionalStringType"></part>
-				<part name="certReq" type="xsd:base64Binary"></part>
+				<part name="callbackIndicator" type="ns:CallbackIndicatorType"/>
+				<part name="messageID" type="ns:OptionalMessageIDType"/>
+				<part name="responseURL" type="ns:OptionalStringType"/>
+				<part name="certReq" type="xsd:base64Binary"/>
 			</message>
-
-			<portType name="EAC-PKI-DV-ProtocolType">
-
+			<message name="RequestCertificate_Res">
+				<part name="Result" type="ns:RequestCertificateResult"/>
+			</message>
+			<!-- message RequestForeignCertificate -->
+			<message name="RequestForeignCertificate_Req">
+				<part name="callbackIndicator" type="ns:CallbackIndicatorType"/>	
+				<part name="messageID" type="ns:OptionalMessageIDType"/>
+				<part name="foreignCAR" type="xsd:string"/>
+				<part name="responseURL" type="ns:OptionalStringType"/>
+				<part name="certReq" type="xsd:base64Binary"/>
+			</message>
+			<message name="RequestForeignCertificate_Res">
+				<part name="Result" type="ns:RequestForeignCertificateResult"/>
+			</message>
+			<!-- message GetCACertificates -->
+			<message name="GetCACertificates_Req">
+				<part name="callbackIndicator" type="ns:CallbackIndicatorType"/>		
+				<part name="messageID" type="ns:OptionalMessageIDType"/>
+				<part name="responseURL" type="ns:OptionalStringType"/>
+			</message>
+			<message name="GetCACertificates_Res">
+				<part name="Result" type="ns:GetCACertificatesResult"/>
+			</message>
+	
+			<!-- Definition of the port types -->
+			<portType name="EAC-PKI-CVCA-ProtocolType">
+				<!-- port type for message RequestCertificate -->
 				<operation name="RequestCertificate">
-					<input message="tns:RequestCertificate_Req"></input>
-					<output message="tns:RequestCertificate_Res"></output>
+					<input message="tns:RequestCertificate_Req"/>
+					<output message="tns:RequestCertificate_Res"/>
 				</operation>
-
+				<!-- port type for message RequestForeignCertificate -->
+				<operation name="RequestForeignCertificate">
+					<input message="tns:RequestForeignCertificate_Req"/>
+					<output message="tns:RequestForeignCertificate_Res"/>
+				</operation>
+				<!-- port type for message GetCACertificates -->
 				<operation name="GetCACertificates">
-					<input message="tns:GetCACertificates_Req"></input>
-					<output message="tns:GetCACertificates_Res"></output>
-				</operation>
-
-				<operation name="SendCertificates">
-					<input message="tns:SendCertificates_Req"></input>
-					<output message="tns:SendCertificates_Res"></output>
+					<input message="tns:GetCACertificates_Req"/>
+					<output message="tns:GetCACertificates_Res"/>
 				</operation>
 			</portType>
-
-			<binding name="EAC-DV" type="tns:EAC-PKI-DV-ProtocolType">
-				<SOAP:binding style="rpc" transport="http://schemas.xmlsoap.org/soap/http"/>
-
-				<operation name="RequestCertificate">
-					<SOAP:operation soapAction="" style="rpc"/>
-
-					<input>
-						<SOAP:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="uri:EAC-PKI-DV-Protocol/1.0" use="literal"/>
-					</input>
-
-					<output>
-						<SOAP:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="uri:EAC-PKI-DV-Protocol/1.0" use="literal"/>
-					</output>
-				</operation>
-
-				<operation name="GetCACertificates">
-					<SOAP:operation soapAction="" style="rpc"/>
-
-					<input>
-						<SOAP:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="uri:EAC-PKI-DV-Protocol/1.0" use="literal"/>
-					</input>
-
-					<output>
-						<SOAP:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="uri:EAC-PKI-DV-Protocol/1.0" use="literal"/>
-					</output>
-				</operation>
-
-				<operation name="SendCertificates">
-					<SOAP:operation soapAction="" style="rpc"/>
-
-					<input>
-						<SOAP:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="uri:EAC-PKI-DV-Protocol/1.0" use="literal"/>
-					</input>
 	
+			<!-- Definition of the bindings -->
+			<binding name="EAC-CVCA" type="tns:EAC-PKI-CVCA-ProtocolType">
+				<SOAP:binding style="rpc" transport="http://schemas.xmlsoap.org/soap/http"/>
+				<operation name="RequestCertificate">
+					<SOAP:operation style="rpc" soapAction=""/>
+					<input>
+						<SOAP:body use="literal" namespace="uri:EAC-PKI-CVCA-Protocol/1.0" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"/>
+					</input>
 					<output>
-						<SOAP:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="uri:EAC-PKI-DV-Protocol/1.0" use="literal"/>
+						<SOAP:body use="literal" namespace="uri:EAC-PKI-CVCA-Protocol/1.0" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"/>
+					</output>
+				</operation>
+				<operation name="RequestForeignCertificate">
+					<SOAP:operation style="rpc" soapAction=""/>
+					<input>
+						<SOAP:body use="literal" namespace="uri:EAC-PKI-CVCA-Protocol/1.0" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"/>
+					</input>
+					<output>
+						<SOAP:body use="literal" namespace="uri:EAC-PKI-CVCA-Protocol/1.0" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"/>
+					</output>
+				</operation>
+				<operation name="GetCACertificates">
+					<SOAP:operation style="rpc" soapAction=""/>
+					<input>
+						<SOAP:body use="literal" namespace="uri:EAC-PKI-CVCA-Protocol/1.0" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"/>
+					</input>
+					<output>
+						<SOAP:body use="literal" namespace="uri:EAC-PKI-CVCA-Protocol/1.0" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"/>
 					</output>
 				</operation>
 			</binding>
 
-			<service name="EAC-DV-ProtocolService">
-
-				<port binding="tns:EAC-DV" name="EAC-DV-ProtocolServicePort">
+		<!-- Definition of the service -->
+			<service name="EAC-CVCA-ProtocolService">
+				<port name="EAC-CVCA-ProtocolServicePort" binding="tns:EAC-CVCA">
 					<SOAP:address location="http://localhost:8080/se/dvca"/>
 				</port>
 			</service>
 		</definitions>;
+
 		break;
 	case "xsd=./BasicTypes_DV_TerminalAuth.xsd":
-		var xml = <empty>Empty</empty>;
+		var xml =
+		<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:nsBT="uri:eacBT/1.0" targetNamespace="uri:eacBT/1.0" elementFormDefault="qualified">
+		<!-- this scheme is based on the document 
+			PKI for the Extended Access Control (EAC), Protocol for the Management of Certififcates and CRLs
+			Version 1.0, Date 09.11.2009
+		-->
+		<!-- Definition of the type for a message ID -->
+			<xsd:simpleType name="MessageIDType">
+				<xsd:restriction base="xsd:string"/>
+			</xsd:simpleType>
+			<!-- Definition of the type for a callbackIndicator -->
+			<xsd:simpleType name="CallbackIndicatorType">
+				<xsd:restriction base="xsd:string">
+					<xsd:enumeration value="callback_possible"/>
+					<xsd:enumeration value="callback_not_possible"/>
+				</xsd:restriction>
+			</xsd:simpleType>
+			<!-- Definition of the type of an optional messageID parameter -->
+			<xsd:complexType name="OptionalMessageIDType">
+				<xsd:sequence>
+					<xsd:element name="messageID" type="nsBT:MessageIDType" minOccurs="0"/>
+				</xsd:sequence>
+			</xsd:complexType>
+			<!-- Definition of the type of an optional string parameter -->
+			<xsd:complexType name="OptionalStringType">
+				<xsd:sequence>
+					<xsd:element name="string" type="xsd:string" minOccurs="0"/>
+				</xsd:sequence>
+			</xsd:complexType>
+			<!-- Definition of the complex type for a sequence of certificates -->
+			<xsd:complexType name="CertificateSeqType">
+				<xsd:sequence>
+					<xsd:element name="certificate" type="xsd:base64Binary" minOccurs="0" maxOccurs="unbounded"/>
+				</xsd:sequence>
+			</xsd:complexType>
+			<!-- Definition of the types of the status codes for the messages SendCertificates -->
+			<xsd:simpleType name="SendCertificates_statusInfoType">
+				<xsd:restriction base="xsd:string">
+					<xsd:enumeration value="ok_cert_available"/>
+					<xsd:enumeration value="failure_inner_signature"/>
+					<xsd:enumeration value="failure_outer_signature"/>
+					<xsd:enumeration value="failure_syntax"/>
+					<xsd:enumeration value="failure_request_not_accepted"/>
+				</xsd:restriction>
+			</xsd:simpleType>
+	
+			<!-- ==================== -->
+			<!-- Definition of the types of the return codes for the different messages -->
+			<xsd:simpleType name="RequestCertificate_returnCodeType">
+				<xsd:restriction base="xsd:string">
+					<xsd:enumeration value="ok_cert_available"/>
+					<xsd:enumeration value="ok_syntax"/>
+					<xsd:enumeration value="ok_reception_ack"/>
+					<xsd:enumeration value="failure_inner_signature"/>
+					<xsd:enumeration value="failure_outer_signature"/>
+					<xsd:enumeration value="failure_syntax"/>
+					<xsd:enumeration value="failure_request_not_accepted"/>
+					<xsd:enumeration value="failure_synchronous_processing_not_possible"/>
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:simpleType name="GetCACertificates_returnCodeType">
+				<xsd:restriction base="xsd:string">
+					<xsd:enumeration value="ok_cert_available"/>
+					<xsd:enumeration value="ok_syntax"/>
+					<xsd:enumeration value="ok_reception_ack"/>
+					<xsd:enumeration value="failure_syntax"/>
+					<xsd:enumeration value="failure_request_not_accepted"/>
+					<xsd:enumeration value="failure_synchronous_processing_not_possible"/>
+				</xsd:restriction>
+			</xsd:simpleType>
+			<xsd:simpleType name="SendCertificates_returnCodeType">
+				<xsd:restriction base="xsd:string">
+					<xsd:enumeration value="ok_received_correctly"/>
+					<xsd:enumeration value="failure_syntax"/>
+					<xsd:enumeration value="failure_messageID_unknown"/>
+				</xsd:restriction>
+			</xsd:simpleType>
+	
+			<!-- ==================== -->
+			<!-- Definition of the types of the result for the different messages -->
+			<xsd:complexType name="RequestCertificateResult">
+				<xsd:sequence>
+					<xsd:element name="returnCode" type="nsBT:RequestCertificate_returnCodeType"/>
+					<xsd:element name="certificateSeq" type="nsBT:CertificateSeqType" minOccurs="0"/>
+				</xsd:sequence>
+			</xsd:complexType>
+			<xsd:complexType name="GetCACertificatesResult">
+				<xsd:sequence>
+					<xsd:element name="returnCode" type="nsBT:GetCACertificates_returnCodeType"/>
+					<xsd:element name="certificateSeq" type="nsBT:CertificateSeqType" minOccurs="0"/>
+				</xsd:sequence>
+			</xsd:complexType>
+			<xsd:complexType name="SendCertificatesResult">
+				<xsd:sequence>
+					<xsd:element name="returnCode" type="nsBT:SendCertificates_returnCodeType"/>
+				</xsd:sequence>
+			</xsd:complexType>
+		</xsd:schema>;
 		
 		break;
 	default:
