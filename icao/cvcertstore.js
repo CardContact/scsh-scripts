@@ -165,6 +165,23 @@ CVCertificateStore.parentPathOf = function(path) {
 
 
 /**
+ * Return the n-element of the path
+ *
+ * @param {String} path the path to return the last element from
+ * @returns the last path element or null for the root
+ * @type String
+ */
+CVCertificateStore.nthElementOf = function(path, n) {
+	var pe = path.substr(1).split("/");
+	if (typeof(n) == "undefined") {
+		return pe[pe.length - 1];
+	}
+	return pe[n];
+}
+
+
+
+/**
  * Returns the current terminal certificate for a given CVCA reference.
  *
  * @param {PublicKeyReference} cvcaref the public key reference (CHR) of the root CA.
@@ -797,27 +814,31 @@ CVCertificateStore.prototype.getCHRForSequenceNumber = function(path, sequence) 
  * @type CVC[]
  */
 CVCertificateStore.prototype.insertCertificates = function(crypto, certlist, insertSelfSigned) {
+
+	var chrmap = [];
 	
-	if (insertSelfSigned) {		// Process self-signed certificates
-		var unprocessed = [];
-		for (var i = 0; i < certlist.length; i++) {
-			var cvc = certlist[i];
+	var unprocessed = [];
+	for (var i = 0; i < certlist.length; i++) {
+		var cvc = certlist[i];
+		var chr = cvc.getCHR().toString();
+		
+		if (chr == cvc.getCAR().toString()) { // Self signed
+			var result = cvc.verifyWith(crypto, cvc.getPublicKey());
 
-			if (cvc.getCHR().toString() == cvc.getCAR().toString()) { // Self signed
-				var result = cvc.verifyWith(crypto, cvc.getPublicKey());
-
-				if (result) {
-					var path = "/" + cvc.getCHR().getHolder();
+			if (result) {
+				var path = "/" + cvc.getCHR().getHolder();
+				if (insertSelfSigned) {		// Store self-signed certificates
 					this.storeCertificate(path, cvc, true);
-				} else {
-					GPSystem.trace("Self-signed certificate failed signature verification. " + cvc);
 				}
 			} else {
-				unprocessed.push(cvc);
+				GPSystem.trace("Self-signed certificate failed signature verification. " + cvc);
 			}
+		} else {
+			unprocessed.push(cvc);
+			chrmap[chr] = cvc;
 		}
-		certlist = unprocessed;
 	}
+	certlist = unprocessed;
 	
 	var unprocessed = [];		// Collect unprocessed certificates
 	var capath = [];			// Map of CA names to CA paths
@@ -878,6 +899,164 @@ CVCertificateStore.prototype.insertCertificates = function(crypto, certlist, ins
 			unprocessed.push(cvc);
 		}
 	}
+	return unprocessed;
+}
+
+
+
+/**
+ * Insert a single certificates into the certificate store
+ *
+ * <p>Before a certificate is imported, the signature is verified.</p>
+ * <p>If the certificate is a terminal certificate, then the first element of the path given
+ *    in cvcahint is used to determine the correct CVCA.</p>
+ *
+ * @param {Crypto} crypto the crypto provider to be used for certificate verification
+ * @param {CVC} cvc the certificate
+ * @param {String} cvcahint the PKI path (e.g. "/UTCVCA1/UTDVCA1/UTTERM"). Only the first path element is relevant
+ * @returns true, if the certificate was inserted
+ * @type boolean
+ */
+CVCertificateStore.prototype.insertCertificate = function(crypto, cvc, cvcahint) {
+
+	var car = cvc.getCAR();
+	var path = "/" + car.getHolder();
+	var cacert = this.getCertificate(path, car);
+	if (cacert == null) {
+		var path = "/" + CVCertificateStore.nthElementOf(cvcahint, 0) + "/" + car.getHolder();
+		print("Using hint " + path);
+		var cacert = this.getCertificate(path, car);
+		if (cacert == null) {
+			return false;
+		}
+	}
+	
+	var dp = this.getDomainParameter(path, car);
+	var result = cvc.verifyWith(crypto, cacert.getPublicKey(dp));
+	if (result) {
+		var chr = cvc.getCHR();
+		var holder = chr.getHolder();
+
+		if (holder == car.getHolder()) {	// Link certificate
+			this.storeCertificate("/" + holder, cvc, true);
+		} else {							// Subordinate certificate
+			this.storeCertificate(path + "/" + holder, cvc, true);
+		}
+	} else {
+		GPSystem.trace("Certificate " + cvc + " failed signature verification with " + cacert);
+	}
+	return true;
+}
+
+
+
+/**
+ * Insert certificates into certificate store
+ *
+ * <p>The import into the internal data structure is done in three steps:</p>
+ * <ol>
+ *  <li>If allowed, all self-signed certificates are imported</li>
+ *  <li>All possible certificate chains are build</li>
+ *  <li>Certificate chains are processed starting this the topmost certificate in the hierachie</li>
+ * </ol>
+ * <p>Certificates at the terminal level can only be imported, if the issuing
+ *    DVCA certificate is contained in the list or a hint for the relevant CVCA is
+ *    given in the first element of the path contained in parameter cvcahint.</p>
+ * <p>Before a certificate is imported, the signature is verified.</p>
+ *
+ * @param {Crypto} crypto the crypto provider to be used for certificate verification
+ * @param {CVC[]} certlist the unordered list of certificates
+ * @param {Boolean} insertSelfSigned true, if the import of root certificates is allowed
+ * @param {String} cvcahint the PKI path (e.g. "/UTCVCA1/UTDVCA1/UTTERM"). Only the first path element is relevant
+ * @returns the (ideally empty) list of unprocessed certificates. This does not contains certificates
+ *          that fail signature verification.
+ * @type CVC[]
+ */
+CVCertificateStore.prototype.insertCertificates2 = function(crypto, certlist, insertSelfSigned, cvcahint) {
+
+	var chrmap = [];
+	
+	// Iterate certificate list and store self-signed certificates, if allowed
+	// Generate a map of certificate holder references
+	var unprocessed = [];
+	for (var i = 0; i < certlist.length; i++) {
+		var cvc = certlist[i];
+		var chr = cvc.getCHR().toString();
+		
+		if (chr == cvc.getCAR().toString()) { // Self signed
+			var result = cvc.verifyWith(crypto, cvc.getPublicKey());
+
+			if (result) {
+				var path = "/" + cvc.getCHR().getHolder();
+				if (insertSelfSigned) {		// Store self-signed certificates
+					this.storeCertificate(path, cvc, true);
+				}
+			} else {
+				GPSystem.trace("Self-signed certificate failed signature verification. " + cvc);
+			}
+		} else {
+			var state = { cvc: cvc, end: true, stored: false };
+			unprocessed.push(state);
+			if (typeof(chrmap[chr]) == "undefined") {
+				chrmap[chr] = state;
+			} else {
+				// Duplicate CHRs for terminals are allowed
+				chrmap[cvc.getCAR().toString() + "/" + chr] = state;
+			}
+		}
+	}
+	
+	// Mark certificates that are surely CAs, because an issued certificate is contained in the list
+	certlist = unprocessed;
+	for (var i = 0; i < certlist.length; i++) {
+		var cvc = certlist[i].cvc;
+		var state = chrmap[cvc.getCAR().toString()];
+		if (typeof(state) != "undefined") {
+			print("Mark as CA: " + state.cvc);
+			state.end = false;
+		}
+	}
+	
+	var unprocessed = [];
+	for (var i = 0; i < certlist.length; i++) {
+		var state = certlist[i];
+		if (state.end) {		// Find all certificates which are at the end of the chain
+			var list = [];
+			var lastpathelement = state.cvc.getCHR().getHolder();
+			var path = "/" + lastpathelement;
+			var singlecert = true;
+			while(true)	{		// Build a certificate chain and the path for the last certificate
+				var pathelement = state.cvc.getCAR().getHolder();
+				if (pathelement != lastpathelement) {		// CVCA Link Certificates don't add to the path
+					path = "/" + pathelement + path;
+				}
+				lastpathelement = pathelement;
+
+				if (!state.stored) {			// If not already stored, add to the list
+					list.push(state);
+					state.stored = true;
+				}
+				state = chrmap[state.cvc.getCAR().toString()];
+				if (typeof(state) == "undefined") {
+					break;
+				}
+				singlecert = false;
+			}
+			if (singlecert && cvcahint) {
+				print("Single certificate might be a terminal certificate, using cvca hint");
+				path = cvcahint;
+			} else {
+				print(path);
+			}
+			for (var j = list.length - 1; j >= 0; j--) {	// Process chain in reverse order
+				var cvc = list[j].cvc;
+				if (!this.insertCertificate(crypto, cvc, path)) {
+					unprocessed.push(cvc);
+				}
+			}
+		}
+	}
+
 	return unprocessed;
 }
 

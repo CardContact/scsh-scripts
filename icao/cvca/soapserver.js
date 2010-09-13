@@ -145,7 +145,7 @@ function dispatchSOAPRequest(req, res, service) {
 
 
 /**
- * Serves a simple status page that show the registered services.
+ * Dispatches calls to service or GUI class.
  *
  * @param {HttpRequest} req the request object
  * @param {HttpResponse} req the response object
@@ -156,13 +156,25 @@ function handleRequest(req, res) {
 	} else {
 		var url = req.pathInfo.split("/");
 		var service = SOAPServer.services[url[1]];
-	
+
 		if (!service) {
 			GPSystem.trace("SOAPServer - Service URL " + req.pathInfo + " not defined");
 			res.setStatus(HttpResponse.SC_NOT_FOUND);
 		} else if (req.method == "GET") {
-			GPSystem.trace("SOAPServer - received GET for " + req.pathInfo);
-			service.ui.handleInquiry(req, res);
+			if (req.queryString && 
+					((req.queryString.toLowerCase() == "wsdl") || 
+					 (req.queryString.substr(0, 3).toLowerCase() == "xsd"))) {
+				if (typeof(service.service.GetWSDL) != "undefined") {
+					print(req.queryString);
+					service.service.GetWSDL(req, res);
+				} else {
+					print("No WSDL found");
+					res.setStatus(HttpResponse.SC_NOT_FOUND);
+				}
+			} else {
+				GPSystem.trace("SOAPServer - received GET for " + req.pathInfo);
+				service.ui.handleInquiry(req, res);
+			}
 		} else if (req.method == "POST") {
 			dispatchSOAPRequest(req, res, service);
 		} else {

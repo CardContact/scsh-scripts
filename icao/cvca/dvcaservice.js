@@ -845,3 +845,134 @@ DVCAService.prototype.SendCertificates = function(soapBody) {
 
 	return response;
 }
+
+
+
+/**
+ * Return the WSDL and referenced XSD structures
+ *
+ * @param {HttpRequest} req the request object
+ * @param {HttpResponse} req the response object
+ */
+DVCAService.prototype.GetWSDL = function(req, res) {
+	switch(req.queryString) {
+	case "wsdl":
+		var xml = 
+		<definitions name="EAC-PKI-DV" targetNamespace="uri:EAC-PKI-DV-Protocol/1.0" xmlns:SOAP="http://xxx" xmlns:xsi="http://xsi"
+				xsi:schemaLocation="http://schemas.xmlsoap.org/wsdl/ http://schemas.xmlsoap.org/wsdl/2003-02-11.xsd">
+			<types>
+				<schema>
+					<import namespace="http://www.w3.org/2001/XMLSchema"/>
+					<import namespace="uri:eacBT/1.0" schemaLocation="http://localhost:8080/se/dvca?xsd=./BasicTypes_DV_TerminalAuth.xsd"/>
+				</schema>
+			</types>
+
+			<message name="RequestCertificate_Res">
+				<part name="Result" type="ns:RequestCertificateResult"></part>
+			</message>
+
+			<message name="GetCACertificates_Req">
+				<part name="callbackIndicator" type="ns:CallbackIndicatorType"></part>
+				<part name="messageID" type="ns:OptionalMessageIDType"></part>
+				<part name="responseURL" type="ns:OptionalStringType"></part>
+			</message>
+
+			<message name="SendCertificates_Req">
+				<part name="messageID" type="ns:MessageIDType"></part>
+				<part name="statusInfo" type="ns:SendCertificates_statusInfoType"></part>
+				<part name="certificateSeq" type="ns:CertificateSeqType"></part>
+			</message>
+
+			<message name="SendCertificates_Res">
+				<part name="Result" type="ns:SendCertificatesResult"></part>
+			</message>
+
+			<message name="GetCACertificates_Res">
+				<part name="Result" type="ns:GetCACertificatesResult"></part>
+			</message>
+
+			<message name="RequestCertificate_Req">
+				<part name="callbackIndicator" type="ns:CallbackIndicatorType"></part>
+				<part name="messageID" type="ns:OptionalMessageIDType"></part>
+				<part name="responseURL" type="ns:OptionalStringType"></part>
+				<part name="certReq" type="xsd:base64Binary"></part>
+			</message>
+
+			<portType name="EAC-PKI-DV-ProtocolType">
+
+				<operation name="RequestCertificate">
+					<input message="tns:RequestCertificate_Req"></input>
+					<output message="tns:RequestCertificate_Res"></output>
+				</operation>
+
+				<operation name="GetCACertificates">
+					<input message="tns:GetCACertificates_Req"></input>
+					<output message="tns:GetCACertificates_Res"></output>
+				</operation>
+
+				<operation name="SendCertificates">
+					<input message="tns:SendCertificates_Req"></input>
+					<output message="tns:SendCertificates_Res"></output>
+				</operation>
+			</portType>
+
+			<binding name="EAC-DV" type="tns:EAC-PKI-DV-ProtocolType">
+				<SOAP:binding style="rpc" transport="http://schemas.xmlsoap.org/soap/http"/>
+
+				<operation name="RequestCertificate">
+					<SOAP:operation soapAction="" style="rpc"/>
+
+					<input>
+						<SOAP:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="uri:EAC-PKI-DV-Protocol/1.0" use="literal"/>
+					</input>
+
+					<output>
+						<SOAP:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="uri:EAC-PKI-DV-Protocol/1.0" use="literal"/>
+					</output>
+				</operation>
+
+				<operation name="GetCACertificates">
+					<SOAP:operation soapAction="" style="rpc"/>
+
+					<input>
+						<SOAP:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="uri:EAC-PKI-DV-Protocol/1.0" use="literal"/>
+					</input>
+
+					<output>
+						<SOAP:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="uri:EAC-PKI-DV-Protocol/1.0" use="literal"/>
+					</output>
+				</operation>
+
+				<operation name="SendCertificates">
+					<SOAP:operation soapAction="" style="rpc"/>
+
+					<input>
+						<SOAP:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="uri:EAC-PKI-DV-Protocol/1.0" use="literal"/>
+					</input>
+	
+					<output>
+						<SOAP:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="uri:EAC-PKI-DV-Protocol/1.0" use="literal"/>
+					</output>
+				</operation>
+			</binding>
+
+			<service name="EAC-DV-ProtocolService">
+
+				<port binding="tns:EAC-DV" name="EAC-DV-ProtocolServicePort">
+					<SOAP:address location="http://localhost:8080/se/dvca"/>
+				</port>
+			</service>
+		</definitions>;
+		break;
+	case "xsd=./BasicTypes_DV_TerminalAuth.xsd":
+		var xml = <empty>Empty</empty>;
+		
+		break;
+	default:
+		throw new GPError("DVCAService", GPError.INVALID_DATA, 0, "Unknown WSDL artifact " + req.queryString);
+	}
+	
+	res.setContentType("text/xml; charset=utf-8");
+	res.println(xml.toXMLString());
+}
+

@@ -64,5 +64,11 @@ for (var i = 0; i < certlist.length; i++) {
 	print(certlist[i]);
 }
 
-store.insertCertificates(crypto, certlist, true);
+var unprocessed = store.insertCertificates2(crypto, certlist, true);
 
+if (unprocessed.length > 0) {
+	print("The following certificates could not be processed:");
+	for (var i = 0; i < unprocessed.length; i++) {
+		print(unprocessed[i]);
+	}
+}
