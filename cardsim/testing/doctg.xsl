@@ -6,7 +6,7 @@
 		<html>
 			<head>
 			<style type="text/css">
-				h2 { margin-top:1cm; }			
+				h2 { margin-top:1cm; background-color: #e8e8e8; }			
 				h1 { margin-top:0.5cm; }			
 			</style>
 				<title><xsl:value-of select="@id"/> - Reference Documentation</title>

@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="doctg.xsl" ?>
+<testgroup 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="http://www.openscdp.org/schema/testframework-1.0.xsd"
+	id="tg_readbinary_odd_ins" arrayElement="testcase,function" arrayIndex="id,Name">
+	<name>READ BINARY Odd INS Test Group</name>
+	<description>
+		<p>This group of tests verify the implementation of the READ BINARY APDU using an odd instruction byte</p>
+	</description>
+	<reference>
+		<p>ISO 7816-4</p>
+	</reference>
+
+<!-- Initializing the test group environment -->
+<!-- Enable this if you want your own constructor
+	<constructor Param="name, parameter">
+		<Script><![CDATA[
+	
+	// Call constructor of super class TestGroup and define name of test group
+	TestGroup.call(this, name, parameter);
+	
+		]]></Script>
+	</constructor>
+-->
+
+	
+<!-- Setup method called before each test case is executed -->
+	<setup>
+		<Script><![CDATA[
+
+	this.card = this.parameter.card;
+	
+	this.card.reset(Card.RESET_COLD);
+			
+		]]></Script>
+	</setup>
+
+
+	
+<!-- Teardown method called after each test case is executed -->
+	<teardown>
+		<Script><![CDATA[
+		
+//	print("TestGroup.teardown() called.");
+
+		]]></Script>
+	</teardown>
+
+
+
+	<testcase id="001ReadBinary">
+		<name>Read bytes with given Ne</name>
+		<description>
+			<p>Read 5 bytes from offset 5, offset 0 and last 5 bytes using INS=B1</p>
+		</description>
+		<requirement>
+			<p>The card must support valid offsets and length value</p>
+		</requirement>
+		<reference>
+			<p>ISO 7816-4</p>
+		</reference>
+		<Script><![CDATA[
+
+	var dm = this.parameter.dataModel;
+	var ef = dm.getNode("MF/EF_GDO");
+	var fid = new ByteString(ef.fid, HEX);
+	var ref = new ByteString(ef.content, HEX);
+	
+	var fcp = this.card.sendApdu(0x00, 0xA4, 0x00, 0x0C, fid, [0x9000]);
+
+	this.assertTrue(fcp.length == 0, "Select EF with P2='0C' returned data");
+	
+	var data = this.card.sendApdu(0x00, 0xB1, 0x00, 0x00, new ByteString("540105", HEX), 5, [0x9000]);
+	this.assertTrue(ref.bytes(5, 5).equals(data), "Data read does not match reference value");
+	
+	var data = this.card.sendApdu(0x00, 0xB1, 0x00, 0x00, new ByteString("540100", HEX), 5, [0x9000]);
+	this.assertTrue(ref.bytes(0, 5).equals(data), "Data read does not match reference value");
+
+	var data = this.card.sendApdu(0x00, 0xB1, 0x00, 0x00, new ByteString("54020000", HEX), 5, [0x9000]);
+	this.assertTrue(ref.bytes(0, 5).equals(data), "Data read does not match reference value");
+
+		]]></Script>
+	</testcase>
+
+
+
+	<testcase id="002ReadBinaryNe0">
+		<name>Read byte with Ne=0</name>
+		<description>
+			<p>Read all bytes from offset 0 and offset 5 using INS=B1</p>
+		</description>
+		<requirement>
+			<p>The card must return all available bytes for Ne=0</p>
+		</requirement>
+		<reference>
+			<p>ISO 7816-4</p>
+		</reference>
+		<Script><![CDATA[
+
+	var dm = this.parameter.dataModel;
+	var ef = dm.getNode("MF/EF_GDO");
+	var fid = new ByteString(ef.fid, HEX);
+	var ref = new ByteString(ef.content, HEX);
+	
+	var fcp = this.card.sendApdu(0x00, 0xA4, 0x00, 0x0C, fid, [0x9000]);
+
+	this.assertTrue(fcp.length == 0, "Select EF with P2='0C' returned data");
+	
+	// Short APDU
+	var data = this.card.sendApdu(0x00, 0xB1, 0x00, 0x00, new ByteString("540100", HEX), 0, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+	
+	// Extended APDU
+	var data = this.card.sendApdu(0x00, 0xB1, 0x00, 0x00, new ByteString("540100", HEX), 65536, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+	
+	var data = this.card.sendApdu(0x00, 0xB1, 0x00, 0x00, new ByteString("540105", HEX), 0, [0x9000]);
+	this.assertTrue(ref.bytes(5).equals(data), "Data read does not match reference value");
+
+		]]></Script>
+	</testcase>
+
+
+
+	<testcase id="011ReadBinarySFI">
+		<name>Read bytes with given Ne using SFI selection</name>
+		<description>
+			<p>Select file using SFI and read 5 bytes from offset 5, offset 0 and last 5 bytes using INS=B1</p>
+		</description>
+		<requirement>
+			<p>The card must support EF selection by SFI and valid offsets and length value</p>
+		</requirement>
+		<reference>
+			<p>ISO 7816-4</p>
+		</reference>
+		<Script><![CDATA[
+
+	var dm = this.parameter.dataModel;
+	var ef = dm.getNode("MF/EF_GDO");
+	var sfi = parseInt(ef.sfi);
+	var ref = new ByteString(ef.content, HEX);
+	
+	var data = this.card.sendApdu(0x00, 0xB1, 0x00, sfi, new ByteString("540105", HEX), 5, [0x9000]);
+	this.assertTrue(ref.bytes(5, 5).equals(data), "Data read does not match reference value");
+	
+	var data = this.card.sendApdu(0x00, 0xB1, 0x00, sfi, new ByteString("540100", HEX), 5, [0x9000]);
+	this.assertTrue(ref.bytes(0, 5).equals(data), "Data read does not match reference value");
+
+		]]></Script>
+	</testcase>
+
+
+
+	<testcase id="012ReadBinaryNe0SFI">
+		<name>Read byte with Ne=0 using SFI selection</name>
+		<description>
+			<p>Select file using SFI and read all bytes from offset 0 and offset 5 using INS=B1</p>
+		</description>
+		<requirement>
+			<p>The card must return all available bytes for Ne=0</p>
+		</requirement>
+		<reference>
+			<p>ISO 7816-4</p>
+		</reference>
+		<Script><![CDATA[
+
+	var dm = this.parameter.dataModel;
+	var ef = dm.getNode("MF/EF_GDO");
+	var sfi = parseInt(ef.sfi);
+	var ref = new ByteString(ef.content, HEX);
+	
+	var data = this.card.sendApdu(0x00, 0xB1, 0x00, sfi, new ByteString("540100", HEX), 0, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+	
+	var data = this.card.sendApdu(0x00, 0xB1, 0x00, sfi, new ByteString("540105", HEX), 0, [0x9000]);
+	this.assertTrue(ref.bytes(5).equals(data), "Data read does not match reference value");
+
+		]]></Script>
+	</testcase>
+
+
+
+	<testcase id="013ReadBinaryNe0FID">
+		<name>Read byte with Ne=0 using FID selection</name>
+		<description>
+			<p>Select file using FID and read all bytes from offset 0 and offset 5 using INS=B1</p>
+		</description>
+		<requirement>
+			<p>The card must return all available bytes for Ne=0</p>
+		</requirement>
+		<reference>
+			<p>ISO 7816-4</p>
+		</reference>
+		<Script><![CDATA[
+
+	var dm = this.parameter.dataModel;
+	var ef = dm.getNode("MF/EF_GDO");
+	var fid = new ByteString(ef.fid, HEX);
+	var ref = new ByteString(ef.content, HEX);
+	
+	var data = this.card.sendApdu(0x00, 0xB1, fid.byteAt(0), fid.byteAt(1), new ByteString("540100", HEX), 0, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+	
+	var data = this.card.sendApdu(0x00, 0xB1, fid.byteAt(0), fid.byteAt(1), new ByteString("540105", HEX), 0, [0x9000]);
+	this.assertTrue(ref.bytes(5).equals(data), "Data read does not match reference value");
+
+		]]></Script>
+	</testcase>
+
+
+
+	<testcase id="020SFIselectedEF">
+		<name>Read from current file, selected by previous selection with SFI</name>
+		<description>
+			<p>Select file using FID, read file using SFI read from current EF</p>
+		</description>
+		<requirement>
+			<p>A file selected with SFI must remain the currently selected EF</p>
+		</requirement>
+		<reference>
+			<p>ISO 7816-4</p>
+		</reference>
+		<Script><![CDATA[
+
+	var dm = this.parameter.dataModel;
+	var ef = dm.getNode("MF/EF_DIR");
+	var fid = new ByteString(ef.fid, HEX);
+
+	var ef = dm.getNode("MF/EF_GDO");
+	var sfi = parseInt(ef.sfi);
+	var ref = new ByteString(ef.content, HEX);
+	
+	var fcp = this.card.sendApdu(0x00, 0xA4, 0x00, 0x0C, fid, [0x9000]);
+
+	this.assertTrue(fcp.length == 0, "Select EF with P2='0C' returned data");
+
+	var data = this.card.sendApdu(0x00, 0xB1, 0x00, sfi,  new ByteString("540100", HEX), 0, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+	
+	var data = this.card.sendApdu(0x00, 0xB1, 0x00, 0x00, new ByteString("540100", HEX), 0, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+	
+		]]></Script>
+	</testcase>
+
+
+
+	<testcase id="021FIDselectedEF">
+		<name>Read from current file, selected by previous selection with FID</name>
+		<description>
+			<p>Select file using FID, read file using FID then read from current EF</p>
+		</description>
+		<requirement>
+			<p>A file selected with FID must remain the currently selected EF</p>
+		</requirement>
+		<reference>
+			<p>ISO 7816-4</p>
+		</reference>
+		<Script><![CDATA[
+
+	var dm = this.parameter.dataModel;
+	var ef = dm.getNode("MF/EF_DIR");
+	var fid1 = new ByteString(ef.fid, HEX);
+
+	var ef = dm.getNode("MF/EF_GDO");
+	var fid2 = new ByteString(ef.fid, HEX);
+	var ref = new ByteString(ef.content, HEX);
+	
+	var fcp = this.card.sendApdu(0x00, 0xA4, 0x00, 0x0C, fid1, [0x9000]);
+
+	this.assertTrue(fcp.length == 0, "Select EF with P2='0C' returned data");
+
+	var data = this.card.sendApdu(0x00, 0xB1, fid2.byteAt(0), fid2.byteAt(1),  new ByteString("540100", HEX), 0, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+	
+	var data = this.card.sendApdu(0x00, 0xB1, 0x00, 0x00, new ByteString("540100", HEX), 0, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+	
+		]]></Script>
+	</testcase>
+</testgroup>

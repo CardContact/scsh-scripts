@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="doctg.xsl" ?>
+<testgroup 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="http://www.openscdp.org/schema/testframework-1.0.xsd"
+	id="tg_readbinary_sw" arrayElement="testcase,function" arrayIndex="id,Name">
+	<name>READ BINARY Status Word Test Group</name>
+	<description>
+		<p>This group of tests verify the correct implementation of status words for the READ BINARY APDU</p>
+	</description>
+	<reference>
+		<p>ISO 7816-4</p>
+	</reference>
+
+<!-- Initializing the test group environment -->
+<!-- Enable this if you want your own constructor
+	<constructor Param="name, parameter">
+		<Script><![CDATA[
+	
+	// Call constructor of super class TestGroup and define name of test group
+	TestGroup.call(this, name, parameter);
+	
+		]]></Script>
+	</constructor>
+-->
+
+	
+<!-- Setup method called before each test case is executed -->
+	<setup>
+		<Script><![CDATA[
+
+	this.card = this.parameter.card;
+	
+	this.card.reset(Card.RESET_COLD);
+			
+		]]></Script>
+	</setup>
+
+
+	
+<!-- Teardown method called after each test case is executed -->
+	<teardown>
+		<Script><![CDATA[
+		
+//	print("TestGroup.teardown() called.");
+
+		]]></Script>
+	</teardown>
+
+
+
+	<testcase id="001ReadEOF">
+		<name>Read past end of file</name>
+		<description>
+			<p>Read 5 bytes from offset file size - 4 using INS=B0</p>
+		</description>
+		<requirement>
+			<p>The card must return SW1/SW2 '6282' End of file or record reached before reading Ne bytes</p>
+		</requirement>
+		<reference>
+			<p>ISO 7816-4</p>
+		</reference>
+		<Script><![CDATA[
+
+	var dm = this.parameter.dataModel;
+	var ef = dm.getNode("MF/EF_GDO");
+	var fid = new ByteString(ef.fid, HEX);
+	var ref = new ByteString(ef.content, HEX);
+	
+	var fcp = this.card.sendApdu(0x00, 0xA4, 0x00, 0x0C, fid, [0x9000]);
+
+	this.assertTrue(fcp.length == 0, "Select EF with P2='0C' returned data");
+	
+	var data = this.card.sendApdu(0x00, 0xB0, 0x00, ref.length - 4, 5, [0x6282]);
+	this.assertTrue(ref.bytes(ref.length - 4, 4).equals(data), "Data read does not match reference value");
+
+		]]></Script>
+	</testcase>
+
+
+
+	<testcase id="002OffsetPastEOF">
+		<name>Offset is past end of file</name>
+		<description>
+			<p>Read 5 bytes from offset file size and file size + 1 using INS=B0</p>
+		</description>
+		<requirement>
+			<p>The card must return SW1/SW2 '6A86' Incorrect parameters P1-P2</p>
+		</requirement>
+		<reference>
+			<p>ISO 7816-4</p>
+		</reference>
+		<Script><![CDATA[
+
+	var dm = this.parameter.dataModel;
+	var ef = dm.getNode("MF/EF_GDO");
+	var fid = new ByteString(ef.fid, HEX);
+	var ref = new ByteString(ef.content, HEX);
+	
+	var fcp = this.card.sendApdu(0x00, 0xA4, 0x00, 0x0C, fid, [0x9000]);
+
+	this.assertTrue(fcp.length == 0, "Select EF with P2='0C' returned data");
+	
+	var data = this.card.sendApdu(0x00, 0xB0, 0x00, ref.length, 5, [0x6A86]);
+	var data = this.card.sendApdu(0x00, 0xB0, 0x00, ref.length + 1, 5, [0x6A86]);
+
+		]]></Script>
+	</testcase>
+
+
+
+	<testcase id="003LinearFile">
+		<name>EF is linear</name>
+		<description>
+			<p>Read bytes from linear file</p>
+		</description>
+		<requirement>
+			<p>The card must return SW1/SW2 '6981' Command incompatible with file structure</p>
+		</requirement>
+		<reference>
+			<p>ISO 7816-4</p>
+		</reference>
+		<Script><![CDATA[
+
+	var dm = this.parameter.dataModel;
+	var ef = dm.getNode("MF/EF_DIR");
+	var fid = new ByteString(ef.fid, HEX);
+	
+	var fcp = this.card.sendApdu(0x00, 0xA4, 0x00, 0x0C, fid, [0x9000]);
+
+	this.assertTrue(fcp.length == 0, "Select EF with P2='0C' returned data");
+	
+	var data = this.card.sendApdu(0x00, 0xB0, 0x00, 0x00, 0, [0x6981]);
+
+		]]></Script>
+	</testcase>
+
+
+
+	<testcase id="004Chaining">
+		<name>Chaining bit set</name>
+		<description>
+			<p>Issue READ BINARY with chaining bit set in CLA</p>
+		</description>
+		<requirement>
+			<p>The card must return SW1/SW2 '6884' Command chaining not supported</p>
+		</requirement>
+		<reference>
+			<p>ISO 7816-4</p>
+		</reference>
+		<Script><![CDATA[
+
+	var dm = this.parameter.dataModel;
+	var ef = dm.getNode("MF/EF_GDO");
+	var fid = new ByteString(ef.fid, HEX);
+	
+	var fcp = this.card.sendApdu(0x00, 0xA4, 0x00, 0x0C, fid, [0x9000]);
+
+	this.assertTrue(fcp.length == 0, "Select EF with P2='0C' returned data");
+	
+	var data = this.card.sendApdu(0x10, 0xB0, 0x00, 0x00, 0, [0x6884]);
+
+		]]></Script>
+	</testcase>
+
+
+
+	<testcase id="005NoLe">
+		<name>Command without Le field</name>
+		<description>
+			<p>Issue READ BINARY as case 1 command without an Le byte</p>
+		</description>
+		<requirement>
+			<p>The card must return SW1/SW2 '6700' Wrong length</p>
+		</requirement>
+		<reference>
+			<p>ISO 7816-4</p>
+		</reference>
+		<Script><![CDATA[
+
+	var dm = this.parameter.dataModel;
+	var ef = dm.getNode("MF/EF_GDO");
+	var fid = new ByteString(ef.fid, HEX);
+	
+	var fcp = this.card.sendApdu(0x00, 0xA4, 0x00, 0x0C, fid, [0x9000]);
+
+	this.assertTrue(fcp.length == 0, "Select EF with P2='0C' returned data");
+
+	var data = this.card.sendApdu(0x00, 0xB0, 0x00, 0x00, [0x6700]);
+
+		]]></Script>
+	</testcase>
+
+
+
+	<testcase id="010NoCurrentEF">
+		<name>No current EF</name>
+		<description>
+			<p>Read from an EF if none is selected</p>
+		</description>
+		<requirement>
+			<p>The card must return SW1/SW2 '6986' Command not allowed (No current EF)</p>
+		</requirement>
+		<reference>
+			<p>ISO 7816-4</p>
+		</reference>
+		<Script><![CDATA[
+
+	this.card.sendApdu(0x00, 0xB0, 0x00, 0x00, 0, [0x6986]);
+
+		]]></Script>
+	</testcase>
+
+
+
+	<testcase id="011EFNotFound">
+		<name>Implicitly selected EF not found</name>
+		<description>
+			<p>Read from an non existant EF</p>
+		</description>
+		<requirement>
+			<p>The card must return SW1/SW2 '6A82' File not found</p>
+		</requirement>
+		<reference>
+			<p>ISO 7816-4</p>
+		</reference>
+		<Script><![CDATA[
+
+	// SFI=15 does not exist
+	this.card.sendApdu(0x00, 0xB0, 0x8F, 0x00, 0, [0x6A82]);
+
+	// FID=1000 does not exist
+	this.card.sendApdu(0x00, 0xB1, 0x10, 0x00,  new ByteString("540100", HEX), 0, [0x6A82]);
+
+		]]></Script>
+	</testcase>
+
+
+
+	<testcase id="020InvalidData">
+		<name>Odd instruction with invalid TLV</name>
+		<description>
+			<p>Issue READ BINARY with odd instruction byte and invalid TLV in body</p>
+		</description>
+		<requirement>
+			<p>The card must return SW1/SW2 '6A80' Incorrect parameter in the data field</p>
+		</requirement>
+		<reference>
+			<p>ISO 7816-4</p>
+		</reference>
+		<Script><![CDATA[
+
+	var dm = this.parameter.dataModel;
+	var ef = dm.getNode("MF/EF_GDO");
+	var fid = new ByteString(ef.fid, HEX);
+	
+	this.card.sendApdu(0x00, 0xB1, fid.byteAt(0), fid.byteAt(1), new ByteString("5401", HEX), 0, [0x6A80]);
+	this.card.sendApdu(0x00, 0xB1, fid.byteAt(0), fid.byteAt(1), new ByteString("54", HEX), 0, [0x6A80]);
+	this.card.sendApdu(0x00, 0xB1, fid.byteAt(0), fid.byteAt(1), new ByteString("520100", HEX), 0, [0x6A80]);
+	this.card.sendApdu(0x00, 0xB1, fid.byteAt(0), fid.byteAt(1), new ByteString("540100540100", HEX), 0, [0x6A80]);
+	this.card.sendApdu(0x00, 0xB1, fid.byteAt(0), fid.byteAt(1), new ByteString("5401005301", HEX), 0, [0x6A80]);
+// Bug in scdp4j fixed but not released yet
+//	this.card.sendApdu(0x00, 0xB1, fid.byteAt(0), fid.byteAt(1), new ByteString("54010053", HEX), 0, [0x6A80]);
+	this.card.sendApdu(0x00, 0xB1, fid.byteAt(0), fid.byteAt(1), new ByteString("5401007301", HEX), 0, [0x6A80]);
+// Bug in scdp4j fixed but not released yet
+//	this.card.sendApdu(0x00, 0xB1, fid.byteAt(0), fid.byteAt(1), new ByteString("54010073", HEX), 0, [0x6A80]);
+	this.card.sendApdu(0x00, 0xB1, fid.byteAt(0), fid.byteAt(1), new ByteString("530100540100", HEX), 0, [0x6A80]);
+	this.card.sendApdu(0x00, 0xB1, fid.byteAt(0), fid.byteAt(1), new ByteString("540100530100520100", HEX), 0, [0x6A80]);
+
+		]]></Script>
+	</testcase>
+
+
+
+	<testcase id="021UnexpectedCData">
+		<name>Unexpected Command Data</name>
+		<description>
+			<p>Send READ BINARY with command data</p>
+		</description>
+		<requirement>
+			<p>The card must return SW1/SW2 '6A80' Incorrect parameter in the data field</p>
+		</requirement>
+		<reference>
+			<p>ISO 7816-4</p>
+		</reference>
+		<Script><![CDATA[
+
+	var dm = this.parameter.dataModel;
+	var ef = dm.getNode("MF/EF_GDO");
+	var fid = new ByteString(ef.fid, HEX);
+	var ref = new ByteString(ef.content, HEX);
+	
+	var fcp = this.card.sendApdu(0x00, 0xA4, 0x00, 0x0C, fid, [0x9000]);
+
+	this.assertTrue(fcp.length == 0, "Select EF with P2='0C' returned data");
+	
+	this.card.sendApdu(0x00, 0xB0, 0x00, 0x00, new ByteString("0000", HEX), 5, [0x6A80]);
+	this.card.sendApdu(0x00, 0xB1, fid.byteAt(0), fid.byteAt(1), new ByteString("540100530100", HEX), 0, [0x6A80]);
+
+		]]></Script>
+	</testcase>
+</testgroup>

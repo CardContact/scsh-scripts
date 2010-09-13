@@ -89,7 +89,11 @@ function APDU() {
 	this.SW = APDU.SW_GENERALERROR;
 }
 
-APDU.INS_SELECT				= 0xA4;
+APDU.INS_MANAGE_SE				= 0x22;
+APDU.INS_PSO					= 0x2A;
+APDU.INS_GENERAL_AUTHENTICATE	= 0x86;
+APDU.INS_SELECT					= 0xA4;
+APDU.INS_READBINARY				= 0xB0;
 
 APDU.SW_OK                 = 0x9000;      	/* Process completed                 */
 
@@ -126,7 +130,7 @@ APDU.SW_AUTHMETHLOCKED     = 0x6983;      	/*-Checking error: Authentication met
 APDU.SW_REFDATANOTUSABLE   = 0x6984;      	/*-Checking error: Reference data not usable */
 APDU.SW_CONDOFUSENOTSAT    = 0x6985;      	/*-Checking error: Condition of use not satisfied */
 APDU.SW_COMNOTALLOWNOEF    = 0x6986;      	/*-Checking error: Command not allowed (no current EF) */
-APDU.SW_SMOBJMISSINGF      = 0x6987;      	/*-Checking error: Expected secure messaging object missing */
+APDU.SW_SMOBJMISSING       = 0x6987;      	/*-Checking error: Expected secure messaging object missing */
 APDU.SW_INCSMDATAOBJECT    = 0x6988;      	/*-Checking error: Incorrect secure messaging data object */
 
 APDU.SW_INVPARA            = 0x6A00;      	/*-Checking error: Wrong parameter P1-P2 */
@@ -270,8 +274,8 @@ APDU.prototype.getCommandAPDU = function() {
 APDU.prototype.getResponseAPDU = function() {
 	var bb = new ByteBuffer();
 	
-	if (this.rapdu) {
-		bb.append(this.rapdu);
+	if (this.rdata) {
+		bb.append(this.rdata);
 	}
 		
 	bb.append(this.SW >> 8);
@@ -290,6 +294,42 @@ APDU.prototype.getResponseAPDU = function() {
  */
 APDU.prototype.getCLA = function() {
 	return this.cla;
+}
+
+
+
+/**
+ * Test if command chaining is indicated
+ *
+ * @type boolean
+ * @return true if chaining bit is set
+ */
+APDU.prototype.isChained = function() {
+	return (this.cla & 0x10) == 0x10;
+}
+
+
+
+/**
+ * Test if command is send using secure messaging
+ *
+ * @type boolean
+ * @return true if secure messaging is indicated in CLA byte
+ */
+APDU.prototype.isSecureMessaging = function() {
+	return (this.cla & 0x08) == 0x08;
+}
+
+
+
+/**
+ * Test if command is send using secure messaging
+ *
+ * @type boolean
+ * @return true if secure messaging is using an authenticated header
+ */
+APDU.prototype.isAuthenticatedHeader = function() {
+	return (this.cla & 0x0C) == 0x0C;
 }
 
 
@@ -331,6 +371,17 @@ APDU.prototype.getP2 = function() {
 
 
 /**
+ * Set the command data
+ *
+ * @param {ByteString} cdata the command data
+ */
+APDU.prototype.setCData = function(cdata) {
+	this.cdata = cdata;
+}
+
+
+
+/**
  * Gets the command data
  *
  * @type ByteString
@@ -349,7 +400,7 @@ APDU.prototype.getCData = function() {
  * @return true if command APDU has data field
  */
 APDU.prototype.hasCData = function() {
-	return typeof(this.cdata) != "undefined";
+	return ((typeof(this.cdata) != "undefined") && (this.cdata != null));
 }
 
 
@@ -402,12 +453,93 @@ APDU.prototype.hasLe = function() {
 
 
 /**
+ * Set secure channel object to be used in wrap and unwrap methods
+ *
+ * @param {SecureChannel} secureChannel the channel
+ */
+APDU.prototype.setSecureChannel = function(secureChannel) {
+	this.secureChannel = secureChannel;
+}
+
+
+
+/**
+ * Return the secure channel, if any
+ *
+ * @type SecureChannel
+ * @return the secure channel
+ */
+APDU.prototype.getSecureChannel = function() {
+	return this.secureChannel;
+}
+
+
+
+/**
+ * Test if a secure channel is defined for this APDU
+ *
+ * @type boolean
+ * @return true, if secure channel is set
+ */
+APDU.prototype.hasSecureChannel = function() {
+	return (typeof(this.secureChannel) != "undefined") && (this.secureChannel != null);
+}
+
+
+
+/**
+ * Wrap APDU using secure channel
+ */
+APDU.prototype.wrap = function() {
+	if (this.hasSecureChannel()) {
+		this.secureChannel.wrap(this);
+	}
+}
+
+
+
+/**
+ * Unwrap APDU using secure channel
+ */
+APDU.prototype.unwrap = function() {
+	if (this.hasSecureChannel()) {
+		this.secureChannel.unwrap(this);
+	}
+}
+
+
+
+/**
  * Sets the response data field for the response APDU
  *
  * @param {ByteString} data the response data field
  */
 APDU.prototype.setRData = function(data) {
-	this.rapdu = data;
+	this.rdata = data;
+}
+
+
+
+/**
+ * Get the response data
+ *
+ * @type ByteString
+ * @return the response data
+ */
+APDU.prototype.getRData = function() {
+	return this.rdata;
+}
+
+
+
+/**
+ * Check if APDU has response data
+ *
+ * @type boolean
+ * @return true if response APDU has data field
+ */
+APDU.prototype.hasRData = function() {
+	return ((typeof(this.rdata) != "undefined") && (this.rdata != null));
 }
 
 
@@ -419,6 +551,18 @@ APDU.prototype.setRData = function(data) {
  */
 APDU.prototype.setSW = function(sw) {
 	this.SW = sw;
+}
+
+
+
+/**
+ * Get the status word
+ *
+ * @type Number
+ * @return the status word
+ */
+APDU.prototype.getSW = function() {
+	return this.SW;
 }
 
 
@@ -516,8 +660,9 @@ APDU.test = function() {
 function DataUnitAPDU(apdu) {
 	this.apdu = apdu;
 
+	var p1 = apdu.getP1();
+	
 	if ((this.apdu.getINS() & 1) == 0) {		// Even instruction
-		var p1 = this.apdu.getP1();
 		if ((p1 & 0x80) == 0x80) {				// SFI in P1
 			this.offset = this.apdu.getP2();
 			this.sfi = p1 & 0x1F;
@@ -525,7 +670,19 @@ function DataUnitAPDU(apdu) {
 			this.offset = (p1 << 8) + this.apdu.getP2();
 		}
 		this.data = apdu.getCData();
-	} else {
+	} else {									// Odd instruction
+		var p2 = apdu.getP2();
+		var fid = (p1 << 8) + p2;				// FID in P1 P2
+		// If bits b16 - b6 are all 0 and b5 - b1 are not all equal, then we have an SFI 
+		if (((fid & 0xFFE0) == 0) && ((fid & 0x1F) >= 1) && ((fid & 0x1F) <= 30)) {
+			this.sfi = fid & 0x1F;
+		} else if (fid != 0) {					// FID = 0000 means current file
+			var bb = new ByteBuffer();
+			bb.append(p1);
+			bb.append(p2);
+			this.fid = bb.toByteString();
+		}
+
 		var a = this.apdu.getCDataAsTLVList();
 
 		if ((a.length < 1) || (a.length > 2)) {
@@ -549,6 +706,36 @@ function DataUnitAPDU(apdu) {
 			this.data = o.getValue();
 		}
 	}
+}
+
+
+
+/**
+ * Gets the short file identifier, if one defined
+ * 
+ * @type Number
+ * @return the short file identifier in the range 1 to 30 or -1 if not defined
+ */
+DataUnitAPDU.prototype.getSFI = function() {
+	if (typeof(this.sfi) == "undefined") {
+		return -1;
+	}
+	return this.sfi;
+}
+
+
+
+/**
+ * Gets the file identifier, if one defined
+ * 
+ * @type ByteString
+ * @return the file identifier or null if not defined
+ */
+DataUnitAPDU.prototype.getFID = function() {
+	if (typeof(this.fid) == "undefined") {
+		return null;
+	}
+	return this.fid;
 }
 
 
@@ -587,7 +774,7 @@ DataUnitAPDU.prototype.getCData = function() {
  * @returns true if command data contained
  */
 DataUnitAPDU.prototype.hasCData = function() {
-	return (typeof(this.data) != "undefined");
+	return ((typeof(this.data) != "undefined") && (this.data != null));
 }
 
 

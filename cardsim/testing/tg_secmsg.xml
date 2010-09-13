@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="doctg.xsl" ?>
+<testgroup 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="http://www.openscdp.org/schema/testframework-1.0.xsd"
+	id="tg_secmsg" arrayElement="testcase,function" arrayIndex="id,Name">
+	<name>Secure Messaging Test Group</name>
+	<description>
+		<p>This group of tests verify the correct implementation of a secure messaging channel</p>
+	</description>
+	<reference>
+		<p>ISO 7816-4</p>
+	</reference>
+
+<!-- Initializing the test group environment -->
+<!-- Enable this if you want your own constructor
+	<constructor Param="name, parameter">
+		<Script><![CDATA[
+	
+	// Call constructor of super class TestGroup and define name of test group
+	TestGroup.call(this, name, parameter);
+	
+		]]></Script>
+	</constructor>
+-->
+
+	
+<!-- Setup method called before each test case is executed -->
+	<setup>
+		<Script><![CDATA[
+
+	this.card = this.parameter.card;
+
+	this.card.reset(Card.RESET_COLD);
+
+	var dm = this.parameter.dataModel;
+	var mf = dm.getNode("MF");
+
+	sm = new IsoSecureChannel(this.parameter.crypto, IsoSecureChannel.SSC_SYNC_ENC_POLICY);
+//	sm = new IsoSecureChannel(this.parameter.crypto, IsoSecureChannel.SSC_DEFAULT_POLICY);
+	sm.setEncKey(mf.K_ENC);
+	sm.setMacKey(mf.K_MAC);
+	sm.setMACSendSequenceCounter(new ByteString("00000000000000000000000000000000", HEX));
+	
+	this.card.setCredential(sm);
+		]]></Script>
+	</setup>
+
+
+	
+<!-- Teardown method called after each test case is executed -->
+	<teardown>
+		<Script><![CDATA[
+		
+//	print("TestGroup.teardown() called.");
+
+		]]></Script>
+	</teardown>
+
+
+
+	<testcase id="001TerminateChannel">
+		<name>Terminate channel using a plain APDU</name>
+		<description>
+			<p>Select EF_GDO using a plain APDU and then using a secure messaging APDU</p>
+		</description>
+		<requirement>
+			<p>The card must terminate the secure channel and report an error SW1/SW2 '6882' if it is tried
+			   later with a secure messaging APDU</p>
+		</requirement>
+		<reference>
+			<p>ISO 7816-4</p>
+		</reference>
+		<Script><![CDATA[
+
+	var dm = this.parameter.dataModel;
+	var ef = dm.getNode("MF/EF_GDO");
+	var fid = new ByteString(ef.fid, HEX);
+	var ref = new ByteString(ef.content, HEX);
+	
+	var fcp = this.card.sendApdu(0x00, 0xA4, 0x00, 0x0C, fid, [0x9000]);
+	this.assertTrue(fcp.length == 0, "Select EF with P2='0C' returned data");
+	
+	var fcp = this.card.sendApdu(0x0C, 0xA4, 0x00, 0x0C, fid, [0x6882]);
+	this.assertTrue(fcp.length == 0, "Select EF with P2='0C' returned data");
+
+		]]></Script>
+	</testcase>
+
+
+
+	<testcase id="002ReadWithSMEvenINS">
+		<name>Read from EF_GDO using secure messaging and INS=B0</name>
+		<description>
+			<p>Read EF_GDO using secure messaging with an even instruction byte</p>
+		</description>
+		<requirement>
+			<p>The card must support reading an EF using an established secure channel</p>
+		</requirement>
+		<reference>
+			<p>ISO 7816-4</p>
+		</reference>
+		<Script><![CDATA[
+
+	var dm = this.parameter.dataModel;
+	var ef = dm.getNode("MF/EF_GDO");
+	var fid = new ByteString(ef.fid, HEX);
+	var ref = new ByteString(ef.content, HEX);
+	
+	var fcp = this.card.sendSecMsgApdu(Card.ALL, 0x00, 0xA4, 0x00, 0x0C, fid, [0x9000]);
+
+	this.assertTrue(fcp.length == 0, "Select EF with P2='0C' returned data");
+	
+	var data = this.card.sendSecMsgApdu(Card.ALL, 0x00, 0xB0, 0x00, 0x00, 0, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+
+		]]></Script>
+	</testcase>
+
+
+
+	<testcase id="003ReadWithSMOddINS">
+		<name>Read from EF_GDO using secure messaging and INS=B1</name>
+		<description>
+			<p>Read EF_GDO using secure messaging with an off instruction byte</p>
+		</description>
+		<requirement>
+			<p>The card must support reading an EF using an established secure channel</p>
+		</requirement>
+		<reference>
+			<p>ISO 7816-4</p>
+		</reference>
+		<Script><![CDATA[
+
+	var dm = this.parameter.dataModel;
+	var ef = dm.getNode("MF/EF_GDO");
+	var fid = new ByteString(ef.fid, HEX);
+	var ref = new ByteString(ef.content, HEX);
+	
+	var fcp = this.card.sendSecMsgApdu(Card.ALL, 0x00, 0xA4, 0x00, 0x04, fid, 0, [0x9000]);
+
+	this.assertTrue(fcp.length > 0, "Select EF with P2='04' did not return data");
+	
+	var data = this.card.sendSecMsgApdu(Card.ALL, 0x00, 0xB1, 0x00, 0x00, new ByteString("540100", HEX), 0, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+
+		]]></Script>
+	</testcase>
+</testgroup>

@@ -26,7 +26,7 @@
 
 
 load("apdu.js");
-
+load("securityenvironment.js");
 
 
 /**
@@ -74,7 +74,7 @@ FCP.short2bytestring = function(val) {
  * <p>This function should never be called directly. Use newTransparentDF(), newDF() or newLinearEF() instead.</p>
  *
  * @param {String|ByteString} fid the file identifier (2 Bytes)
- * @param {Number} sfi the short file identifier or -1 if not defined
+ * @param {Number} sfi the short file identifier or -1 or 0 if not defined
  * @param {Number} type the file type, one of FCP.DEDICATEDFILE, FCP.TRANSPARENT or FCP.LINEAR*
  * @param {Boolean} shareable true, if file may be shared between logical channels
  * @param {Boolean} internal true, if file is internal only and not externally selectable
@@ -104,7 +104,13 @@ FCP.newFCP = function(fid, sfi, type, shareable, internal, supl) {
 	if (typeof(sfi) != "number") {
 		throw new GPError("FCP", GPError.INVALID_TYPE, 1, "Argument must be of type Number");
 	}
-	fcp.sfi = sfi;
+	if ((sfi >= -1) && (sfi <= 30)) {
+		if (sfi > 0) {
+			fcp.sfi = sfi;
+		}
+	} else {
+		throw new GPError("FCP", GPError.INVALID_DATA, 1, "SFI must be in the range 1 to 30 or 0 if not defined");
+	}
 
 	if (typeof(type) != "number") {
 		throw new GPError("FCP", GPError.INVALID_TYPE, 2, "Argument must be of type Number");
@@ -131,7 +137,7 @@ FCP.newFCP = function(fid, sfi, type, shareable, internal, supl) {
  * Construct a new FCP object for an EF of type transparent.
  *
  * @param {String|ByteString} fid the file identifier (2 Bytes)
- * @param {Number} sfi the short file identifier or -1 if not defined
+ * @param {Number} sfi the short file identifier or -1 or 0 if not defined
  * @param {Number} size the file size
  * @param {ByteString} supl supplemental information
  * @type FCP
@@ -178,7 +184,7 @@ FCP.newDF = function(fid, aid, supl) {
  * Construct a new FCP object for an EF of type linear.
  *
  * @param {String|ByteString} fid the file identifier (2 Bytes)
- * @param {Number} sfi the short file identifier or -1 if not defined
+ * @param {Number} sfi the short file identifier or -1 or 0 if not defined
  * @param {Number} type the file type, one of FCP.LINEARFIXED or FCP.LINEARVARIABLE
  * @param {Number} recsize the maximum or fixed record size
  * @param {Number} recno the maximum number of records
@@ -264,7 +270,7 @@ FCP.prototype.getBytes = function() {
 		fcp.add(new ASN1("dFName", 0x84, this.aid));
 	}
 	
-	if ((typeof(this.sfi) != "undefined") && (this.sfi > 0)) {
+	if (typeof(this.sfi) != "undefined") {
 		var bb = new ByteBuffer();
 		bb.append(this.sfi << 3);
 		fcp.add(new ASN1("shortFileIdentifier", 0x88, bb.toByteString()));
@@ -417,7 +423,7 @@ TransparentEF.prototype.readBinary = function(apdu, offset, length) {
 	}
 
 	if (offset >= this.content.length) {
-	
+		throw new GPError("TransparentEF", GPError.INVALID_DATA, APDU.SW_INCP1P2, "Offset out of range");
 	}
 	
 	var rlen = length;
@@ -427,6 +433,14 @@ TransparentEF.prototype.readBinary = function(apdu, offset, length) {
 			rlen = 256;
 		}
 	}
+
+	if (offset + rlen > this.content.length) {
+		apdu.setSW(APDU.SW_EOF);
+		rlen = this.content.length - offset;
+	} else {
+		apdu.setSW(APDU.SW_OK);
+	}
+
 	return this.content.bytes(offset, rlen);
 }
 
@@ -517,7 +531,7 @@ DF.prototype.add = function(node) {
 	} else {
 		var sfi = f.getSFI();
 //		print("Found SFI " + sfi);
-		if (sfi != -1) {
+		if (typeof(sfi) != "undefined") {
 			if (this.sfimap[sfi]) {
 				throw new GPError("DF", GPError.INVALID_DATA, APDU.SW_FILEEXISTS, "Duplicate short file identifier " + sfi);
 			}
@@ -576,6 +590,9 @@ DF.prototype.selectByAID = function(aid) {
  * @return the dump 
  */
 DF.prototype.dump = function(indent) {
+	if (typeof(indent) == "undefined") {
+		indent = "";
+	}
 	var str = indent + this.toString() + "\n";
 	
 	for (var i = 0; i < this.childs.length; i++) {
@@ -607,6 +624,26 @@ function FileSelector(mf) {
 	this.mf = mf;
 	this.currentDF = mf;
 	this.currentEF = null;
+	
+	this.se = { VEXK: new SecurityEnvironment(), CDIK: new SecurityEnvironment(), SMRES: new SecurityEnvironment(), SMCOM: new SecurityEnvironment()};
+}
+
+
+
+/**
+ * Returns the current EF, if any
+ *
+ * @type EF
+ * @return the current EF or null
+ */
+FileSelector.prototype.getCurrentEF = function() {
+	return this.currentEF;
+}
+
+
+
+FileSelector.prototype.getSecurityEnvironment = function() {
+	return this.se;
 }
 
 
@@ -651,6 +688,26 @@ FileSelector.prototype.selectFID = function(fid, check, df) {
 	} else {
 		this.currentEF = node;
 	}
+	return node;
+}
+
+
+
+/**
+ * Select a DF entry by SFI
+ *
+ * @param {Number} sfi the short file identifier
+ * @type FSNode
+ * @return the selected file system node
+ */
+FileSelector.prototype.selectSFI = function(sfi) {
+	var node = this.currentDF.selectBySFI(sfi);
+	
+	if (!node) {
+		throw new GPError("FileSelector", GPError.INVALID_DATA, APDU.SW_FILENOTFOUND, "File with SFI " + sfi + " not found");
+	}
+
+	this.currentEF = node;
 	return node;
 }
 

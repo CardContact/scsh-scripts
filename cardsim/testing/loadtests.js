@@ -33,14 +33,22 @@ load("tools/TestRunner.js");
 load("tools/TestGroup.js");
 load("tools/TestProcedure.js");
 
+load("../datamodel.js");
+
 
 var param = new Array();
 
+param["dataModel"] = new CardDataModel();
 param["card"] = new Card();
+param["crypto"] = new Crypto();
 
 var testRunner = new TestRunner("Card Simulation Test Suite");
 
-// testRunner.addTestProcedureFromXML("tp_example.xml");
+testRunner.addTestProcedureFromXML("tp_fci.xml");
 testRunner.addTestGroupFromXML("tg_select.xml", param);
+testRunner.addTestGroupFromXML("tg_readbinary_even_ins.xml", param);
+testRunner.addTestGroupFromXML("tg_readbinary_odd_ins.xml", param);
+testRunner.addTestGroupFromXML("tg_readbinary_sw.xml", param);
+testRunner.addTestGroupFromXML("tg_secmsg.xml", param);
 
 print("Test-Suite loaded...");

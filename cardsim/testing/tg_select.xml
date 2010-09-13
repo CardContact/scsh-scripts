@@ -105,12 +105,19 @@
 		<reference>
 			<p>ISO 7816-4</p>
 		</reference>
+		<procedures arrayElement="procedure" arrayIndex="#">
+			<procedure id="tp_fci"/>
+		</procedures>
 		<Script><![CDATA[
 
 	var fcp = this.card.sendApdu(0x00, 0xA4, 0x00, 0x04, [0x9000]);
 
 	this.assertTrue(fcp.length > 0, "Select MF with P2='04' did not return data");
 	
+	var param = { dut: fcp, type: 0x62};
+	
+	var result = this.runTestProcedure("tp_fci", param);
+
 		]]></Script>
 	</testcase>
 
@@ -127,12 +134,19 @@
 		<reference>
 			<p>ISO 7816-4</p>
 		</reference>
+		<procedures arrayElement="procedure" arrayIndex="#">
+			<procedure id="tp_fci"/>
+		</procedures>
 		<Script><![CDATA[
 
 	var fcp = this.card.sendApdu(0x00, 0xA4, 0x00, 0x04, new ByteString("3F00", HEX), [0x9000]);
 
 	this.assertTrue(fcp.length > 0, "Select MF with P2='04' did not return data");
 	
+	var param = { dut: fcp, type: 0x62};
+	
+	var result = this.runTestProcedure("tp_fci", param);
+
 		]]></Script>
 	</testcase>
 
@@ -152,7 +166,10 @@
 		</reference>
 		<Script><![CDATA[
 
-	var fcp = this.card.sendApdu(0x00, 0xA4, 0x00, 0x0C, new ByteString("2F00", HEX), [0x9000]);
+	var dm = this.parameter.dataModel;
+	var fid = new ByteString(dm.getNode("MF/EF_GDO").fid, HEX);
+	
+	var fcp = this.card.sendApdu(0x00, 0xA4, 0x00, 0x0C, fid, [0x9000]);
 
 	this.assertTrue(fcp.length == 0, "Select EF with P2='0C' returned data");
 	
@@ -173,12 +190,23 @@
 		<reference>
 			<p>ISO 7816-4</p>
 		</reference>
+		<procedures arrayElement="procedure" arrayIndex="#">
+			<procedure id="tp_fci"/>
+		</procedures>
 		<Script><![CDATA[
 
-	var fcp = this.card.sendApdu(0x00, 0xA4, 0x00, 0x04, new ByteString("2F00", HEX), [0x9000]);
+	var dm = this.parameter.dataModel;
+	var ef = dm.getNode("MF/EF_GDO");
+	var fid = new ByteString(ef.fid, HEX);
+	
+	var fcp = this.card.sendApdu(0x00, 0xA4, 0x00, 0x04, fid, [0x9000]);
 
 	this.assertTrue(fcp.length > 0, "Select EF with P2='04' did not return data");
 	
+	var param = { dut: fcp, type: 0x62, t80: parseInt(ef.size)};
+	
+	var result = this.runTestProcedure("tp_fci", param);
+
 		]]></Script>
 	</testcase>
 

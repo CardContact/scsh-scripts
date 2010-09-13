@@ -25,29 +25,70 @@
  */
 
 load("filesystem.js");
+load("commandinterpreter.js");
+load("securechannel.js");
 
 
-
+/**
+ * Create a card simulation object
+ *
+ * @class Class implementing a simple ISO 7816-4 card simulation
+ * @constructor
+ */
 function SimpleCardSimulator() {
 	this.aid = new ByteString("A0000000010101", HEX);
 
 	this.mf = new DF(FCP.newDF("3F00", null),
-						new TransparentEF(FCP.newTransparentEF("2F00", -1, 100)),
-						new TransparentEF(FCP.newTransparentEF("2F01", 0x17, 100)),
+						new LinearEF(FCP.newLinearEF("2F00", 0, FCP.LINEARVARIABLE, 20, 10)),
+						new TransparentEF(FCP.newTransparentEF("2F02", 1, 100), new ByteString("5A0A00010203040506070809", HEX)),
 						new DF(FCP.newDF("DF01", this.aid),
-							new TransparentEF(FCP.newTransparentEF("EF01", -1, 100)),
-							new TransparentEF(FCP.newTransparentEF("EF02", -1, 100))
+							new TransparentEF(FCP.newTransparentEF("EF01", 0, 100)),
+							new TransparentEF(FCP.newTransparentEF("EF02", 0, 100))
 						)
 					);
 
-	this.fileSelector = new FileSelector(this.mf);
-
+	print(this.mf.dump(""));
+	
+	this.initialize();
 }
 
 
 
+/**
+ * Initialize card runtime
+ */
+SimpleCardSimulator.prototype.initialize = function() {
+	this.fileSelector = new FileSelector(this.mf);
+	this.commandInterpreter = new CommandInterpreter(this.fileSelector);
+	
+	var sm = new SecureChannel(new Crypto());
+	
+	sm.setSendSequenceCounterPolicy(IsoSecureChannel.SSC_SYNC_ENC_POLICY);
+
+	var k = new Key();
+	k.setComponent(Key.AES, new ByteString("7CA110454A1A6E570131D9619DC1376E4A1A6E570131D961", HEX));
+	sm.setMacKey(k);
+
+	var k = new Key();
+	k.setComponent(Key.AES, new ByteString("0131D9619DC1376E7CA110454A1A6E579DC1376E7CA11045", HEX));
+	sm.setEncKey(k);
+	
+	sm.setMACSendSequenceCounter(new ByteString("00000000000000000000000000000000", HEX));
+	
+	this.commandInterpreter.setSecureChannel(sm);
+}
+
+
+
+/**
+ * Process an inbound APDU
+ *
+ * @param {ByteString} capdu the command APDU
+ * @type ByteString
+ * @return the response APDU
+ */ 
 SimpleCardSimulator.prototype.processAPDU = function(capdu) {
-	print("Received APDU: " + capdu);
+	print("Command APDU : " + capdu);
 
 	var apdu;
 	
@@ -66,49 +107,52 @@ SimpleCardSimulator.prototype.processAPDU = function(capdu) {
 		return bb.toByteString();
 	}
 
-	try	{
-		switch(apdu.getINS()) {
-			case APDU.INS_SELECT:
-				this.fileSelector.processSelectAPDU(apdu);
-				break;
-			default:
-				apdu.setSW(APDU.SW_INVINS);
-		}
-	}
-	catch(e) {
-		GPSystem.trace(e.fileName + "#" + e.lineNumber + ": " + e);
-		var sw = APDU.SW_GENERALERROR;
-		if (e instanceof GPError) {
-			apdu.setSW(e.reason);
-		}
-	}
+	this.commandInterpreter.processAPDU(apdu);
 	
-	return apdu.getResponseAPDU();
+	var rapdu = apdu.getResponseAPDU();
+	print("Response APDU: " + rapdu);
+	return rapdu;
 }
 
 
 
+/**
+ * Respond to reset request
+ *
+ * @param {Number} type reset type (One of Card.RESET_COLD or Card.RESET.WARM)
+ * @type ByteString
+ * @return answer to reset
+ */
 SimpleCardSimulator.prototype.reset = function(type) {
 	print("Reset type: " + type);
-	this.fileSelector = new FileSelector(this.mf);
+
+	this.initialize();
+
 	var atr = new ByteString("3B600000", HEX);
 	return atr;
 }
 
 
 
-var newsim = false;
-if (typeof(CARDSIM) == "undefined") {
-	CARDSIM = new CardSimulationAdapter("JCOPSimulation", "8050");
-	newsim = true;
+/**
+ * Create new simulation and register with existing or newly created adapter singleton.
+ *
+ */
+SimpleCardSimulator.newInstance = function() {
+	var sim = new SimpleCardSimulator();
+
+	if (typeof(CARDSIM) == "undefined") {
+		var adapter = new CardSimulationAdapter("JCOPSimulation", "8050");
+		adapter.setSimulationObject(sim);
+		adapter.start();
+		CARDSIM = adapter;
+		print("Simulation running...");
+	} else {
+		CARDSIM.setSimulationObject(sim);
+		print("Simulation replaced...");
+	}
 }
 
-var sim = new SimpleCardSimulator();
 
-CARDSIM.setSimulationObject(sim);
 
-if (newsim) {
-	CARDSIM.start();
-}
-
-print("Simulation running...");
+SimpleCardSimulator.newInstance();

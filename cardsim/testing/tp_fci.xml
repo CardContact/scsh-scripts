@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="doctp.xsl" ?>
+<testprocedure 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="http://www.openscdp.org/schema/testframework-1.0.xsd"
+	id="tp_fci" arrayElement="teststep" arrayIndex="id">
+	<name>Verify File Control Information structure</name>
+	<description>
+		<p>Ensure that the file control information conform to ISO 7816-4 and contain the correct informations</p>
+	</description>
+	<reference>
+		<p>No reference defined.</p>
+	</reference>
+
+<!-- Initializing the test procedure environment -->
+<!-- Enable if you want to use your own constructor
+	<constructor Param="name, testgroup, parameter">
+		<Script><![CDATA[
+	
+	// Call constructor of super class TestProcedure and define name of test procedure
+	TestProcedure.call(this, name, testgroup, parameter);
+	
+		]]></Script>
+	</constructor>
+-->
+
+	
+<!-- Setup method called before the test procedure is executed -->
+	<setup>
+		<Script><![CDATA[
+
+//	print("setup() called.");			
+			
+		]]></Script>
+	</setup>
+
+
+	
+<!-- Teardown method called after the test procedure is executed -->
+	<teardown>
+		<Script><![CDATA[
+		
+//	print("teardown() called.");			
+
+		]]></Script>
+	</teardown>
+
+
+
+<!-- Each test step must be declared with an id that starts with a 3 digit number -->
+	<teststep id="001CheckTLV">
+		<name>Check TLV structure</name>
+		<description>
+			<p>Verify that the TLV structure is valid</p>
+		</description>
+		<requirement>
+			<p>The card must return a FCI conforming to ISO 7816-4</p>
+		</requirement>
+		<reference>
+			<p>ISO 7816-4:2005, 5.3.3</p>
+		</reference>
+		<Script><![CDATA[
+
+	var dut = this.parameter.dut;
+	this.log("Checking FCI: " + dut.toString(HEX));
+
+	this.assertTrue(dut.length > 0 , "Nothing found in FCI");
+	
+	var b = dut.byteAt(0);
+	this.assertTrue(b <= 0xBF, "First byte in FCI indicates proprietary encoding");
+	
+	if (this.parameter.type) {
+		this.assertEquals(this.parameter.type, b, "Must be 62, 64 or 6F template");
+	} else {
+		this.assertTrue((b == 0x62) || (b == 0x64) || (b == 0x6F), "Must be 62, 64 or 6F template");
+	}
+	
+	var asn = new ASN1(dut);
+	
+	this.assertTrue(asn.elements > 0 , "Nothing found in FCI");
+	
+	this.asn = asn;		// Pass to next step
+		]]></Script>
+	</teststep>
+
+
+
+<!-- Each test step must be declared with an id that starts with a 3 digit number -->
+	<teststep id="010CheckTag80">
+		<name>Check Tag 80 in FCI</name>
+		<description>
+			<p>Verify that a tag 80 "Number of data bytes in file - excluding structural information" ( if existant or required) is valid</p>
+		</description>
+		<requirement>
+			<p>The card must return a valid tag 80 is required</p>
+		</requirement>
+		<reference>
+			<p>ISO 7816-4:2005, 5.3.3</p>
+		</reference>
+		<Script><![CDATA[
+
+	var asn = this.asn;
+	
+	var t = asn.find(0x80);
+	
+	if (t != null) {
+		this.assertTrue(asn.find(0x80, t) == null, "Tag 80 contained more that once");
+		
+		var l = t.value.toUnsigned();
+		
+		if (this.parameter.t80) {
+			this.assertEquals(l, this.parameter.t80, "Length (" + l + ") does not match expected value (" + this.parameter.t80 + ")");
+		}
+	} else {
+		this.assertTrue(typeof(this.parameter.t80) == "undefined", "Required tag 80 not found");
+	}
+	
+		]]></Script>
+	</teststep>
+
+</testprocedure>
