@@ -116,6 +116,11 @@ EMVView.prototype.decodeDataElement = function(tag, value) {
 			print("Service Code: " + string2.substr(1));
 			print();
 			break;
+		case 0x9F07:
+			print("Application Usage Control: " + value.toString(HEX));
+			this.decodeAUC(value);
+			print();
+			break;
 		case 0x9F0D:
 			print("Issuer Action Code - Default: " + value.toString(HEX));
 			this.decodeActionCode(value);
@@ -169,15 +174,18 @@ EMVView.prototype.decodeDataObjectList = function(list) {
 			var tag2 = subL.left(2);
 			var tag2 = tag2.toUnsigned();
 			var	subL = subL.bytes(2);
+			var length = subL.left(1);
+			//var length = length.toUnsigned();			
 			var subL = subL.bytes(1);	//Length Byte 			
 		}
 		else {
 			var tag2 = subL.left(1);
 			var tag2 = tag2.toUnsigned();
 			var subL = subL.bytes(1);
+			var length = subL.left(1);
 			var subL = subL.bytes(1);   //Length Byte 	
 		}
-		print("  " + DOL[tag2]);
+		print("  " + tag2.toString(HEX) + " - " + length + " - " + DOL[tag2]);
 	}
 }
 
@@ -304,6 +312,44 @@ EMVView.prototype.decodeCVM = function(list) {
 		print("    " + CVM[b & 0x3F]);
 	}
 }
+
+EMVView.prototype.decodeAUC = function(auc) {
+	var byte1 = auc.byteAt(0);
+	var byte2 = auc.byteAt(1);
+	print("  Byte 1:");
+	for (var i = 0; i <=7; i++) {		
+		if(byte1 & Math.pow(2,i) == Math.pow(2,i)) {
+			print("    " + AUC1[Math.pow(2,i)]);
+		}
+	}
+	print("  Byte 2:");
+	for (var i = 0; i <=7; i++) {		
+		if(byte2 & Math.pow(2,i) == Math.pow(2,i)) {
+			print("    " + AUC2[Math.pow(2,i)]);
+		}
+	}
+}
+
+
+AUC1 = [];
+AUC1[0x01] = "Valid at terminals other than ATMs";
+AUC1[0x02] = "Valid at ATMs";
+AUC1[0x04] = "Valid for international services";
+AUC1[0x08] = "Valid for domestic services";
+AUC1[0x10] = "Valid for international goods";
+AUC1[0x20] = "Valid for domestic goods";
+AUC1[0x40] = "Valid for international cash transactions";
+AUC1[0x80] = "Valid for domestic cash transactions";
+
+AUC2 = [];
+AUC2[0x01] = "RFU";
+AUC2[0x02] = "RFU";
+AUC2[0x04] = "RFU";
+AUC2[0x08] = "RFU";
+AUC2[0x10] = "RFU";
+AUC2[0x20] = "RFU";
+AUC2[0x40] = "International cashback allowed";
+AUC2[0x80] = "Domestic cashback allowed";
 
 TVR = [
 		[	"Offline data authentication was not performed (b8)",
