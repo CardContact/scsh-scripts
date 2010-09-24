@@ -82,8 +82,10 @@ EMV.prototype.readRecord = function(sfi, recno) {
 EMV.prototype.getProcessingOptions = function(pdol) {
 	if (pdol == null) {
 		//var pdol = new ByteString("8300", HEX);						// OTHER
-		var pdol = new ByteString("830B0000000000000000000000", HEX);	// VISA
-		
+		//var pdol = new ByteString("830B0000000000000000000000", HEX);	// VISA
+		//var pdol = new ByteString("830B2028C00276160200000000", HEX);	// VISA mit generate ac support
+		var pdol = new ByteString("830B2028C00276150200000000", HEX);
+	
 	}
 	var data = this.card.sendApdu(0x80, 0xA8, 0x00, 0x00, pdol, 0);
 	
@@ -227,6 +229,7 @@ EMV.prototype.tryAID = function() {
 		
 		if (fci.length > 0) {
 			this.cardDE[EMV.AID] = aid;
+			print("FCI returned in SELECT: ", new ASN1(fci));
 			return;
 		}
 	}
