@@ -4,7 +4,7 @@
  * @constructor
  * @param {EMV} emv an instance of the EMV class
  */
-function DataAuthentication(emv) {
+function DataAuthentication(emv) {	
 	this.emv = emv;
 	this.crypto= emv.crypto;
 	this.schemePublicKeyTable = [];
@@ -150,6 +150,7 @@ DataAuthentication.prototype.retrievalIssuerPublicKey = function() {
  * @param {Key} key the Issuer Public Key
 */
 DataAuthentication.prototype.verifySSAD = function(issuerPublicKeyModulus) {
+	print("-- Data Authentication --");
 	var issuerPublicKeyModulus =  issuerPublicKeyModulus;
 	var key = new Key();
 	key.setType(Key.PUBLIC);
@@ -212,7 +213,8 @@ DataAuthentication.prototype.retrievalICCPublicKey = function(issuerPublicKeyMod
 
 	// Step 2: The Recovered Data Trailer is equal to 'BC'
 	var decryptedICC = crypto.decrypt(key, Crypto.RSA, iccCert);
-
+	print("decryptedICC");//löschen
+	print(decryptedICC);//löschen
 	assert(decryptedICC.byteAt(decryptedICC.length - 1) == 0xBC);
 	
 	// Step 3: The Recovered Data Header is equal to '6A'	
@@ -229,7 +231,20 @@ DataAuthentication.prototype.retrievalICCPublicKey = function(issuerPublicKeyMod
 	list = list.concat(remex);	
 	var daInput = this.emv.getDAInput();
 	list = list.concat(daInput);
+
+	var sdaTagList = this.emv.cardDE[0x9F4A];
+	if(typeof(sdaTagList != "undefined")) {
+		var value = new ByteBuffer();
+		for(var i = 0; i < sdaTagList.length; i++) {
+			var tag = sdaTagList.byteAt(i);			
+			value = value.append(this.emv.cardDE[tag]);
+		}
+		value = value.toByteString();
+		list = list.concat(value);
+	}
 		
+
+/* alt
 	var sdaTagList = this.emv.cardDE[0x9F4A];
 	if(typeof(sdaTagList != "undefined")) {
 		for(var i = 0; i < sdaTagList.length; i++) {
@@ -243,6 +258,7 @@ DataAuthentication.prototype.retrievalICCPublicKey = function(issuerPublicKeyMod
 		value = value.toByteString();
 		list = list.concat(value);
 	}
+*/
 
 	// Step 6: Generate hash from concatenation
 	var hashConcat = this.crypto.digest(Crypto.SHA_1, list);	
@@ -283,9 +299,12 @@ DataAuthentication.prototype.dynamicDataAuthentication = function(iccPublicKeyMo
 	var iccPublicKeyModulus = iccPublicKeyModulus;
 	
 	var Data = crypto.generateRandom(4);
-		
+	print("Random Number");//löschen
+	print(Data);//löschen	
 	var internalAuthenticate = card.sendApdu(0x00, 0x88, 0x00, 0x00, Data, 0x00);
 	var asn = new ASN1(internalAuthenticate);
+	print("Internal Authenticate");//löschen
+	print(asn);//löschen
 	var tag = asn.find(0x9F4B);
 	var SDAD = tag.value;
 	
@@ -294,7 +313,8 @@ DataAuthentication.prototype.dynamicDataAuthentication = function(iccPublicKeyMo
 	picKey.setComponent(Key.MODULUS, iccPublicKeyModulus);
 	picKey.setComponent(Key.EXPONENT, this.emv.cardDE[0x9F47]);
 	var decryptedSDAD = crypto.decrypt(picKey, Crypto.RSA, SDAD);
-	
+	print("decrypted Signed Dynamic Application Data");//löschen
+	print(decryptedSDAD);//löschen
 	// Step 1: SDAD and ICC Public Key Modulus have the same length
 	assert(SDAD.length == iccPublicKeyModulus.length);
 	
@@ -307,7 +327,7 @@ DataAuthentication.prototype.dynamicDataAuthentication = function(iccPublicKeyMo
 	// Step 4: The Signed Data Format is equal to '05'
 	assert(decryptedSDAD.byteAt(1) == 0x05);
 	
-	// Step 5: Concatenation of Signed Data Format, Hash Algorithm Indicator, ICC Dynamic Data Length, ICC Dynamic Data, Pad Pattern, DDOL
+	// Step 5: Concatenation of Signed Data Format, Hash Algorithm Indicator, ICC Dynamic Data Length, ICC Dynamic Data, Pad Pattern, random number
 	var LDD = decryptedSDAD.byteAt(3);
 	var list = decryptedSDAD.bytes(1, 3 + LDD + decryptedSDAD.length - LDD - 25);
 	list = list.concat(Data);
