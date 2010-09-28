@@ -36,6 +36,7 @@
     </div>
 <div id="main">
 <!-- #BeginEditable "BODY" -->
+<p><a href="Terminal Risk Management.html">< back</a> <a href="Overview.html">index</a> <a href="Card Action Analysis.html">Next ></a></p>
 <h1>Terminal Action Analysis</h1>
 
 <p>
@@ -45,7 +46,7 @@ The Terminal will send the decision with a Generate AC command to the card.</p>
 <p>The decision is based on the Transaction Verification Results. 
 There are several lists called Issuer Action Code (IAC) and Terminal Action Code (TAC) which give a directive to evaluate the TVR.</p>
 
-<h2>Structure</h2>
+<h2 id="TVR">Structure</h2>
 <p>IAC, TAC and TVR have the same structure.</p>
 <p>Source: <a href="http://www.emvco.com/specifications.aspx?id=155">EMV Book 3</a></p>
 <p>Byte 1:</p>
@@ -657,10 +658,10 @@ If TVR and IAC both have byte four b8 set to 1 the transaction will be rejected.
 <p>The TAC specifies the terminal's conditions. It is similar to the IAC.</p>
 
 
-<h2>Generate AC</h2>
+<h2 id="GenerateAC">Generate AC</h2>
 <p>
 If the terminal made an decision, it will send with a Generate AC command to the card.
-Depending on the decision, the terminal requires different Application Cryptogram from the card.</p>
+Depending on the decision, the terminal requires different Application Cryptograms from the card.</p>
 <p>
 Source: <a href="http://www.emvco.com/specifications.aspx?id=155">EMV Book 3</a>
 <table class="content">
@@ -851,7 +852,8 @@ Card Risk Management Data Object List 1 (CDOL1): 9F02069F030695055F2A029A039C019
   9f4c - 08 - ICC Dynamic Number
   9f45 - 02 - Data Authentication Code
 </pre>
-<p>First we create an ByteString which corresponds to the CDOL1 above.</p>
+<p>First we create an ByteString which corresponds to the CDOL1 above.<br> 
+To obtain the ICC Dynamic Number we send a Get Challenge command  to the card. The card will return an 8-byte unpredictable number.</p>
 <pre>
 var authorisedAmount = new ByteString("000000000001", HEX);
 var secondaryAmount = new ByteString("000000000000", HEX);
@@ -871,6 +873,7 @@ var p1 = 0x40;
 
 var generateAC = card.sendApdu(0x80, 0xAE, p1, 0x00, Data, 0x00);
 </pre>
+<p>The Generate AC command was succesful if the card returns SW1/SW2=9000.</p>
 <pre>
 96 C: 00 84 00 00 - GET CHALLENGE      Le=0 
    R: SW1/SW2=9000 (Normal processing: No error) Lr=8
@@ -884,6 +887,7 @@ var generateAC = card.sendApdu(0x80, 0xAE, p1, 0x00, Data, 0x00);
       0000  77 1E 9F 27 01 80 9F 36 02 02 13 9F 26 08 2D F3  w..'...6....&.-.
       0010  83 3C 61 85 5B EA 9F 10 07 06 84 23 00 31 02 08  .<a.[......#.1..
 </pre>
+<p><a href="Terminal Risk Management.html">< back</a> <a href="Overview.html">index</a> <a href="Card Action Analysis.html">Next ></a></p>
 <!-- #EndEditable -->
 <br>
 <p class="copyright">&copy; Copyright 2003 - 2010 <a href="http://www.cardcontact.de">CardContact</a>
