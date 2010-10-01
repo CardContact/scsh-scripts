@@ -27,6 +27,10 @@
 
 /**
  * EMV class constructor
+ * @class This class implements functions for tansaction process 
+ * @constructor
+ * @param {card} the card object 
+ * @param {crypto} crypto
  */
 function EMV(card, crypto) {
 	this.card = card;
@@ -41,6 +45,9 @@ function EMV(card, crypto) {
 
 /**
  * Return cardDE
+ *
+ * @return the cardDE array 
+ * @type Array
  */
 EMV.prototype.getCardDataElements = function() {
 	return this.cardDE;
@@ -50,6 +57,11 @@ EMV.prototype.getCardDataElements = function() {
 
 /**
  * Send SELECT APDU
+ *
+ * @param {dfname} dfname the PSE AID
+ * @param {first} first the selection options
+ * @return the FCI
+ * @type ByteString
  */
 EMV.prototype.select = function(dfname, first) {
 	var fci = this.card.sendApdu(0x00, 0xA4, 0x04, (first ? 0x00 : 0x02), dfname, 0x00);
@@ -61,7 +73,10 @@ EMV.prototype.select = function(dfname, first) {
 /**
  * Send READ RECORD APDU
  *
- * Return empty ByteString if no data was read
+ * @param {sfi} the SFI
+ * @param {recno} the record number
+ * @return the corresponding record or empty ByteString if no data was read
+ * @type ByteString
  */
 EMV.prototype.readRecord = function(sfi, recno) {
 	var data = this.card.sendApdu(0x00, 0xB2, recno, (sfi << 3) | 0x04, 0);
@@ -77,7 +92,9 @@ EMV.prototype.readRecord = function(sfi, recno) {
 /**
  * Send GET PROCESSING OPTION APDU
  *
- * 
+ * @param{pdol} the Processing Data Object List
+ * @return the Application Interchange Profile and the Application File Locator
+ * @type ByteString
  */
 EMV.prototype.getProcessingOptions = function(pdol) {
 	if (pdol == null) {
@@ -95,8 +112,10 @@ EMV.prototype.getProcessingOptions = function(pdol) {
 
 
 /**
- * Select and read Payment System Environment on either
- * contact or contactless card
+ * <p>Select and read Payment System Environment on either
+ * contact or contactless card</p>
+ *
+ * @param{contactless} the PSE AID
  */
 EMV.prototype.selectPSE = function(contactless) {
 	this.PSE = null;
@@ -158,7 +177,8 @@ EMV.prototype.selectPSE = function(contactless) {
 
 
 /**
- * Return array of PSE entries or null if none defined
+ * @return array of PSE entries or null if none defined
+ * @type Array
  */
 EMV.prototype.getPSE = function() {
 	return this.PSE;
@@ -167,7 +187,8 @@ EMV.prototype.getPSE = function() {
 
 
 /**
- * Return AID of application with highest priority or null if no PSE defined
+ * @return AID of application with highest priority or null if no PSE defined
+ * @type ByteString
  */
 EMV.prototype.getAID = function() {
 
@@ -236,7 +257,9 @@ EMV.prototype.tryAID = function() {
 }
 
 
-
+/**
+ * Add elements from ByteString into the cardDE array
+ */
 EMV.prototype.addCardDEFromList = function(tlvlist) {
 	for (var i = 0; i < tlvlist.length; i++) {
 		var t = tlvlist.index(i);
@@ -245,8 +268,10 @@ EMV.prototype.addCardDEFromList = function(tlvlist) {
 	}
 }
 
-
-
+/**
+ * Inform the ICC that a new transaction is beginning
+ * Store AIP and AFL into the cardDE array
+ */
 EMV.prototype.initApplProc = function() {
 	// Create PDOL
 	var data = this.getProcessingOptions(null);
@@ -323,7 +348,7 @@ EMV.prototype.readApplData = function() {
 }
 
 /**
- * Return daInput
+ * @return the Data Authentication Input
  */
 EMV.prototype.getDAInput = function() {
 	return this.daInput;
@@ -335,6 +360,33 @@ EMV.prototype.processDOL = function(dol) {
 }
 
 
+/**
+ * Send GENERATE APPLICATION CRYPTOGRAM APDU
+ */
+EMV.prototype.generateAC = function() {
+/*
+p1
+0x00 = AAC = reject transaction
+0x40 = TC = proceed offline
+0x80 = ARQC = go online
+*/
+
+var p1 = 0x40;
+
+var authorisedAmount = new ByteString("000000000001", HEX);
+var secondaryAmount = new ByteString("000000000000", HEX);
+var tvr = new ByteString("0000000000", HEX);
+var transCurrencyCode = new ByteString("0978", HEX);
+var transDate = new ByteString("090730", HEX);
+var transType = new ByteString("21", HEX);
+var unpredictableNumber = crypto.generateRandom(4);
+var iccDynamicNumber = card.sendApdu(0x00, 0x84, 0x00, 0x00, 0x00);
+var DataAuthCode = this.cardDE[0x9F45];
+
+var Data = authorisedAmount.concat(secondaryAmount).concat(tvr).concat(transCurrencyCode).concat(transDate).concat(transType).concat(unpredictableNumber).concat(iccDynamicNumber).concat(DataAuthCode); 
+
+var generateAC = card.sendApdu(0x80, 0xAE, p1, 0x00, Data, 0x00);
+}
 
 // Constants
 
