@@ -333,7 +333,7 @@ CVCertificateStore.prototype.getPrivateKey = function(path, chr) {
 		var bin = CVCertificateStore.loadBinaryFile(fn);
 	}
 	catch(e) {
-		GPSystem.trace(e);
+//		GPSystem.trace(e);
 		return null;
 	}
 
@@ -389,7 +389,8 @@ CVCertificateStore.prototype.getRequest = function(path, chr) {
 		bin = CVCertificateStore.loadBinaryFile(fn);
 	}
 	catch (e) {
-		GPSystem.trace(e);
+//		GPSystem.trace(e);
+		return null;
 	}
 	return new CVC(bin);
 }
@@ -496,7 +497,7 @@ CVCertificateStore.prototype.getCertificateBinary = function(path, chr, selfsign
 		bin = CVCertificateStore.loadBinaryFile(fn);
 	}
 	catch (e) {
-		GPSystem.trace(e);
+//		GPSystem.trace(e);
 	}
 	return bin;
 }

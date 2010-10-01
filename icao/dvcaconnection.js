@@ -160,6 +160,8 @@ DVCAConnection.prototype.requestCertificate = function(certreq) {
 		throw new GPError("DVCAConnection", GPError.DEVICE_ERROR, 0, "RequestCertificate failed with : " + e);
 	}
 	
+	var certlist = [];
+
 	if (response.Result.ns1::returnCode.substr(0, 3) == "ok_") {
 		GPSystem.trace("Received certificates from DVCA:");
 		for each (var c in response.Result.ns1::certificateSeq.ns1::certificate) {
