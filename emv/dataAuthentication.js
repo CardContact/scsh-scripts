@@ -1,7 +1,8 @@
 /**
- * SDA class constructor
- * @class This class implements static data authentication
+ * DataAuthentication class constructor
+ * @class This class implements data authentication
  * @constructor
+ * @requires EMV
  * @param {EMV} emv an instance of the EMV class
  */
 function DataAuthentication(emv) {	
@@ -200,6 +201,13 @@ DataAuthentication.prototype.verifySSAD = function(issuerPublicKeyModulus) {
 	print("SDA was successful");
 }
 
+/**
+ * Retrieval of ICC Public Key
+ *
+ * @param {Key} key the Issuer Public Key
+ * @type Key
+ * @return the ICC Public Key
+*/
 DataAuthentication.prototype.retrievalICCPublicKey = function(issuerPublicKeyModulus) {
 	var issuerPublicKeyModulus =  issuerPublicKeyModulus;
 	var key = new Key();
@@ -295,6 +303,11 @@ DataAuthentication.prototype.retrievalICCPublicKey = function(issuerPublicKeyMod
 	return(iccPublicKeyModulus)
 }	
 
+/**
+ * Dynamic Data Authentication
+ *
+ * @param {Key} key the ICC Public Key
+*/
 DataAuthentication.prototype.dynamicDataAuthentication = function(iccPublicKeyModulus) {
 	var iccPublicKeyModulus = iccPublicKeyModulus;
 	

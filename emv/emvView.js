@@ -29,6 +29,7 @@
  *
  * @class This class implements a viewer for data stored on emv cards
  * @constructor
+ * @requires EMV
  * @param {EMV} emv an instance of the EMV class
  */
 function EMVView(emv) {
@@ -310,6 +311,8 @@ EMVView.prototype.decodeCVM = function(list) {
 		print("  Fail cardholder verification if this CVM is unsuccessful");
 		}
 		print("    " + CVM[b & 0x3F]);
+		print("  " + CVM2[list.byteAt(i+1)]);
+		print();
 	}
 }
 
@@ -429,6 +432,21 @@ CVM[4] = "Enciphered PIN verification performed by ICC";
 CVM[5] = "Enciphered Pin verification performed by ICC and signature (paper)";
 CVM[0x1E] = "Signature (paper)";
 CVM[0x1F] = "No CVM required";
+
+CVM2 = [];
+CVM2[0] = "Always";
+CVM2[1] = "If unattended cash";
+CVM2[2] = "If not unattended cash and not manual cash and not purchase with cashback";
+CVM2[3] = "If terminal supports the CVM";
+CVM2[4] = "If manual cash";
+CVM2[5] = "If purchase with cashback";
+CVM2[6] = "If transaction is in the application currency and is under X value";
+CVM2[7] = "If transaction is in the application currency and is over X value";
+CVM2[8] = "If transaction is in the application currency and is under Y value";
+CVM2[9] = "If transaction is in the application currency and is over Y value";
+CVM2[10] = "RFU";
+CVM2[11] = "Reserved for use by individual payment systems";
+
 
 DOL = [];
 DOL[0x9F02] = "Authorised amount of the transaction (excluding adjustments)";
