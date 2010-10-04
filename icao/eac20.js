@@ -33,6 +33,14 @@ load("cvcertstore.js");
 
 
 
+/**
+ * Create a protocol object for EAC
+ *
+ * @class Class implementing support for Extended Access Control V2
+ * @constructor
+ * @param {Crypto} crypto the crypto provider
+ * @param {Card} card the card object
+ */
 function EAC20(crypto, card) {
 	this.crypto = crypto;
 	this.card = card;
@@ -43,14 +51,23 @@ function EAC20(crypto, card) {
 }
 
 
-
+/** PACE PWD is the hashed MRZ */
 EAC20.ID_MRZ = 1;
+/** PACE PWD is the CAN */
 EAC20.ID_CAN = 2;
+/** PACE PWD is the PIN */
 EAC20.ID_PIN = 3;
+/** PACE PWD is the PUK */
 EAC20.ID_PUK = 4;
 
 
 
+/**
+ * Process a list of security infos from EF.CardInfo, EF.CardSecurity or EF.ChipSecurity
+ * 
+ * @param {ASN1} si the security info ASN Sequence
+ * @param {boolean} fromCardSecurity true if security infos are taken from EF.CardSecurity
+ */
 EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
 	GPSystem.trace("SecurityInfos:");
 	GPSystem.trace(si);
@@ -115,10 +132,13 @@ EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
 					id = 0;
 				}
 				
-				if (!fromCardSecurity && (typeof(this.PACEInfos[id]) != "undefined")) {
-					throw new GPError("EAC20", GPError.INVALID_DATA, 0, "Duplicate parameterId " + id + " for PACEInfo");
+				if (pi.version == 1) {
+					if (!fromCardSecurity && (typeof(this.PACEInfos[id]) != "undefined")) {
+						throw new GPError("EAC20", GPError.INVALID_DATA, 0, "Duplicate parameterId " + id + " for PACEInfo");
+					}
+				} else {
+					id = 0;
 				}
-				
 				this.PACEInfos[id] = pi;
 			}
 		} else if (oid.value.startsWith(id_CA) == id_CA.length) {
@@ -164,6 +184,10 @@ EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
 
 
 
+/**
+ * Read EF.CardInfo and process security infos
+ *
+ */
 EAC20.prototype.readCardInfo = function() {
 	var mf = new CardFile(card, ":3F00");
 	this.mf = mf;
@@ -184,6 +208,9 @@ EAC20.prototype.readCardInfo = function() {
 
 
 
+/**
+ * Read EF.CardSecurity and process security infos
+ */
 EAC20.prototype.readCardSecurity = function() {
 	var cs = new CardFile(this.mf, ":011D");
 	var csbin = cs.readBinary();
@@ -215,24 +242,48 @@ EAC20.prototype.readCardSecurity = function() {
 
 
 
+/**
+ * Return the list of PACEInfo objects
+ *
+ * @return the list of PACEInfo objects read from the card, indexed by the parameterId
+ * @type PACEInfo[]
+ */
 EAC20.prototype.getPACEInfos = function() {
 	return this.PACEInfos;
 }
 
 
 
+/**
+ * Return the list of PACEDomainParameterInfo objects
+ *
+ * @return the list of PACEDomainParameterInfo objects read from the card, indexed by the parameterId
+ * @type PACEDomainParameterInfo[]
+ */
 EAC20.prototype.getPACEDomainParameterInfos = function() {
 	return this.PACEDPs;
 }
 
 
 
-EAC20.prototype.getCAnfos = function() {
+/**
+ * Return the list of ChipAuthenticationInfo objects
+ *
+ * @return the list of ChipAuthenticationInfo objects read from the card, indexed by the keyId
+ * @type ChipAuthenticationInfo[]
+ */
+EAC20.prototype.getCAInfos = function() {
 	return this.CAInfos;
 }
 
 
 
+/**
+ * Return the list of ChipAuthenticationDomainParameterInfo objects
+ *
+ * @return the list of ChipAuthenticationDomainParameterInfo objects read from the card, indexed by the keyId
+ * @type ChipAuthenticationDomainParameterInfo[]
+ */
 EAC20.prototype.getCADomainParameterInfos = function() {
 	return this.CADPs;
 }
@@ -240,8 +291,23 @@ EAC20.prototype.getCADomainParameterInfos = function() {
 
 
 /**
+ * Return the MF access object with the associated secure channel
+ *
+ * @return the MF card file object
+ * @type CardFile
+ */
+EAC20.prototype.getMF = function() {
+	return this.mf;
+}
+
+
+
+/**
  * Perform PACE using the indicated parameter set, the identified password, the password value and
  * an optional cardholder authentication template.
+ *
+ * <p>This method supports PACE version 1 and 2. For version 2, parameterId with a value between 0 and 31 denotes
+ * a standardized domain parameter as defined in TR-03110 2.04 or later.</p>
  *
  * @param {Number} parameterId the identifier for the PACEInfo and PACEDomainParameterInfo from EF.CardInfo. Use 0 for
  *                             the default.
@@ -259,11 +325,18 @@ EAC20.prototype.performPACE = function(parameterId, pwdid, pwd, chat) {
 		throw new GPError("EAC20", GPError.INVALID_DATA, 0, "Unknown parameterId " + parameterId + " for PACEInfo");
 	}
 	
-	var pacedp = this.PACEDPs[parameterId];
-	if (typeof(pacedp) == "undefined") {
-		throw new GPError("EAC20", GPError.INVALID_DATA, 0, "Unknown parameterId " + parameterId + " for PACEDomainParameterInfo");
+	var domainParameter;
+	
+	if ((paceinfo.version == 1) || ((paceinfo.version == 2) && (parameterId > 31))) {
+		var pacedp = this.PACEDPs[parameterId];
+		if (typeof(pacedp) == "undefined") {
+			throw new GPError("EAC20", GPError.INVALID_DATA, 0, "Unknown parameterId " + parameterId + " for PACEDomainParameterInfo");
+		}
+		domainParameter = pacedp.domainParameter;
+	} else {
+		domainParameter = PACEDomainParameterInfo.getStandardizedDomainParameter(parameterId);
 	}
-
+	
 	if (!(pwd instanceof ByteString)) {
 		throw new GPError("EAC20", GPError.INVALID_TYPE, 0, "Argument pwd must be of type ByteString");
 	}
@@ -273,7 +346,7 @@ EAC20.prototype.performPACE = function(parameterId, pwdid, pwd, chat) {
 	}
 
 	
-	var pace = new PACE(this.crypto, paceinfo.protocol, pacedp.domainParameter);
+	var pace = new PACE(this.crypto, paceinfo.protocol, domainParameter, paceinfo.version);
 	pace.setPassword(pwd);
 
 	// Manage SE
@@ -379,6 +452,13 @@ EAC20.prototype.performPACE = function(parameterId, pwdid, pwd, chat) {
 
 
 
+/**
+ * Return the trust anchor's CAR as indicated by the card in the PACE protocol
+ *
+ * @param {boolean} previous, true to return the previous CAR, if any
+ * @return the CertificationAuthorityReference (CAR)
+ * @type PublicKeyReference
+ */
 EAC20.prototype.getTrustAnchorCAR = function(previous) {
 	if (previous) {
 		return this.previousCAR;
@@ -389,6 +469,11 @@ EAC20.prototype.getTrustAnchorCAR = function(previous) {
 
 
 
+/**
+ * Submit a list of certificates to the card for verification
+ *
+ * @param {CVC[]} cvcchain the list of certificates, starting with link certificates, DVCA certificate and terminal certificate.
+ */
 EAC20.prototype.verifyCertificateChain = function(cvcchain) {
 	for (var i = 0; i < cvcchain.length; i++) {
 		var cvc = cvcchain[i];
@@ -417,6 +502,12 @@ EAC20.prototype.verifyCertificateChain = function(cvcchain) {
 
 
 
+/**
+ * Perform terminal authentication using a given terminal key
+ *
+ * @param {Key} termkey the terminal private key
+ * @param {ASN1} auxdata auxiliary data (tag '67') to be included in terminal authentication
+ */
 EAC20.prototype.performTerminalAuthentication = function(termkey, auxdata) {
 	var signatureInput = this.performTerminalAuthenticationSetup(auxdata);
 	
@@ -434,6 +525,11 @@ EAC20.prototype.performTerminalAuthentication = function(termkey, auxdata) {
 
 
 
+/**
+ * Prepare terminal authentication by setting the required security environment
+ *
+ * @param {ASN1} auxdata auxiliary data (tag '67') to be included in terminal authentication
+ */
 EAC20.prototype.performTerminalAuthenticationSetup = function(auxdata) {
 
 	var idIFD = this.ca.getCompressedPublicKey();
@@ -443,7 +539,9 @@ EAC20.prototype.performTerminalAuthenticationSetup = function(auxdata) {
 	// ToDo: Copy from root CVCA certificate
 	bb.append(new ASN1(0x80, new ByteString("id-TA-ECDSA-SHA-256", OID)).getBytes());
 	bb.append(new ASN1(0x83, this.terminalCHR.getBytes()).getBytes());
-//	bb.append(auxdata);
+	if (auxdata) {
+		bb.append(auxdata);
+	}
 	bb.append(new ASN1(0x91, idIFD).getBytes());
 	
 	var msedata = bb.toByteString();
@@ -465,13 +563,23 @@ EAC20.prototype.performTerminalAuthenticationSetup = function(auxdata) {
 }
 
 
-	
+
+/**
+ * Complete terminal authentication by submitting the signature to the card
+ *
+ * @param {ByteString} signature the signature as concatenation of r and s
+ */
 EAC20.prototype.performTerminalAuthenticationFinal = function(signature) {
 	this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x82, 0x00, 0x00, signature, [0x9000]);
 }
 
 
 
+/**
+ * Prepare chip authentication by generating the ephemeral key pair
+ *
+ * @param {Number} keyId the key identifier to be used for chip authentication
+ */
 EAC20.prototype.prepareChipAuthentication = function(keyId) {
 	var cainfo = this.CAInfos[keyId];
 	if (typeof(cainfo) == "undefined") {
@@ -492,6 +600,12 @@ EAC20.prototype.prepareChipAuthentication = function(keyId) {
 
 
 
+/**
+ * Perform chip authentication and establish a secure channel
+ *
+ * @return true, if chip authentication was successfull
+ * @type boolean
+ */
 EAC20.prototype.performChipAuthentication = function() {
 
 	var bb = new ByteBuffer();
@@ -528,7 +642,9 @@ EAC20.prototype.performChipAuthentication = function() {
 	
 	this.ca.performKeyAgreement(this.cAPublicKey, nonce);
 	
-	if (this.ca.verifyAuthenticationToken(authToken)) {
+	var result = this.ca.verifyAuthenticationToken(authToken);
+	
+	if (result) {
 		GPSystem.trace("Authentication token valid");
 
 		var sm = new IsoSecureChannel(crypto, IsoSecureChannel.SSC_SYNC_ENC_POLICY);
@@ -539,10 +655,19 @@ EAC20.prototype.performChipAuthentication = function() {
 		this.card.setCredential(sm);
 		this.sm = sm;
 	}
+	return result;
 }
 
 
 
+/**
+ * Perform restricted identification
+ *
+ * @param {Number} keyId restricted identification key identifier
+ * @param {ByteString} sectorPublicKey the sector public key data
+ * @return the sector specific identifier
+ * @type ByteString
+ */
 EAC20.prototype.performRestrictedIdentification = function(keyId, sectorPublicKey) {
 	var bb = new ByteBuffer();
 	bb.append(new ASN1(0x80, new ByteString("id-RI-ECDH-SHA-256", OID)).getBytes());

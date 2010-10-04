@@ -34,7 +34,7 @@
  * <pre>
  * PACEInfo ::= SEQUENCE {
  * 		protocol	OBJECT IDENTIFIER,
- * 		version INTEGER, -- MUST be 1
+ * 		version INTEGER, -- MUST be 1 or 2
  * 		parameterId INTEGER OPTIONAL
  * }
  * </pre>
@@ -60,7 +60,6 @@ function PACEInfo(tlv) {
 			assert(t.tag == ASN1.INTEGER);
 			this.parameterId = t.value.toSigned();
 		}
-		
 	}
 }
 
@@ -167,6 +166,14 @@ PACEDomainParameterInfo.prototype.toTLV = function() {
 
 
 
+PACEDomainParameterInfo.getStandardizedDomainParameter = function(id) {
+	var key = new Key();
+	key.setComponent(Key.ECC_CURVE_OID, new ByteString("brainpoolP256r1", OID));
+	return key;
+}
+
+
+
 PACEDomainParameterInfo.prototype.toString = function() {
 	return "PACEDomainParameterInfo(protocol=" + this.protocol + ", parameterId=" + this.protocolId + ")";
 }
@@ -183,11 +190,18 @@ PACEDomainParameterInfo.prototype.toString = function() {
  * @param {Crypto} crypto the crypto provider
  * @param {String} algo the algorithm OID as String object
  * @param {Key} domainparam the key object holding ECC domain parameter
+ * @param {Number} version protocol version (1 or 2)
  */
-function PACE(crypto, algo, domparam) {
+function PACE(crypto, algo, domparam, version) {
 	this.crypto = crypto;
 	this.algo = algo.toString(OID);
 	this.domparam = domparam;
+
+	if (typeof(version) != "undefined") {
+		this.version = version;
+	} else {
+		this.version = 1;
+	}
 	
 //	print(ECCUtils.ECParametersToString(domparam));
 	
@@ -479,7 +493,7 @@ PACE.encodePublicKey = function(oid, key, withDP) {
  * @type ByteString
  */
 PACE.prototype.calculateAuthenticationToken = function() {
-	var t = PACE.encodePublicKey(this.algo, this.otherPuK, true);
+	var t = PACE.encodePublicKey(this.algo, this.otherPuK, (this.version == 1));
 	GPSystem.trace("Authentication Token:");
 	GPSystem.trace(t);
 	
@@ -499,7 +513,7 @@ PACE.prototype.calculateAuthenticationToken = function() {
  * @type Boolean
  */
 PACE.prototype.verifyAuthenticationToken = function(authToken) {
-	var t = PACE.encodePublicKey(this.algo, this.puk, true);
+	var t = PACE.encodePublicKey(this.algo, this.puk, (this.version == 1));
 	GPSystem.trace("Authentication Token:");
 	GPSystem.trace(t);
 	

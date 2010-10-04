@@ -135,7 +135,15 @@ function ChipAuthenticationDomainParameterInfo(tlv) {
 		assert(t.tag == ASN1.SEQUENCE);
 
 		if (t.elements > 0) {
-			this.domainParameter = ECCUtils.decodeECParameters(t.get(1));
+			var oid = t.get(0);
+			assert(oid.tag == ASN1.OBJECT_IDENTIFIER);
+			if (oid.value.equals(new ByteString("standardizedDomainParameter", OID))) {
+				this.domainParameter = new Key();
+				// ToDo: Match ID to table entry
+				this.domainParameter.setComponent(Key.ECC_CURVE_OID, new ByteString("brainpoolP256r1", OID));
+			} else {
+				this.domainParameter = ECCUtils.decodeECParameters(t.get(1));
+			}
 		} else {
 			this.domainParameter = new Key();
 			this.domainParameter.setComponent(Key.ECC_CURVE_OID, new ByteString("brainpoolP256r1", OID));
