@@ -42,7 +42,6 @@ function VTermService(certstorepath, path, parentURL) {
 	this.type = "VTERM";
 	
 	this.path = path;
-	this.parent = pe[1];
 	this.parentURL = parentURL;
 	
 	this.crypto = new Crypto();
@@ -76,6 +75,45 @@ VTermService.prototype.setSendCertificateURL = function(url) {
  */
 VTermService.prototype.setKeySpec = function(keyparam, algorithm) {
 	this.cvca.setKeySpec(keyparam, algorithm);
+}
+
+
+
+/**
+ * Return path of current virtual terminal cluster
+ *
+ * @return the path
+ * @type String
+ */
+VTermService.prototype.getPath = function() {
+	return this.path;
+}
+
+
+
+/**
+ * Return the CVCCA instance of a given holder
+ *
+ * @param {String} holderID the holder ID
+ * @return the CVCCA instance
+ * @type CVCCA
+ */
+VTermService.prototype.getCVCCA = function(holderID) {
+	var tcc = new CVCCA(this.crypto, this.ss, null, null, this.path + "/" + holderID);
+	return tcc;
+}
+
+
+
+/**
+ * Return the current certificate chain for a given holder
+ *
+ * @return the certificate chain for this holder
+ * @type CVC[]
+ */
+VTermService.prototype.getCertificateList = function(holderID) {
+	var tcc = this.getCVCCA(holderID);
+	return tcc.getCertificateList();
 }
 
 
@@ -152,13 +190,9 @@ VTermService.prototype.updateCACertificates = function(async) {
 
 	var certlist = this.getCACertificatesFromDVCA(sr);
 
-	var list = this.ss.insertCertificates(this.crypto, certlist, true);
+	var list = this.importCertificates(certlist);
 
 	if (list.length > 0) {
-		print("Warning: Could not import the following certificates");
-		for (var i = 0; i < list.length; i++) {
-			print(list[i]);
-		}
 		return "Not all certificates could be imported. See log for details.";
 	}
 	
@@ -178,7 +212,7 @@ VTermService.prototype.renewCertificate = function(async, forceinitial, holderID
 	var car = this.ss.getCurrentCHR(this.path);
 
 	var tcc = new CVCCA(this.crypto, this.ss, null, null, this.path + "/" + holderID);
-	
+
 	tcc.setRemovePreviousKey(true);
 	tcc.setKeySpec(dp, algo);
 	
@@ -225,6 +259,16 @@ VTermService.prototype.renewCertificate = function(async, forceinitial, holderID
  */
 VTermService.prototype.importCertificates = function(certlist) {
 
+	for (var i = 0; i < certlist.length; i++) {
+		var cvc = certlist[i];
+		var chat = cvc.getCHAT();
+		var certtype = cvc.getCHAT().get(1).value.byteAt(0) & 0xC0;
+		if ((certtype == 0x80) || (certtype == 0x40)) {
+			var pe = this.path.substr(1).split("/");
+			this.path = "/" + pe[0] + "/" + cvc.getCHR().getHolder();
+		}
+	}
+	
 	var list = this.ss.insertCertificates(this.crypto, certlist, true);
 
 	if (list.length > 0) {
@@ -233,6 +277,7 @@ VTermService.prototype.importCertificates = function(certlist) {
 			print(list[i]);
 		}
 	}
+	return list
 }
 
 

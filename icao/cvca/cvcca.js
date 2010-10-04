@@ -336,7 +336,7 @@ CVCCA.prototype.importCertificates = function(certs) {
 	}
 	
 	// Insert all other certificates into certificate store
-	var list = this.certstore.insertCertificates(this.crypto, othercerts, true);
+	var list = this.certstore.insertCertificates2(this.crypto, othercerts, true, this.path);
 	
 	// Process my own certificates. Should be one at maximum, matching a request
 	for (var i = 0; i < mycerts.length; i++) {

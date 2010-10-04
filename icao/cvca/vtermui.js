@@ -36,7 +36,7 @@
 function VTermUI(service) {
 	CommonUI.call(this, service);
 	
-	this.defaultHolderID = "UTVT1234567";
+	this.holderID = "UTVT1234567";
 }
 
 VTermUI.prototype = new CommonUI();
@@ -91,29 +91,29 @@ VTermUI.prototype.serveStatusPage = function(req, res, url) {
 	var page =
 		<div>
 			<h1>Virtual Terminal Service</h1>
+			<p>Subordinate of {this.service.getPath()}</p>
 			<div id="activechain"/>
 			<div id="pendingoutboundrequests"/>
 			<h2>Possible actions:</h2>
 			<form action="" method="get">
-				HolderID<input name="op" type="hidden" value="change"/><input name="holderID" size="11" maxlength="11" value={this.defaultHolderID}/><button type="submit">Change</button>
+				HolderID<input name="op" type="hidden" value="change"/><input name="holderID" size="11" maxlength="11" value={this.holderID}/><button type="submit">Change</button>
 			</form>
 			<ul>
 				<li><a href={"?op=update"}>Update CVCA/DVCA certificates synchronously</a></li>
-				<li><a href={"?op=updateasync&holderID=" + this.defaultHolderID}>Update CVCA/DVCA certificates asynchronously</a></li>
-				<li><a href={"?op=renew&holderID=" + this.defaultHolderID}>Renew certificate synchronously</a></li>
-<!--				<li><a href={"?op=renewasync&holderID=" + this.defaultHolderID}>Renew certificate asynchronously</a></li> -->
-				<li><a href={"?op=initial&holderID=" + this.defaultHolderID}>Request initial certificate synchronously</a></li>
-<!--				<li><a href={"?op=initialasync&holderID=" + this.defaultHolderID}>Request initial certificate asynchronously</a></li> -->
+				<li><a href={"?op=updateasync&holderID=" + this.holderID}>Update CVCA/DVCA certificates asynchronously</a></li>
+				<li><a href={"?op=renew&holderID=" + this.holderID}>Renew certificate synchronously</a></li>
+<!--				<li><a href={"?op=renewasync&holderID=" + this.holderID}>Renew certificate asynchronously</a></li> -->
+				<li><a href={"?op=initial&holderID=" + this.holderID}>Request initial certificate synchronously</a></li>
+<!--				<li><a href={"?op=initialasync&holderID=" + this.holderID}>Request initial certificate asynchronously</a></li> -->
 			</ul>
 		</div>
 
-/*
-	// ToDo: Refactor to getter
-	var certlist = this.service.tcc.getCertificateList();
+	var certlist = this.service.getCertificateList(this.holderID);
 	
 	if (certlist.length > 0) {
 		var t = <table class="content"/>;
 
+		t.colgroup += <colgroup><col width="24"/><col width="24"/><col width="20"/><col width="16"/><col width="16"/></colgroup>
 		t.tr += <tr><th>CHR</th><th>CAR</th><th>Type</th><th>Effective</th><th>Expiration</th></tr>;
 
 		var i = certlist.length - 6;
@@ -144,8 +144,8 @@ VTermUI.prototype.serveStatusPage = function(req, res, url) {
 				<td><a href={refurl}>{cvc.getCHR().toString()}</a></td>
 				<td>{cvc.getCAR().toString()}</td>
 				<td>{cvc.getType()}</td>
-				<td>{cvc.getCED().toLocaleDateString()}</td>
-				<td>{cvc.getCXD().toLocaleDateString()}</td>
+				<td>{CommonUI.dateString(cvc.getCED())}</td>
+				<td>{CommonUI.dateString(cvc.getCXD())}</td>
 			</tr>
 		}
 	
@@ -154,7 +154,6 @@ VTermUI.prototype.serveStatusPage = function(req, res, url) {
 		div.h2 = "Active certificate chain:";
 		div.appendChild(t);
 	}
-*/
 	
 	var queue = this.service.listOutboundRequests();
 	
@@ -245,7 +244,7 @@ VTermUI.prototype.handleInquiry = function(req, res) {
 
 			switch(operation.op) {
 			case "change":
-				this.defaultHolderID = operation.holderID;
+				this.holderID = operation.holderID;
 				this.serveStatusPage(req, res, url);
 				break;
 			case "update":

@@ -179,8 +179,7 @@ SOAPServer.registerService("tcc", tcc, tccui);
 // --- VTerm section ---
 
 // Create a virtual terminal service
-// var vt = new VTermService(datadir + "/vt", "/UTCVCA/UTDVCA", url + "/se/dvca");
-var vt = new VTermService(datadir + "/vt", "/UTCVCA/UTDVCA", "http://calzone:8080/se/dvca");
+var vt = new VTermService(datadir + "/vt", "/UTCVCA/UTDVCA", url + "/se/dvca");
 vt.setSendCertificateURL(url + "/se/vt");
 
 // Create GUI
