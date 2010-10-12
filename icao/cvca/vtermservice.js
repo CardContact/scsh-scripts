@@ -35,6 +35,10 @@ load("tools/eccutils.js");
  * @param {String} parentURL the URL of the parent CA's webservice
  */ 
 function VTermService(certstorepath, path, parentURL) {
+	if (typeof(certstorepath) == "undefined") {
+		return; 	// Empty constructor for prototype
+	}
+	
 	var pe = path.substr(1).split("/");
 	assert(pe.length == 2);
 
@@ -43,6 +47,8 @@ function VTermService(certstorepath, path, parentURL) {
 	
 	this.path = path;
 	this.parentURL = parentURL;
+	this.removePreviousKey = false;
+
 	
 	this.crypto = new Crypto();
 	
@@ -52,6 +58,7 @@ function VTermService(certstorepath, path, parentURL) {
 	this.outqueuemap = [];
 	
 	this.lock = new java.util.concurrent.locks.ReentrantLock(true);
+	this.version = "1.0";
 }
 
 
@@ -75,6 +82,17 @@ VTermService.prototype.setSendCertificateURL = function(url) {
  */
 VTermService.prototype.setKeySpec = function(keyparam, algorithm) {
 	this.cvca.setKeySpec(keyparam, algorithm);
+}
+
+
+
+/**
+ * Set flags that controls the removal of the previous key if the certificate for the new key is imported
+ *
+ * @param {boolean} removePreviousKey true to remove, false to keep
+ */
+VTermService.prototype.setRemovePreviousKey = function(removePreviousKey) {
+	this.removePreviousKey = removePreviousKey;
 }
 
 
@@ -264,8 +282,7 @@ VTermService.prototype.importCertificates = function(certlist) {
 		var chat = cvc.getCHAT();
 		var certtype = cvc.getCHAT().get(1).value.byteAt(0) & 0xC0;
 		if ((certtype == 0x80) || (certtype == 0x40)) {
-			var pe = this.path.substr(1).split("/");
-			this.path = "/" + pe[0] + "/" + cvc.getCHR().getHolder();
+			this.path = "/" + cvc.getCAR().getHolder() + "/" + cvc.getCHR().getHolder();
 		}
 	}
 	
@@ -293,8 +310,8 @@ VTermService.prototype.getCACertificatesFromDVCA = function(sr) {
 
 	var soapConnection = new SOAPConnection(SOAPConnection.SOAP11);
 
-	var ns = new Namespace("uri:EAC-PKI-DV-Protocol/1.0");
-	var ns1 = new Namespace("uri:eacBT/1.0");
+	var ns = new Namespace("uri:EAC-PKI-DV-Protocol/" + this.version);
+	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
 	var request =
 		<ns:GetCACertificates xmlns:ns={ns} xmlns:ns1={ns1}>
@@ -341,8 +358,8 @@ VTermService.prototype.requestCertificateFromDVCA = function(sr) {
 
 	var soapConnection = new SOAPConnection(SOAPConnection.SOAP11);
 
-	var ns = new Namespace("uri:EAC-PKI-DV-Protocol/1.0");
-	var ns1 = new Namespace("uri:eacBT/1.0");
+	var ns = new Namespace("uri:EAC-PKI-DV-Protocol/" + this.version);
+	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
 	var request =
 		<ns:RequestCertificate xmlns:ns={ns} xmlns:ns1={ns1}>
@@ -394,8 +411,8 @@ VTermService.prototype.requestCertificateFromDVCA = function(sr) {
  */
 VTermService.prototype.SendCertificates = function(soapBody) {
 	
-	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/1.0");
-	var ns1 = new Namespace("uri:eacBT/1.0");
+	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/" + this.version);
+	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
 	var statusInfo = soapBody.statusInfo.toString();
 	var msgid = soapBody.messageID.toString();
@@ -452,8 +469,8 @@ VTermService.prototype.SendCertificates = function(soapBody) {
 VTermService.prototype.GetCertificateChain = function(soapBody) {
 
 	// Create empty response
-	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/1.0");
-	var ns1 = new Namespace("uri:eacBT/1.0");
+	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/" + this.version);
+	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
 	var chrstr = soapBody.keyNameMRTD;
 	if (typeof(chrstr) == "undefined") {
@@ -515,8 +532,8 @@ VTermService.prototype.GetCertificateChain = function(soapBody) {
 VTermService.prototype.GetTASignature = function(soapBody) {
 
 	// Create empty response
-	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/1.0");
-	var ns1 = new Namespace("uri:eacBT/1.0");
+	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/" + this.version);
+	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
 	var returnCode = ServiceRequest.OK_SIGNATURE_AVAILABLE;
 	

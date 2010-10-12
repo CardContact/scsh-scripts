@@ -88,10 +88,14 @@ VTermUI.prototype.serveStatusPage = function(req, res, url) {
 	// ToDo: Refactor to getter
 //	var status = this.service.tcc.isOperational() ? "operational" : "not operational";
 
+	var path = this.service.getPath();
+	var pe = path.substr(1).split("/");
+
 	var page =
 		<div>
 			<h1>Virtual Terminal Service</h1>
-			<p>Subordinate of {this.service.getPath()}</p>
+			<p>Subordinate of {path}</p>
+
 			<div id="activechain"/>
 			<div id="pendingoutboundrequests"/>
 			<h2>Possible actions:</h2>
@@ -99,7 +103,7 @@ VTermUI.prototype.serveStatusPage = function(req, res, url) {
 				HolderID<input name="op" type="hidden" value="change"/><input name="holderID" size="11" maxlength="11" value={this.holderID}/><button type="submit">Change</button>
 			</form>
 			<ul>
-				<li><a href={"?op=update"}>Update CVCA/DVCA certificates synchronously</a></li>
+				<li><a href="?op=update">Update CVCA/DVCA certificates synchronously</a></li>
 				<li><a href={"?op=updateasync&holderID=" + this.holderID}>Update CVCA/DVCA certificates asynchronously</a></li>
 				<li><a href={"?op=renew&holderID=" + this.holderID}>Renew certificate synchronously</a></li>
 <!--				<li><a href={"?op=renewasync&holderID=" + this.holderID}>Renew certificate asynchronously</a></li> -->
@@ -120,24 +124,25 @@ VTermUI.prototype.serveStatusPage = function(req, res, url) {
 		if (i <= 0) {
 			i = 0;
 		} else {
-			var ofs = this.service.path.substr(1).indexOf("/") + 1;
-			refurl = url[0] + "/certlist?path=" + this.service.path.substr(0, ofs);
+			refurl = url[0] + "/certlist?path=" + "/" + pe[0];
 			t.tr += <tr><td><a href={refurl}>Older ...</a></td><td></td><td></td><td></td><td></td></tr>;
 		}
 		
 		for (; i < certlist.length; i++) {
 			var cvc = certlist[i];
 			var chr = cvc.getCHR();
-			if (chr.getHolder().equals(this.service.name)) {
-				var path = this.service.path;
-			} else if (chr.getHolder().equals(this.service.parent)) {
-				var path = this.service.path.substr(0, this.service.path.lastIndexOf("/"));
+
+			if (chr.getHolder().equals(pe[0])) {
+				var certpath = "/" + pe[0];
+			} else if (chr.getHolder().equals(pe[1])) {
+				var certpath = "/" + pe[0] + "/" + pe[1];
 			} else {
-				var path = "/" + chr.getHolder();
+				var certpath = path + "/" + chr.getHolder();
 			}
+
 			var selfsigned = cvc.getCHR().equals(cvc.getCAR());
 			var refurl = url[0] + "/cvc?" + 
-							"path=" + path + "&" +
+							"path=" + certpath + "&" +
 							"chr=" + cvc.getCHR().toString() + "&" +
 							"selfsigned=" + selfsigned;
 			t.tr += <tr>

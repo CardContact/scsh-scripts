@@ -352,12 +352,12 @@ CVCCA.prototype.importCertificates = function(certs) {
 				GPSystem.trace("We do not have a key for " + cert.toString() + " - ignored...");
 			} else {
 				this.certstore.storeCertificate(this.path, cert, true);
-					
+
 				if (this.removePreviousKey) {
 					var req = this.certstore.getRequest(this.path, chr);
 					var previous = req.getOuterCAR();
-					print("Previous key: " + previous);
-					if (previous != null) {
+//					print("Previous key: " + previous);
+					if ((previous != null) && (previous.getSequenceNo() != "00000")) {
 						this.certstore.deleteCertificate(this.path, previous, false);
 						this.certstore.deleteRequest(this.path, previous);
 						this.certstore.deletePrivateKey(this.path, previous);

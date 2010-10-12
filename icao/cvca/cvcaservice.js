@@ -45,6 +45,7 @@ function CVCAService(path, name) {
 	this.path = this.cvca.path;
 	this.queue = [];
 	this.dVCertificatePolicies = [];
+	this.version = "1.0";
 }
 
 
@@ -402,8 +403,8 @@ CVCAService.prototype.sendCertificates = function(serviceRequest, certificates) 
 
 	var soapConnection = new SOAPConnection(SOAPConnection.SOAP11);
 
-	var ns = new Namespace("uri:EAC-PKI-DV-Protocol/1.0");
-	var ns1 = new Namespace("uri:eacBT/1.0");
+	var ns = new Namespace("uri:EAC-PKI-DV-Protocol/" + this.version);
+	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
 	var request =
 		<ns:SendCertificates xmlns:ns={ns} xmlns:ns1={ns1}>
@@ -447,8 +448,8 @@ CVCAService.prototype.sendCertificates = function(serviceRequest, certificates) 
 CVCAService.prototype.GetCACertificates = function(soapBody) {
 
 	// Create empty response
-	var ns = new Namespace("uri:EAC-PKI-CVCA-Protocol/1.0");
-	var ns1 = new Namespace("uri:eacBT/1.0");
+	var ns = new Namespace("uri:EAC-PKI-CVCA-Protocol/" + this.version);
+	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
 	var callback = soapBody.callbackIndicator;
 	
@@ -499,8 +500,8 @@ CVCAService.prototype.GetCACertificates = function(soapBody) {
  */
 CVCAService.prototype.RequestCertificate = function(soapBody) {
 	
-	var ns = new Namespace("uri:EAC-PKI-CVCA-Protocol/1.0");
-	var ns1 = new Namespace("uri:eacBT/1.0");
+	var ns = new Namespace("uri:EAC-PKI-CVCA-Protocol/" + this.version);
+	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
 	var certlist = [];
 

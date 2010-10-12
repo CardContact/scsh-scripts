@@ -51,6 +51,7 @@ function TCCService(certstorepath, path, parentURL) {
 	this.tcc = new CVCCA(this.crypto, this.ss, this.name, this.parent, path);
 	this.outqueue = [];
 	this.outqueuemap = [];
+	this.version = "1.0";
 }
 
 
@@ -229,8 +230,8 @@ TCCService.prototype.getCACertificatesFromDVCA = function(sr) {
 
 	var soapConnection = new SOAPConnection(SOAPConnection.SOAP11);
 
-	var ns = new Namespace("uri:EAC-PKI-DV-Protocol/1.0");
-	var ns1 = new Namespace("uri:eacBT/1.0");
+	var ns = new Namespace("uri:EAC-PKI-DV-Protocol/" + this.version);
+	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
 	var request =
 		<ns:GetCACertificates xmlns:ns={ns} xmlns:ns1={ns1}>
@@ -277,8 +278,8 @@ TCCService.prototype.requestCertificateFromDVCA = function(sr) {
 
 	var soapConnection = new SOAPConnection(SOAPConnection.SOAP11);
 
-	var ns = new Namespace("uri:EAC-PKI-DV-Protocol/1.0");
-	var ns1 = new Namespace("uri:eacBT/1.0");
+	var ns = new Namespace("uri:EAC-PKI-DV-Protocol/" + this.version);
+	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
 	var request =
 		<ns:RequestCertificate xmlns:ns={ns} xmlns:ns1={ns1}>
@@ -330,8 +331,8 @@ TCCService.prototype.requestCertificateFromDVCA = function(sr) {
  */
 TCCService.prototype.SendCertificates = function(soapBody) {
 	
-	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/1.0");
-	var ns1 = new Namespace("uri:eacBT/1.0");
+	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/" + this.version);
+	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
 	var statusInfo = soapBody.statusInfo.toString();
 	var msgid = soapBody.messageID.toString();
@@ -388,8 +389,8 @@ TCCService.prototype.SendCertificates = function(soapBody) {
 TCCService.prototype.GetCertificateChain = function(soapBody) {
 
 	// Create empty response
-	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/1.0");
-	var ns1 = new Namespace("uri:eacBT/1.0");
+	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/" + this.version);
+	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
 	var chrstr = soapBody.keyNameMRTD;
 	if (typeof(chrstr) == "undefined") {
@@ -451,8 +452,8 @@ TCCService.prototype.GetCertificateChain = function(soapBody) {
 TCCService.prototype.GetTASignature = function(soapBody) {
 
 	// Create empty response
-	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/1.0");
-	var ns1 = new Namespace("uri:eacBT/1.0");
+	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/" + this.version);
+	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
 	var returnCode = ServiceRequest.OK_SIGNATURE_AVAILABLE;
 	

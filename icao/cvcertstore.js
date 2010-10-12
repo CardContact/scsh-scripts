@@ -421,12 +421,6 @@ CVCertificateStore.prototype.deleteRequest = function(path, chr) {
  * @param {Boolean} makeCurrent true if this certificate become the current certificate
  */
 CVCertificateStore.prototype.storeCertificate = function(path, cert, makeCurrent) {
-	var cfg = this.loadConfig(path);
-	if (cfg == null) {
-		cfg = this.getDefaultConfig(path);
-		this.saveConfig(path, cfg);
-	}
-
 	var car = cert.getCAR();
 	var chr = cert.getCHR();
 	if (car.equals(chr)) {
@@ -434,6 +428,18 @@ CVCertificateStore.prototype.storeCertificate = function(path, cert, makeCurrent
 	} else {
 		var fn = this.path + path + "/" + chr.toString() + ".cvcert";
 	}
+
+	var f = new java.io.File(fn);
+	if (f.exists()) {
+		return;
+	}
+	
+	var cfg = this.loadConfig(path);
+	if (cfg == null) {
+		cfg = this.getDefaultConfig(path);
+		this.saveConfig(path, cfg);
+	}
+
 	GPSystem.trace("Saving certificate to " + fn);
 	CVCertificateStore.saveBinaryFile(fn, cert.getBytes());
 
@@ -925,7 +931,7 @@ CVCertificateStore.prototype.insertCertificate = function(crypto, cvc, cvcahint)
 	var cacert = this.getCertificate(path, car);
 	if (cacert == null) {
 		var path = "/" + CVCertificateStore.nthElementOf(cvcahint, 0) + "/" + car.getHolder();
-		print("Using hint " + path);
+//		print("Using hint " + path);
 		var cacert = this.getCertificate(path, car);
 		if (cacert == null) {
 			return false;
@@ -1013,7 +1019,7 @@ CVCertificateStore.prototype.insertCertificates2 = function(crypto, certlist, in
 		var cvc = certlist[i].cvc;
 		var state = chrmap[cvc.getCAR().toString()];
 		if (typeof(state) != "undefined") {
-			print("Mark as CA: " + state.cvc);
+//			print("Mark as CA: " + state.cvc);
 			state.end = false;
 		}
 	}
@@ -1044,10 +1050,10 @@ CVCertificateStore.prototype.insertCertificates2 = function(crypto, certlist, in
 				singlecert = false;
 			}
 			if (singlecert && cvcahint) {
-				print("Single certificate might be a terminal certificate, using cvca hint");
+//				print("Single certificate might be a terminal certificate, using cvca hint");
 				path = cvcahint;
 			} else {
-				print(path);
+//				print(path);
 			}
 			for (var j = list.length - 1; j >= 0; j--) {	// Process chain in reverse order
 				var cvc = list[j].cvc;
@@ -1078,7 +1084,7 @@ CVCertificateStore.prototype.loadConfig = function(path) {
 		var cfgxml = CVCertificateStore.loadXMLFile(fn);
 	}
 	catch(e) {
-		GPSystem.trace(e);
+//		GPSystem.trace(e);
 	}
 	return cfgxml;
 }
