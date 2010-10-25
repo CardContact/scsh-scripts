@@ -29,17 +29,21 @@
  * EMV class constructor
  * @class This class implements functions for tansaction process 
  * @constructor
- * @param {card} the card object 
- * @param {crypto} crypto
+ * @param {object} card the card object 
+ * @param {object} crypto the crypto object
  */
 function EMV(card, crypto) {
 	this.card = card;
 	this.crypto = crypto;
-	
 	this.cardDE = new Array();
 	this.terminalDE = new Array();
 	
 	this.terminalDE[EMV.UN] = crypto.generateRandom(4);
+	
+	this.terminalDE[0x9F33] = new ByteString("2028C0", HEX);
+	this.terminalDE[0x9F1A] = new ByteString("0276", HEX);
+	this.terminalDE[0x9F35] = new ByteString("15", HEX);
+	this.terminalDE[0x9F40] = new ByteString("0200000000", HEX);
 }
 
 
@@ -58,8 +62,8 @@ EMV.prototype.getCardDataElements = function() {
 /**
  * Send SELECT APDU
  *
- * @param {dfname} dfname the PSE AID
- * @param {first} first the selection options
+ * @param {object} dfname the PSE AID
+ * @param {boolean} first the selection options
  * @return the FCI
  * @type ByteString
  */
@@ -73,8 +77,8 @@ EMV.prototype.select = function(dfname, first) {
 /**
  * Send READ RECORD APDU
  *
- * @param {sfi} the SFI
- * @param {recno} the record number
+ * @param {number} sfi the Short File Identifier
+ * @param {number} recno the record number
  * @return the corresponding record or empty ByteString if no data was read
  * @type ByteString
  */
@@ -87,39 +91,69 @@ EMV.prototype.readRecord = function(sfi, recno) {
 	return(data);
 }
 
+/**
+ * Create a Data Object List related ByteString
+ * @param {object} dol the Data Object List
+ * @return ByteString related to the DOL
+ * @type ByteString
+ */
+EMV.prototype.createDOL = function(dol) {
+print("--Create Dol--");
+print("dol " + dol);
+	var dolenc = new ByteBuffer();
+	while(dol.length > 0) {
+		var b = dol.byteAt(0);
+		if((b&0x1F)==0x1F) {
+			var tag = dol.left(2).toUnsigned();
+			var length = dol.byteAt(2);
+			var	dol = dol.bytes(3);	//Remove Tag and Length Byte
+		}
+		else {
+			var tag = dol.left(1).toUnsigned();
+			var length = dol.byteAt(1);
+			var dol = dol.bytes(2);   //Remove Tag and Length Byte 
+		}
+		print("tag: " + tag.toString(HEX));
+		var addDolenc = this.terminalDE[tag];
+		if (typeof(addDolenc) != "undefined") {
+			// ToDo: Padding
+			assert(length == addDolenc.length);
+			dolenc.append(addDolenc);
+		}
+	}
+	dolenc = dolenc.toByteString();
+	//print("Return this dolenc: " + dolenc);
+	return(dolenc);
+}
 
 
 /**
  * Send GET PROCESSING OPTION APDU
  *
- * @param{pdol} the Processing Data Object List
+ * @param{object} pdol the Processing Data Object List
  * @return the Application Interchange Profile and the Application File Locator
  * @type ByteString
  */
 EMV.prototype.getProcessingOptions = function(pdol) {
 	if (pdol == null) {
-		//var pdol = new ByteString("8300", HEX);						// OTHER
+		var pdol = new ByteString("8300", HEX);							// OTHER
 		//var pdol = new ByteString("830B0000000000000000000000", HEX);	// VISA
 		//var pdol = new ByteString("830B2028C00276160200000000", HEX);	// VISA mit generate ac support
-		var pdol = new ByteString("830B2028C00276150200000000", HEX);
-	
+		//var pdol = new ByteString("830B2028C00276150200000000", HEX);	
 	}
 	var data = this.card.sendApdu(0x80, 0xA8, 0x00, 0x00, pdol, 0);
 	
 	return(data);
 }
 
-
-
 /**
  * <p>Select and read Payment System Environment on either
  * contact or contactless card</p>
  *
- * @param{contactless} the PSE AID
+ * @param {boolean} contactless the PSE AID
  */
 EMV.prototype.selectPSE = function(contactless) {
 	this.PSE = null;
-
 	var dfname = (contactless ? EMV.PSE2 : EMV.PSE1);
 	var fci = this.select(dfname, true);
 	print(fci);
@@ -177,7 +211,8 @@ EMV.prototype.selectPSE = function(contactless) {
 
 
 /**
- * @return array of PSE entries or null if none defined
+ * Return array of PSE entries or null if none defined
+ * @return the PSE array
  * @type Array
  */
 EMV.prototype.getPSE = function() {
@@ -187,7 +222,8 @@ EMV.prototype.getPSE = function() {
 
 
 /**
- * @return AID of application with highest priority or null if no PSE defined
+ * Return AID of application with highest priority or null if no PSE defined
+ * @return the AID
  * @type ByteString
  */
 EMV.prototype.getAID = function() {
@@ -232,12 +268,26 @@ EMV.prototype.getAID = function() {
 EMV.prototype.selectADF = function(aid) {
 	var fci = this.select(aid, true);
 	print(fci);
-	// FCI dekodieren
-	// DE aus FCI in this.cardDE aufnehmen
+	this.decodeFCI(fci);	
 	this.cardDE[EMV.AID] = aid;
 }
 
-
+/**
+ * Decode the A5 Template from the FCI
+ * @param {object} fci the File Control Informations
+ */
+EMV.prototype.decodeFCI = function(fci) {
+	var fcitlv = new ASN1(fci);
+	var a5 = fcitlv.find(0xA5);
+	
+	if (a5 != null) {
+		print("--FCI decodieren--");
+		for (var i = 0; i < a5.elements; i++) {
+			this.cardDE[a5.get(i).tag] = a5.get(i).value;
+			print(a5.get(i).tag.toString(HEX));
+		}
+	}
+}
 
 /**
  * Try a list of predefined AID in order to select an application
@@ -246,16 +296,16 @@ EMV.prototype.tryAID = function() {
 	for (var i = 0; i < EMV.AIDLIST.length; i++) {
 		var le = EMV.AIDLIST[i];
 		var aid = new ByteString(le.aid, HEX);
-		var fci = this.select(aid, true);
+		var fci = this.select(aid, true);	
 		
 		if (fci.length > 0) {
 			this.cardDE[EMV.AID] = aid;
 			print("FCI returned in SELECT: ", new ASN1(fci));
+			this.decodeFCI(fci);
 			return;
-		}
+		}		
 	}
 }
-
 
 /**
  * Add elements from ByteString into the cardDE array
@@ -273,8 +323,22 @@ EMV.prototype.addCardDEFromList = function(tlvlist) {
  * Store AIP and AFL into the cardDE array
  */
 EMV.prototype.initApplProc = function() {
-	// Create PDOL
-	var data = this.getProcessingOptions(null);
+	var pdol = this.cardDE[EMV.PDOL];
+	var pdolenc = null;
+	if (typeof(pdol) != "undefined") {
+		pdolenc = this.createDOL(pdol);
+		var length = pdolenc.length
+		var length = length.toString(HEX);
+		if (pdolenc.length <= 0xF) {
+			var zahlnull = "0";
+			length = zahlnull.concat(length);
+		}
+		var length = new ByteString(length, HEX);	
+		pdolenc = new ByteString("83", HEX).concat(length).concat(pdolenc);
+		print(pdolenc);
+	}
+	
+	var data = this.getProcessingOptions(pdolenc);
 	print(data);
 	var tl = new TLVList(data, TLV.EMV);
 	assert(tl.length == 1);
@@ -289,8 +353,6 @@ EMV.prototype.initApplProc = function() {
 		this.addCardDEFromList(tl);
 	}
 }
-
-
 
 /**
  * Read application data as indicated in the Application File Locator
@@ -348,16 +410,16 @@ EMV.prototype.readApplData = function() {
 }
 
 /**
+ * Return the Data Authentication Input
  * @return the Data Authentication Input
+ * @type ByteString
  */
 EMV.prototype.getDAInput = function() {
 	return this.daInput;
 }
 
 
-EMV.prototype.processDOL = function(dol) {
-	
-}
+
 
 
 /**
@@ -409,6 +471,7 @@ EMV.CAPKI = 0x8F;
 EMV.AFL = 0x94;
 EMV.FCI_ISSUER = 0xA5;
 EMV.UN = 0x9F37;
+EMV.PDOL = 0x9F38;
 EMV.SDATL = 0x9F4A;
 
 EMV.AIDLIST = new Array();
@@ -424,17 +487,3 @@ EMV.TAGLIST[EMV.CDOL1] = { name : "Card Risk Management Data Object List 1" };
 EMV.TAGLIST[EMV.CDOL2] = { name : "Card Risk Management Data Object List 2" };
 
 //EMV.pdol = 0x9F38179F1A0200009F33030000009F3501009F40050000000000;
-
-
-
-/*
-EMV.terminalDE[0x9F1A] = "9F1A020000";
-this.terminalDE[0x9F33] = "9F3303000000";
-this.terminalDE[0x9F35] = "9F350100";
-this.terminalDE[0x9F40] = "9F40050000000000";
-
-this.terminalDE[0x9F1A] = new ByteString("9F1A020000", HEX);
-this.terminalDE[0x9F33] = new ByteString("9F3303000000", HEX);
-this.terminalDE[0x9F35] = new ByteString("9F350100", HEX);
-this.terminalDE[0x9F40] = new ByteString("9F40050000000000", HEX);
-*/

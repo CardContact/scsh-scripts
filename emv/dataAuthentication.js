@@ -1,4 +1,30 @@
 /**
+ *  ---------
+ * |.##> <##.|  Open Smart Card Development Platform (www.openscdp.org)
+ * |#       #|  
+ * |#       #|  Copyright (c) 1999-2009 CardContact Software & System Consulting
+ * |'##> <##'|  Andreas Schwier, 32429 Minden, Germany (www.cardcontact.de)
+ *  --------- 
+ *
+ *  This file is part of OpenSCDP.
+ *
+ *  OpenSCDP is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License version 2 as
+ *  published by the Free Software Foundation.
+ *
+ *  OpenSCDP is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with OpenSCDP; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ *
+ * @fileoverview Class supporting EMV cards
+ */
+
+/**
  * DataAuthentication class constructor
  * @class This class implements data authentication
  * @constructor
@@ -32,14 +58,13 @@ DataAuthentication.prototype.getRID = function() {
 DataAuthentication.prototype.getPubKeyIndex = function() {
 	var index = this.emv.cardDE[0x8F];
 	var index = index.toUnsigned();
-	//print(index);
 	return(index);
 }
 
 /**
  * Add a new public key to the array
  *
- * @param {ByteString} rid
+ * @param {ByteString} rid the Registered Application Provider Identifier
  * @param {Number} index the public key index
  * @param {Key} key the public key
  */
@@ -61,8 +86,6 @@ DataAuthentication.prototype.getSchemePublicKey = function() {
 	var index = this.getPubKeyIndex();
 	
 	var key = this.schemePublicKeyTable[rid.toString(HEX)][index];
-//	print("INDEX");
-//	print(index);
 	return(key);
 }
 
@@ -221,8 +244,6 @@ DataAuthentication.prototype.retrievalICCPublicKey = function(issuerPublicKeyMod
 
 	// Step 2: The Recovered Data Trailer is equal to 'BC'
 	var decryptedICC = crypto.decrypt(key, Crypto.RSA, iccCert);
-	print("decryptedICC");//löschen
-	print(decryptedICC);//löschen
 	assert(decryptedICC.byteAt(decryptedICC.length - 1) == 0xBC);
 	
 	// Step 3: The Recovered Data Header is equal to '6A'	
@@ -312,12 +333,8 @@ DataAuthentication.prototype.dynamicDataAuthentication = function(iccPublicKeyMo
 	var iccPublicKeyModulus = iccPublicKeyModulus;
 	
 	var Data = crypto.generateRandom(4);
-	print("Random Number");//löschen
-	print(Data);//löschen	
 	var internalAuthenticate = card.sendApdu(0x00, 0x88, 0x00, 0x00, Data, 0x00);
 	var asn = new ASN1(internalAuthenticate);
-	print("Internal Authenticate");//löschen
-	print(asn);//löschen
 	var tag = asn.find(0x9F4B);
 	var SDAD = tag.value;
 	
@@ -326,8 +343,6 @@ DataAuthentication.prototype.dynamicDataAuthentication = function(iccPublicKeyMo
 	picKey.setComponent(Key.MODULUS, iccPublicKeyModulus);
 	picKey.setComponent(Key.EXPONENT, this.emv.cardDE[0x9F47]);
 	var decryptedSDAD = crypto.decrypt(picKey, Crypto.RSA, SDAD);
-	print("decrypted Signed Dynamic Application Data");//löschen
-	print(decryptedSDAD);//löschen
 	// Step 1: SDAD and ICC Public Key Modulus have the same length
 	assert(SDAD.length == iccPublicKeyModulus.length);
 	

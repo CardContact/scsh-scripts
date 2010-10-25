@@ -30,7 +30,7 @@
  * @class This class implements a viewer for data stored on emv cards
  * @constructor
  * @requires EMV
- * @param {EMV} emv an instance of the EMV class
+ * @param {object} emv an instance of the EMV class
  */
 function EMVView(emv) {
 	this.emv = emv;
@@ -47,8 +47,7 @@ EMVView.prototype.displayDataElements = function(){
 	print("cardDE.length=" + cardDE.length);
 	for (var i = 0; i < cardDE.length; i++) {
 		if(cardDE[i] != undefined){
-			//print("Tag: " + i.toString(HEX) + " Value: " + this.cardDE[i]);
-			var tag = i; //.toString(HEX);
+			var tag = i; 
 			var value= cardDE[i];
 			this.decodeDataElement(tag, value);
 		}
@@ -62,9 +61,6 @@ EMVView.prototype.displayDataElements = function(){
  * @param {ASN1} value the template containing TLV data objects
  */
 EMVView.prototype.decodeDataElement = function(tag, value) {
-	//print(tag);
-	//print(value);
-
 	switch (tag) {
 		case 0x57:
 			var str = value.toString(HEX);
@@ -112,6 +108,9 @@ EMVView.prototype.decodeDataElement = function(tag, value) {
 		case 0x5F20:
 			print("Cardholder Name : " + value.toString(ASCII));
 			break;
+		case 0x5F2D:
+			print("Language Preference : " + value.toString(ASCII));
+			break;
 		case 0x5F30: 
 			var string2 = value.toString(HEX);
 			print("Service Code: " + string2.substr(1));
@@ -135,6 +134,11 @@ EMVView.prototype.decodeDataElement = function(tag, value) {
 		case 0x9F0F:
 			print("Issuer Action Code - Online: " + value.toString(HEX));
 			this.decodeActionCode(value);
+			print();
+			break;
+		case 0x9F38: 
+			print("Processing Options Data Object List (PDOL): " + value.toString(HEX));
+			this.decodeDataObjectList(value);
 			print();
 			break;
 		case 0x9F49: 
@@ -164,29 +168,19 @@ EMVView.prototype.decodeDataElement = function(tag, value) {
  * @param {ByteString} list the data object list
  */
 EMVView.prototype.decodeDataObjectList = function(list) {
-	//print("DOL : " + list);
-		//	var dolStr = list;
-	//print (list.length);
-	var subL = list;
-	
-	while (subL.length > 0) {
-		var b = subL.byteAt(0);
+	while (list.length > 0) {
+		var b = list.byteAt(0);
 		if((b&0x1F)==0x1F){
-			var tag2 = subL.left(2);
-			var tag2 = tag2.toUnsigned();
-			var	subL = subL.bytes(2);
-			var length = subL.left(1);
-			//var length = length.toUnsigned();			
-			var subL = subL.bytes(1);	//Length Byte 			
+			var tag = list.left(2).toUnsigned();
+			var length = list.byteAt(2);		
+			var list = list.bytes(3);	//Remove Tag and Length Byte		
 		}
 		else {
-			var tag2 = subL.left(1);
-			var tag2 = tag2.toUnsigned();
-			var subL = subL.bytes(1);
-			var length = subL.left(1);
-			var subL = subL.bytes(1);   //Length Byte 	
+			var tag = list.left(1).toUnsigned();
+			var length = list.byteAt(1);
+			var list = list.bytes(2);   //Remove Tag and Length Byte
 		}
-		print("  " + tag2.toString(HEX) + " - " + length + " - " + DOL[tag2]);
+		print("  " + tag.toString(HEX) + " - " + length + " - " + DOL[tag]);
 	}
 }
 
@@ -228,40 +222,6 @@ EMVView.prototype.decodeAIP = function(list) {
 		}
 	}
 }
-/*
-EMVView.prototype.decodeAFL = function(list) {
-	var k = 0;
-	for (i = 0; i < list.length; i = i + 4) {
-		for (var j = 0; j < 4; j++) {
-			var b = list.byteAt(k);
-			//print("Hex: " + b.toString(HEX));
-			switch(j) {
-				case 0:
-					var b = b >> 3;
-					print("  SFI: " + b);
-					var k = k + 1;
-					break;
-				case 1:
-					print("  First/Only Record Number: " + b);
-					var k = k + 1;
-					break;
-				case 2:
-					print("  Last Record Number: " + b);
-					var k = k + 1;
-					break;
-				case 3:
-					print("  Number of records involved in offline data authentication: " + b);
-					var k = k + 1;
-					print();
-					break;
-				default:
-					print("  Default: " + j);
-					break;
-			}
-		}
-	}
-}
-*/
 
 /**
  * Decode an application file locator into a human readable form
@@ -316,6 +276,11 @@ EMVView.prototype.decodeCVM = function(list) {
 	}
 }
 
+/**
+ * Decode the Application Usage Control into a human readable form
+ *
+ * @param {ByteString} auc the Application Usage Control
+ */
 EMVView.prototype.decodeAUC = function(auc) {
 	var byte1 = auc.byteAt(0);
 	var byte2 = auc.byteAt(1);
@@ -449,38 +414,46 @@ CVM2[11] = "Reserved for use by individual payment systems";
 
 
 DOL = [];
-DOL[0x9F02] = "Authorised amount of the transaction (excluding adjustments)";
-DOL[0x9F03] = "Secondary amount associated with the transaction representing a cashback amount";
-DOL[0x9F1A] = "Terminal Country Code";
+DOL[0x5F2A] = "Transaction Currency Code";
 DOL[0x8A] = "Authorisation Response Code";
 DOL[0x91] = "Issuer Authentication Data";
 DOL[0x95] = "Terminal Verification Results";
-DOL[0x5F2A] = "Transaction Currency Code";
 DOL[0x9A] = "Transaction Date";
 DOL[0x9C] = "Transaction Type";
-DOL[0x9F37] = "Unpredictable Number";
+DOL[0x9F02] = "Authorised amount of the transaction (excluding adjustments)";
+DOL[0x9F03] = "Secondary amount associated with the transaction representing a cashback amount";
+DOL[0x9F1A] = "Terminal Country Code";
+DOL[0x9F33] = "Terminal Capabilities";
+DOL[0x9F34] = "Cardholder Verification Method (CVM) Results";
 DOL[0x9F35] = "Terminal Type";
+DOL[0x9F37] = "Unpredictable Number";
+DOL[0x9F40] = "Additional Terminal Capabilities";
 DOL[0x9F45] = "Data Authentication Code";
 DOL[0x9F4C] = "ICC Dynamic Number";
-DOL[0x9F34] = "Cardholder Verification Method (CVM) Results";
+
 
 EMVView.DE = [];
+EMVView.DE[0x4F] = "Application Identifier (AID) - card: ";
+EMVView.DE[0x50] = "Application Label: ";
 EMVView.DE[0x5A] = "Application Primary Account Number (PAN): ";
+EMVView.DE[0x5F2D] = "Language Preference: ";
+
+EMVView.DE[0x5F24] = "Application Expiration Date (YYMMDD): ";
+EMVView.DE[0x5F25] = "Application Effective Date (YYMMDD): ";
+EMVView.DE[0x5F28] = "Issuer Country Code: ";
+EMVView.DE[0x5F34] = "Application Primary Account Number (PAN) Sequence Number: ";
 EMVView.DE[0x87] = "Application Priority Indicator: ";
 EMVView.DE[0x88] = "Short File Identifier (SFI): ";
 EMVView.DE[0x8F] = "Certification Authority Public Key Index: ";
 EMVView.DE[0x90] = "Issuer Public Key Certificate: ";
 EMVView.DE[0x92] = "Issuer Public Key Remainder: ";
 EMVView.DE[0x93] = "Signed Static Application Data: ";
-EMVView.DE[0x5F24] = "Application Expiration Date (YYMMDD): ";
-EMVView.DE[0x5F25] = "Application Effective Date (YYMMDD): ";
-EMVView.DE[0x5F28] = "Issuer Country Code: ";
-EMVView.DE[0x5F34] = "Application Primary Account Number (PAN) Sequence Number: ";
 EMVView.DE[0x9F07] = "Application Usage Control: ";
 EMVView.DE[0x9F08] = "Application Version Number: ";
 EMVView.DE[0x9F32] = "Issuer Public Key Exponent: ";
 EMVView.DE[0x9F42] = "Application Currency Code: ";
 EMVView.DE[0x9F44] = "Application Currency Exponent: ";
+EMVView.DE[0x9F45] = "Data Authentication Code: ";
 EMVView.DE[0x9F46] = "ICC Public Key Certificate: ";
 EMVView.DE[0x9F47] = "ICC Public Key Exponent: ";
 EMVView.DE[0x9F48] = "ICC Public Key Remainder: ";

@@ -60,9 +60,8 @@ if (aid != null) {
 e.initApplProc();
 e.readApplData();
 
-v.displayDataElements();
 
-//d.decryptIssuerPKCertificate();
+v.displayDataElements();
 
 var issuerPublicKeyModulus = d.retrievalIssuerPublicKey();
 
@@ -73,33 +72,8 @@ d.dynamicDataAuthentication(iccPublicKeyModulus);
 
 e.generateAC();
 
-var getData = card.sendApdu(0x80, 0xCA, 0x9F36, 0x9F36, 0x00);
+var getData = card.sendApdu(0x80, 0xCA, 0x9F, 0x36, 0x00);
 print(getData);
 
-
-
-/*
-p1
-0x00 = AAC = reject transaction
-0x40 = TC = proceed offline
-0x80 = ARQC = go online
-
-
-var p1 = 0x40;
-
-var authorisedAmount = new ByteString("000000000001", HEX);
-var secondaryAmount = new ByteString("000000000000", HEX);
-var tvr = new ByteString("0000000000", HEX);
-var transCurrencyCode = new ByteString("0978", HEX);
-var transDate = new ByteString("090730", HEX);
-var transType = new ByteString("21", HEX);
-var unpredictableNumber = crypto.generateRandom(4);
-var iccDynamicNumber = card.sendApdu(0x00, 0x84, 0x00, 0x00, 0x00);
-var DataAuthCode = e.cardDE[0x9F45];
-
-var Data = authorisedAmount.concat(secondaryAmount).concat(tvr).concat(transCurrencyCode).concat(transDate).concat(transType).concat(unpredictableNumber).concat(iccDynamicNumber).concat(DataAuthCode); 
-
-var generateAC = card.sendApdu(0x80, 0xAE, p1, 0x00, Data, 0x00);
-*/
 
 card.close();
