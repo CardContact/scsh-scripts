@@ -286,7 +286,7 @@ VTermService.prototype.importCertificates = function(certlist) {
 		}
 	}
 	
-	var list = this.ss.insertCertificates(this.crypto, certlist, true);
+	var list = this.ss.insertCertificates2(this.crypto, certlist, true, this.path);
 
 	if (list.length > 0) {
 		print("Warning: Could not import the following certificates");
@@ -385,16 +385,27 @@ VTermService.prototype.requestCertificateFromDVCA = function(sr) {
 		throw new GPError("VTermService", GPError.DEVICE_ERROR, 0, "RequestCertificate failed with : " + e);
 	}
 
-	sr.setStatusInfo(response.Result.ns1::returnCode.toString());
 	var certlist = [];
 
-	if (response.Result.ns1::returnCode.substr(0, 3) == "ok_") {
+	if (!response.hasOwnProperty("Result")) {
+		GPSystem.trace(response.toXMLString());
+		sr.setStatusInfo(ServiceRequest.FAILURE_INTERNAL_ERROR);
+		return certlist;
+	}
+	
+	var returnCode = response.Result.ns1::returnCode.toString();
+
+	sr.setStatusInfo(returnCode);
+	
+	if (returnCode.substr(0, 3) == "ok_") {
 		GPSystem.trace("Received certificates from DVCA:");
 		for each (var c in response.Result.ns1::certificateSeq.ns1::certificate) {
 			var cvc = new CVC(new ByteString(c, BASE64));
 			certlist.push(cvc);
 			GPSystem.trace(cvc);
 		}
+	} else {
+		GPSystem.trace("DVCA returned " + returnCode);
 	}
 
 	return certlist;
