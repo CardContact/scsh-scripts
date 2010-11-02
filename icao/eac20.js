@@ -45,7 +45,8 @@ function EAC20(crypto, card) {
 	this.crypto = crypto;
 	this.card = card;
 	this.sm = null;
-
+	this.includeDPinAuthToken = false;		// Standard for PACE version >= 2
+	
 	// ToDo: Determine from CVCA Certificate
 	this.oidTerminalAuthentication = EAC20.id_TA_ECDSA_SHA_256;
 }
@@ -327,6 +328,9 @@ EAC20.prototype.performPACE = function(parameterId, pwdid, pwd, chat) {
 	
 	var domainParameter;
 	
+	// Used for Chip Authentication
+	this.includeDPinAuthToken = !(paceinfo.version >= 2);
+	
 	if ((paceinfo.version == 1) || ((paceinfo.version == 2) && (parameterId > 31))) {
 		var pacedp = this.PACEDPs[parameterId];
 		if (typeof(pacedp) == "undefined") {
@@ -594,7 +598,8 @@ EAC20.prototype.prepareChipAuthentication = function(keyId) {
 	this.cadp = cadp;
 
 	this.ca = new ChipAuthentication(this.crypto, cainfo.protocol, cadp.domainParameter);
-	
+
+	this.ca.includeDPinAuthToken = this.includeDPinAuthToken;
 	this.ca.generateEphemeralCAKeyPair();
 }
 

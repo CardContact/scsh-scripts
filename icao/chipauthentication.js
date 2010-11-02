@@ -154,7 +154,6 @@ function ChipAuthenticationDomainParameterInfo(tlv) {
 			assert(t.tag == ASN1.INTEGER);
 			this.keyId = t.value.toSigned();
 		}
-		
 	}
 }
 
@@ -204,6 +203,7 @@ function ChipAuthentication(crypto, algo, domparam) {
 	this.crypto = crypto;
 	this.algo = algo.toString(OID);
 	this.domparam = domparam;
+	this.includeDPinAuthToken = false;
 	
 //	print(ECCUtils.ECParametersToString(domparam));
 }
@@ -324,7 +324,7 @@ ChipAuthentication.prototype.performKeyAgreement = function(publicKey, nonce) {
  * @type Boolean
  */
 ChipAuthentication.prototype.verifyAuthenticationToken = function(authToken) {
-	var t = PACE.encodePublicKey(this.algo, this.pukCA, true);
+	var t = PACE.encodePublicKey(this.algo, this.pukCA, this.includeDPinAuthToken);
 	GPSystem.trace("Authentication Token:");
 	GPSystem.trace(t);
 	
