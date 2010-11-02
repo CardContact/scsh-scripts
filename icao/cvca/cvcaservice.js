@@ -45,7 +45,7 @@ function CVCAService(path, name) {
 	this.path = this.cvca.path;
 	this.queue = [];
 	this.dVCertificatePolicies = [];
-	this.version = "1.0";
+	this.version = "1.1";
 }
 
 
@@ -406,14 +406,26 @@ CVCAService.prototype.sendCertificates = function(serviceRequest, certificates) 
 	var ns = new Namespace("uri:EAC-PKI-DV-Protocol/" + this.version);
 	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
-	var request =
-		<ns:SendCertificates xmlns:ns={ns} xmlns:ns1={ns1}>
-			<messageID>{serviceRequest.getMessageID()}</messageID>
-			<statusInfo>{serviceRequest.getStatusInfo()}</statusInfo>
-			<certificateSeq>
-			</certificateSeq>
-		</ns:SendCertificates>;
-
+	if (this.version == "1.0") {
+		var request =
+			<ns:SendCertificates xmlns:ns={ns} xmlns:ns1={ns1}>
+				<messageID>{serviceRequest.getMessageID()}</messageID>
+				<statusInfo>{serviceRequest.getStatusInfo()}</statusInfo>
+				<certificateSeq>
+				</certificateSeq>
+			</ns:SendCertificates>;
+	} else {
+		var request =
+			<ns:SendCertificates xmlns:ns={ns} xmlns:ns1={ns1}>
+				<messageID>
+					<ns1:messageID>{serviceRequest.getMessageID()}</ns1:messageID>
+				</messageID>
+				<statusInfo>{serviceRequest.getStatusInfo()}</statusInfo>
+				<certificateSeq>
+				</certificateSeq>
+			</ns:SendCertificates>;
+	}
+	
 	var list = request.certificateSeq;
 
 	for (var i = 0; i < certificates.length; i++) {

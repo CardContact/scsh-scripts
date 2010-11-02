@@ -58,7 +58,7 @@ function VTermService(certstorepath, path, parentURL) {
 	this.outqueuemap = [];
 	
 	this.lock = new java.util.concurrent.locks.ReentrantLock(true);
-	this.version = "1.0";
+	this.version = "1.1";
 }
 
 
@@ -426,7 +426,12 @@ VTermService.prototype.SendCertificates = function(soapBody) {
 	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
 	var statusInfo = soapBody.statusInfo.toString();
-	var msgid = soapBody.messageID.toString();
+
+	if (this.version == "1.0") {
+		var msgid = soapBody.messageID.toString();
+	} else {
+		var msgid = soapBody.messageID.ns1::messageID.toString();
+	}
 	
 	var sr = this.outqueuemap[msgid];
 	if (sr) {

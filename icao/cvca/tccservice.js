@@ -51,7 +51,7 @@ function TCCService(certstorepath, path, parentURL) {
 	this.tcc = new CVCCA(this.crypto, this.ss, this.name, this.parent, path);
 	this.outqueue = [];
 	this.outqueuemap = [];
-	this.version = "1.0";
+	this.version = "1.1";
 }
 
 
@@ -335,7 +335,12 @@ TCCService.prototype.SendCertificates = function(soapBody) {
 	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
 	var statusInfo = soapBody.statusInfo.toString();
-	var msgid = soapBody.messageID.toString();
+
+	if (this.version == "1.0") {
+		var msgid = soapBody.messageID.toString();
+	} else {
+		var msgid = soapBody.messageID.ns1::messageID.toString();
+	}
 	
 	var sr = this.outqueuemap[msgid];
 	if (sr) {

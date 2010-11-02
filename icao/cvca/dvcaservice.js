@@ -50,7 +50,7 @@ function DVCAService(path, name, parent, parentURL) {
 	this.outqueue = [];
 	this.outqueuemap = [];
 	this.terminalCertificatePolicies = [];
-	this.version = "1.0";
+	this.version = "1.1";
 }
 
 
@@ -426,13 +426,25 @@ DVCAService.prototype.sendCertificates = function(serviceRequest, certificates) 
 	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/" + this.version);
 	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
-	var request =
-		<ns:SendCertificates xmlns:ns={ns} xmlns:ns1={ns1}>
-			<messageID>{serviceRequest.getMessageID()}</messageID>
-			<statusInfo>{serviceRequest.getStatusInfo()}</statusInfo>
-			<certificateSeq>
-			</certificateSeq>
-		</ns:SendCertificates>;
+	if (this.version == "1.0") {
+		var request =
+			<ns:SendCertificates xmlns:ns={ns} xmlns:ns1={ns1}>
+				<messageID>{serviceRequest.getMessageID()}</messageID>
+				<statusInfo>{serviceRequest.getStatusInfo()}</statusInfo>
+				<certificateSeq>
+				</certificateSeq>
+			</ns:SendCertificates>;
+	} else {
+		var request =
+			<ns:SendCertificates xmlns:ns={ns} xmlns:ns1={ns1}>
+				<messageID>
+					<ns1:messageID>{serviceRequest.getMessageID()}</ns1:messageID>
+				</messageID>
+				<statusInfo>{serviceRequest.getStatusInfo()}</statusInfo>
+				<certificateSeq>
+				</certificateSeq>
+			</ns:SendCertificates>;
+	}
 
 	var list = request.certificateSeq;
 
@@ -802,7 +814,12 @@ DVCAService.prototype.SendCertificates = function(soapBody) {
 	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
 	var statusInfo = soapBody.statusInfo.toString();
-	var msgid = soapBody.messageID.toString();
+
+	if (this.version == "1.0") {
+		var msgid = soapBody.messageID.toString();
+	} else {
+		var msgid = soapBody.messageID.ns1::messageID.toString();
+	}
 	
 	if (msgid == "Synchronous") {		// Special handling for posts from the command line
 		var sr = new ServiceRequest();
@@ -860,23 +877,24 @@ DVCAService.prototype.GetWSDL = function(req, res) {
 	case "wsdl":
 		var xml = 
 		<definitions
-			name="EAC-PKI-CVCA"
-			targetNamespace="uri:EAC-PKI-CVCA-Protocol/1.0"
-			xmlns:tns="uri:EAC-PKI-CVCA-Protocol/1.0"
+			name="EAC-PKI-DV"
+			targetNamespace="uri:EAC-PKI-DV-Protocol/1.1"
+			xmlns:tns="uri:EAC-PKI-DV-Protocol/1.1"
 
-			xmlns:ns="uri:eacBT/1.0"
+			xmlns:ns="uri:eacBT/1.1"
 
 			xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 			xsi:schemaLocation="http://schemas.xmlsoap.org/wsdl/ http://schemas.xmlsoap.org/wsdl/2003-02-11.xsd"
 
 			xmlns:xsd="http://www.w3.org/2001/XMLSchema"
 			xmlns:SOAP="http://schemas.xmlsoap.org/wsdl/soap/"
-			xmlns="http://schemas.xmlsoap.org/wsdl/">
-    
+			xmlns="http://schemas.xmlsoap.org/wsdl/"
+		>
+
 			<types>
 				<schema xmlns="http://www.w3.org/2001/XMLSchema">
 					<import namespace="http://www.w3.org/2001/XMLSchema"/>
-					<import namespace="uri:eacBT/1.0" schemaLocation="dvca?xsd=./BasicTypes_CVCA_TerminalAuth.xsd"/>
+					<import namespace="uri:eacBT/1.0" schemaLocation="dvca?xsd=./BasicTypes_DV_TerminalAuth.xsd"/>
 				</schema> 
 			</types>
 	
@@ -891,17 +909,6 @@ DVCAService.prototype.GetWSDL = function(req, res) {
 			<message name="RequestCertificate_Res">
 				<part name="Result" type="ns:RequestCertificateResult"/>
 			</message>
-			<!-- message RequestForeignCertificate -->
-			<message name="RequestForeignCertificate_Req">
-				<part name="callbackIndicator" type="ns:CallbackIndicatorType"/>	
-				<part name="messageID" type="ns:OptionalMessageIDType"/>
-				<part name="foreignCAR" type="xsd:string"/>
-				<part name="responseURL" type="ns:OptionalStringType"/>
-				<part name="certReq" type="xsd:base64Binary"/>
-			</message>
-			<message name="RequestForeignCertificate_Res">
-				<part name="Result" type="ns:RequestForeignCertificateResult"/>
-			</message>
 			<!-- message GetCACertificates -->
 			<message name="GetCACertificates_Req">
 				<part name="callbackIndicator" type="ns:CallbackIndicatorType"/>		
@@ -911,75 +918,78 @@ DVCAService.prototype.GetWSDL = function(req, res) {
 			<message name="GetCACertificates_Res">
 				<part name="Result" type="ns:GetCACertificatesResult"/>
 			</message>
-	
+			<!-- message SendCertificates -->
+			<message name="SendCertificates_Req">
+				<part name="messageID" type="ns:OptionalMessageIDType"/>
+				<part name="statusInfo" type="ns:SendCertificates_statusInfoType"/>
+				<part name="certificateSeq" type="ns:CertificateSeqType"/>
+			</message>
+			<message name="SendCertificates_Res">
+				<part name="Result" type="ns:SendCertificatesResult"/>
+			</message>
+
 			<!-- Definition of the port types -->
-			<portType name="EAC-PKI-CVCA-ProtocolType">
+			<portType name="EAC-PKI-DV-ProtocolType">
 				<!-- port type for message RequestCertificate -->
 				<operation name="RequestCertificate">
 					<input message="tns:RequestCertificate_Req"/>
 					<output message="tns:RequestCertificate_Res"/>
-				</operation>
-				<!-- port type for message RequestForeignCertificate -->
-				<operation name="RequestForeignCertificate">
-					<input message="tns:RequestForeignCertificate_Req"/>
-					<output message="tns:RequestForeignCertificate_Res"/>
 				</operation>
 				<!-- port type for message GetCACertificates -->
 				<operation name="GetCACertificates">
 					<input message="tns:GetCACertificates_Req"/>
 					<output message="tns:GetCACertificates_Res"/>
 				</operation>
+				<!-- port type for message SendCertificates -->
+				<operation name="SendCertificates">
+					<input message="tns:SendCertificates_Req"/>
+					<output message="tns:SendCertificates_Res"/>
+				</operation>
 			</portType>
-	
+
 			<!-- Definition of the bindings -->
-			<binding name="EAC-CVCA" type="tns:EAC-PKI-CVCA-ProtocolType">
+			<binding name="EAC-DV" type="tns:EAC-PKI-DV-ProtocolType">
 				<SOAP:binding style="rpc" transport="http://schemas.xmlsoap.org/soap/http"/>
 				<operation name="RequestCertificate">
 					<SOAP:operation style="rpc" soapAction=""/>
 					<input>
-						<SOAP:body use="literal" namespace="uri:EAC-PKI-CVCA-Protocol/1.0" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"/>
+						<SOAP:body use="literal" namespace="uri:EAC-PKI-DV-Protocol/1.1" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"/>
 					</input>
 					<output>
-						<SOAP:body use="literal" namespace="uri:EAC-PKI-CVCA-Protocol/1.0" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"/>
-					</output>
-				</operation>
-				<operation name="RequestForeignCertificate">
-					<SOAP:operation style="rpc" soapAction=""/>
-					<input>
-						<SOAP:body use="literal" namespace="uri:EAC-PKI-CVCA-Protocol/1.0" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"/>
-					</input>
-					<output>
-						<SOAP:body use="literal" namespace="uri:EAC-PKI-CVCA-Protocol/1.0" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"/>
+						<SOAP:body use="literal" namespace="uri:EAC-PKI-DV-Protocol/1.1" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"/>
 					</output>
 				</operation>
 				<operation name="GetCACertificates">
 					<SOAP:operation style="rpc" soapAction=""/>
 					<input>
-						<SOAP:body use="literal" namespace="uri:EAC-PKI-CVCA-Protocol/1.0" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"/>
+						<SOAP:body use="literal" namespace="uri:EAC-PKI-DV-Protocol/1.1" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"/>
 					</input>
 					<output>
-						<SOAP:body use="literal" namespace="uri:EAC-PKI-CVCA-Protocol/1.0" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"/>
+						<SOAP:body use="literal" namespace="uri:EAC-PKI-DV-Protocol/1.1" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"/>
 					</output>
 				</operation>
+				<operation name="SendCertificates">
+					<SOAP:operation style="rpc" soapAction=""/>
+					<input>
+						<SOAP:body use="literal" namespace="uri:EAC-PKI-DV-Protocol/1.1" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"/>
+					</input>
+					<output>
+						<SOAP:body use="literal" namespace="uri:EAC-PKI-DV-Protocol/1.1" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"/>
+					</output>
+				</operation>		
 			</binding>
-
-		<!-- Definition of the service -->
-			<service name="EAC-CVCA-ProtocolService">
-				<port name="EAC-CVCA-ProtocolServicePort" binding="tns:EAC-CVCA">
-					<SOAP:address location="http://localhost:8080/se/dvca"/>
-				</port>
-			</service>
-		</definitions>;
+		</definitions>
 
 		break;
+
 	case "xsd=./BasicTypes_DV_TerminalAuth.xsd":
 		var xml =
-		<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:nsBT="uri:eacBT/1.0" targetNamespace="uri:eacBT/1.0" elementFormDefault="qualified">
-		<!-- this scheme is based on the document 
-			PKI for the Extended Access Control (EAC), Protocol for the Management of Certififcates and CRLs
-			Version 1.0, Date 09.11.2009
-		-->
-		<!-- Definition of the type for a message ID -->
+		<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:nsBT="uri:eacBT/1.1" targetNamespace="uri:eacBT/1.1" elementFormDefault="qualified">
+			<!-- this scheme is based on the document 
+			PKIs for Machine Readable Travel Documents - Protocols for the Management of Certififcates and CRLs
+			Version 1.1, Date 30.06.2010
+			-->
+			<!-- Definition of the type for a message ID -->
 			<xsd:simpleType name="MessageIDType">
 				<xsd:restriction base="xsd:string"/>
 			</xsd:simpleType>
@@ -1014,11 +1024,17 @@ DVCAService.prototype.GetWSDL = function(req, res) {
 					<xsd:enumeration value="ok_cert_available"/>
 					<xsd:enumeration value="failure_inner_signature"/>
 					<xsd:enumeration value="failure_outer_signature"/>
-					<xsd:enumeration value="failure_syntax"/>
+					<xsd:enumeration value="failure_expired"/>
+					<xsd:enumeration value="failure_domain_parameters"/>
 					<xsd:enumeration value="failure_request_not_accepted"/>
+					<xsd:enumeration value="failure_foreignCAR_unknown"/>
+					<xsd:enumeration value="failure_not_forwarded"/>
+					<xsd:enumeration value="failure_request_not_accepted_foreign"/>
+					<xsd:enumeration value="failure_syntax"/>
+					<xsd:enumeration value="failure_internal_error"/>
 				</xsd:restriction>
 			</xsd:simpleType>
-	
+
 			<!-- ==================== -->
 			<!-- Definition of the types of the return codes for the different messages -->
 			<xsd:simpleType name="RequestCertificate_returnCodeType">
@@ -1028,9 +1044,12 @@ DVCAService.prototype.GetWSDL = function(req, res) {
 					<xsd:enumeration value="ok_reception_ack"/>
 					<xsd:enumeration value="failure_inner_signature"/>
 					<xsd:enumeration value="failure_outer_signature"/>
-					<xsd:enumeration value="failure_syntax"/>
+					<xsd:enumeration value="failure_expired"/>
+					<xsd:enumeration value="failure_domain_parameters"/>
 					<xsd:enumeration value="failure_request_not_accepted"/>
+					<xsd:enumeration value="failure_syntax"/>
 					<xsd:enumeration value="failure_synchronous_processing_not_possible"/>
+					<xsd:enumeration value="failure_internal_error"/>
 				</xsd:restriction>
 			</xsd:simpleType>
 			<xsd:simpleType name="GetCACertificates_returnCodeType">
@@ -1041,6 +1060,7 @@ DVCAService.prototype.GetWSDL = function(req, res) {
 					<xsd:enumeration value="failure_syntax"/>
 					<xsd:enumeration value="failure_request_not_accepted"/>
 					<xsd:enumeration value="failure_synchronous_processing_not_possible"/>
+					<xsd:enumeration value="failure_internal_error"/>
 				</xsd:restriction>
 			</xsd:simpleType>
 			<xsd:simpleType name="SendCertificates_returnCodeType">
@@ -1048,9 +1068,10 @@ DVCAService.prototype.GetWSDL = function(req, res) {
 					<xsd:enumeration value="ok_received_correctly"/>
 					<xsd:enumeration value="failure_syntax"/>
 					<xsd:enumeration value="failure_messageID_unknown"/>
+					<xsd:enumeration value="failure_internal_error"/>
 				</xsd:restriction>
 			</xsd:simpleType>
-	
+
 			<!-- ==================== -->
 			<!-- Definition of the types of the result for the different messages -->
 			<xsd:complexType name="RequestCertificateResult">
@@ -1070,7 +1091,7 @@ DVCAService.prototype.GetWSDL = function(req, res) {
 					<xsd:element name="returnCode" type="nsBT:SendCertificates_returnCodeType"/>
 				</xsd:sequence>
 			</xsd:complexType>
-		</xsd:schema>;
+		</xsd:schema>
 		
 		break;
 	default:
