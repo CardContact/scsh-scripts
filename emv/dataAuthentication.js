@@ -92,7 +92,7 @@ DataAuthentication.prototype.getSchemePublicKey = function() {
 /**
  * Decrypt the Issuer PK Certificate
  *
- * @ return the decrypted Issuer PK Certificate
+ * @return the decrypted Issuer PK Certificate
 */
 DataAuthentication.prototype.decryptIssuerPKCertificate = function() {
 	var certificate = this.emv.cardDE[0x90];
@@ -272,23 +272,6 @@ DataAuthentication.prototype.retrievalICCPublicKey = function(issuerPublicKeyMod
 		list = list.concat(value);
 	}
 		
-
-/* alt
-	var sdaTagList = this.emv.cardDE[0x9F4A];
-	if(typeof(sdaTagList != "undefined")) {
-		for(var i = 0; i < sdaTagList.length; i++) {
-			var tag = sdaTagList.byteAt(i);
-			var value = new ByteBuffer();
-			value = value.append(this.emv.cardDE[tag]);
-		}
-	}
-
-	if(value != 0) {
-		value = value.toByteString();
-		list = list.concat(value);
-	}
-*/
-
 	// Step 6: Generate hash from concatenation
 	var hashConcat = this.crypto.digest(Crypto.SHA_1, list);	
 	

@@ -165,20 +165,20 @@ EMVView.prototype.decodeDataElement = function(tag, value) {
  * <p>A data object list is a concatenation of data object identifiers, which each consist of
  *    a tag and a length field.</p>
  *
- * @param {ByteString} list the data object list
+ * @param {ByteString} dol the data object list
  */
-EMVView.prototype.decodeDataObjectList = function(list) {
-	while (list.length > 0) {
-		var b = list.byteAt(0);
+EMVView.prototype.decodeDataObjectList = function(dol) {
+	while (dol.length > 0) {
+		var b = dol.byteAt(0);
 		if((b&0x1F)==0x1F){
-			var tag = list.left(2).toUnsigned();
-			var length = list.byteAt(2);		
-			var list = list.bytes(3);	//Remove Tag and Length Byte		
+			var tag = dol.left(2).toUnsigned();
+			var length = dol.byteAt(2);		
+			var dol = dol.bytes(3);	//Remove Tag and Length Byte		
 		}
 		else {
-			var tag = list.left(1).toUnsigned();
-			var length = list.byteAt(1);
-			var list = list.bytes(2);   //Remove Tag and Length Byte
+			var tag = dol.left(1).toUnsigned();
+			var length = dol.byteAt(1);
+			var dol = dol.bytes(2);   //Remove Tag and Length Byte
 		}
 		print("  " + tag.toString(HEX) + " - " + length + " - " + DOL[tag]);
 	}
@@ -187,12 +187,12 @@ EMVView.prototype.decodeDataObjectList = function(list) {
 /**
  * Decode an action code into a human readable form
  *
- * @param {ByteString} list the action code
+ * @param {ByteString} actionCode the Action Code
  */
-EMVView.prototype.decodeActionCode = function(list) {
+EMVView.prototype.decodeActionCode = function(actionCode) {
 
 	for (var j = 0; j < 5; j++) {
-		var b = list.byteAt(j);
+		var b = actionCode.byteAt(j);
 		print("  Byte " + (j + 1) + ": ");
 	
 		for (var i = 0; i < 8; i++) {
@@ -207,11 +207,11 @@ EMVView.prototype.decodeActionCode = function(list) {
 /**
  * Decode an application interchange profile into a human readable form
  *
- * @param {ByteString} list the AIP
+ * @param {ByteString} aip the Application Interchange Profile
  */
-EMVView.prototype.decodeAIP = function(list) {
+EMVView.prototype.decodeAIP = function(aip) {
 	for (var j = 0; j < 2; j++) {
-		var b = list.byteAt(j);
+		var b = aip.byteAt(j);
 		print("  Byte " + (j + 1) + ": ");
 		
 		for (var i = 0; i < 8; i++) {
@@ -226,12 +226,12 @@ EMVView.prototype.decodeAIP = function(list) {
 /**
  * Decode an application file locator into a human readable form
  *
- * @param {ByteString} list the AFL
+ * @param {ByteString} afl the Application File Locator
  */
-EMVView.prototype.decodeAFL = function(list) {
-	for (var i = 0; i < list.length;) {
+EMVView.prototype.decodeAFL = function(afl) {
+	for (var i = 0; i < afl.length;) {
 		for (var j = 0; j < 4; j++) {
-			var b = list.byteAt(i);
+			var b = afl.byteAt(i);
 			//print("Hex: " + b.toString(HEX));
 			switch(j) {
 				case 0:
@@ -256,14 +256,15 @@ EMVView.prototype.decodeAFL = function(list) {
 		}
 	}
 }
+
 /**
- * Decode a cardholder verification method list into a human readable form
+ * Decode a Cardholder Verification Method List into a human readable form
  *
- * @param {ByteString} list the cardholder verification method list
+ * @param {ByteString} cvmlist the Cardholder Verification Method List
  */
-EMVView.prototype.decodeCVM = function(list) {
-	for (var i = 8; i<list.length; i = i+2) {
-		var b = list.byteAt(i);
+EMVView.prototype.decodeCVM = function(cvmlist) {
+	for (var i = 8; i<cvmlist.length; i = i+2) {
+		var b = cvmlist.byteAt(i);
 		if((b&0x40)==0x40) {
 			print("  Apply succeeding CV Rule if this CVM is unsucccessful");
 		}
@@ -271,7 +272,7 @@ EMVView.prototype.decodeCVM = function(list) {
 		print("  Fail cardholder verification if this CVM is unsuccessful");
 		}
 		print("    " + CVM[b & 0x3F]);
-		print("  " + CVM2[list.byteAt(i+1)]);
+		print("  " + CVM2[cvmlist.byteAt(i+1)]);
 		print();
 	}
 }

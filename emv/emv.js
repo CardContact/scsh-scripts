@@ -24,7 +24,6 @@
  * @fileoverview Class supporting EMV cards
  */
 
-
 /**
  * EMV class constructor
  * @class This class implements functions for tansaction process 
@@ -46,7 +45,6 @@ function EMV(card, crypto) {
 	this.terminalDE[0x9F40] = new ByteString("0200000000", HEX);
 }
 
-
 /**
  * Return cardDE
  *
@@ -56,8 +54,6 @@ function EMV(card, crypto) {
 EMV.prototype.getCardDataElements = function() {
 	return this.cardDE;
 }
-
-
 
 /**
  * Send SELECT APDU
@@ -71,8 +67,6 @@ EMV.prototype.select = function(dfname, first) {
 	var fci = this.card.sendApdu(0x00, 0xA4, 0x04, (first ? 0x00 : 0x02), dfname, 0x00);
 	return(fci);
 }
-
-
 
 /**
  * Send READ RECORD APDU
@@ -125,7 +119,6 @@ print("dol " + dol);
 	//print("Return this dolenc: " + dolenc);
 	return(dolenc);
 }
-
 
 /**
  * Send GET PROCESSING OPTION APDU
@@ -208,8 +201,6 @@ EMV.prototype.selectPSE = function(contactless) {
 	} while (data.length > 0);
 }
 
-
-
 /**
  * Return array of PSE entries or null if none defined
  * @return the PSE array
@@ -218,8 +209,6 @@ EMV.prototype.selectPSE = function(contactless) {
 EMV.prototype.getPSE = function() {
 	return this.PSE;
 }
-
-
 
 /**
  * Return AID of application with highest priority or null if no PSE defined
@@ -260,10 +249,9 @@ EMV.prototype.getAID = function() {
 	return aid;
 }
 
-
-
 /**
  * Select application and return FCI
+ * @param {object} aid the Application Identifier
  */
 EMV.prototype.selectADF = function(aid) {
 	var fci = this.select(aid, true);
@@ -309,6 +297,7 @@ EMV.prototype.tryAID = function() {
 
 /**
  * Add elements from ByteString into the cardDE array
+ * @param {object} tlvlist
  */
 EMV.prototype.addCardDEFromList = function(tlvlist) {
 	for (var i = 0; i < tlvlist.length; i++) {
@@ -417,10 +406,6 @@ EMV.prototype.readApplData = function() {
 EMV.prototype.getDAInput = function() {
 	return this.daInput;
 }
-
-
-
-
 
 /**
  * Send GENERATE APPLICATION CRYPTOGRAM APDU
