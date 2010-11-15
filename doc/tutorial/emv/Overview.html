@@ -39,41 +39,41 @@
 <h1>EMV Tutorial</h1>
 <p>This EMV Tutorial will explain how to use the 
 <a href="http://www.openscdp.org/scsh3/index.html">Smart Card Shell</a> to explore an EMV chip card.</p>
-<h2>Overview:</h2>
+<p>Scripts used throughout the tutorial can be found in the emv directory of the script collection.</p>
 <h3>1. Basics</h3>
 <h4><a href="Reset - ATR.html">1.1 Answer to Reset</a></h4>
-<p>Answer to Reset describes the first contact between card and terminal.</p>
+<p>Answer to Reset describes how card and terminal negotiate communication parameter.</p>
 
 <h4><a href="Read EMV.html">1.2 File Structure & APDU</a></h4>
 <p>Here we get some information about the file structure of EMV cards. Also we learn how the communication between card and terminal works.</p>
 
 <h4><a href="TLV.html">1.3 ASN1 and TLV</a></h4>
-<p>This chapter describes the data structure.</p>
+<p>This chapter describes the data structures, ASN.1 and TLV encoding in particular.</p>
 
 <h3>2. Transaction Process</h3>
 <h4><a href="Application Selection.html">2.1 Application Selection</a></h4>
-<p>Application Selection is the first function performed after the ATR. It selects the Master File of the card.</p>
+<p>Application selection is the first function performed after the ATR. It selects the desired application on the card.</p>
 
 <h4><a href="Initiate Application Process.html">2.2 Initiate Application Process</a></h4>
-<p>The function initiates the transaction process and returns the AIP and AFL.</p>
+<p>This function initiates the transaction process and returns the AIP and AFL.</p>
 
 <h4><a href="Read Application Data.html">2.3 Read Application Data</a></h4>
-<p>The function reads all files which are listed in the AFL.</p>
+<p>This function reads all files which are listed in the AFL.</p>
 
 <h4><a href="SDA.html">2.4 Static Data Authentication</a></h4>
 <p>Static Data Authentication ensure the authenticity of the card's data.</p>
 
 <h4><a href="DDA.html">2.5 Dynamic Data Authentication</a></h4>
-<p>DDA is a more securer way of authentication. It ensures additionally the uniqueness of cards.</p>
+<p>DDA is a more secure way of authentication. Additionally, it ensured the uniqueness of cards.</p>
 
 <h4><a href="Processing Restrictions.html">2.6 Processing Restrictions</a></h4>
-<p>It checks the compatibility between card and terminal.</p>
+<p>Checks the compatibility of card and terminal.</p>
 
 <h4><a href="Cardholder Verification.html">2.7 Cardholder Verification</a></h4>
 <p>Introduction of the Cardolder Verification Methods.</p>
 
 <h4><a href="Terminal Risk Management.html">2.8 Terminal Risk Management</a></h4>
-<p>A list of safety measures to protect from fraus.</p>
+<p>A list of safety measures to protect from fraud.</p>
 
 <h4><a href="Terminal Action Analysis.html">2.9 Terminal Action Analysis</a></h4>
 <p>Description of the terminal's online/offline transaction decision</p>
