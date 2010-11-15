@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project name="doc" basedir="." default="applyTemplate">
 
-	<property name="jsdoc" location="C:/Programme/jsdoc/jsdoc.pl"/>
+	<property name="jsdoc" location="C:/usr/local/jsdoc/jsdoc.pl"/>
 	<property name="build" location="build"/>
 	<property name="doc" location="doc"/>
 	
