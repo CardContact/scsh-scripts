@@ -40,27 +40,30 @@
 <h1>Answer to Reset</h1>
 <p></p>
 <h2>Resetting the card</h2>
-<p>First of all we create an object "card" and define the card reader (_scsh3.reader).</p>
+<p>To perform any communication with the card, we will need to obtain a card object.
+   A card object is created using the new Card() constructor. The constructor accepts a card reader name as
+   parameter. The predefined variable _scsh3.reader contains the default reader name.</p>
 <pre>
 var card = new <a href="http://www.openscdp.org/scsh3/card.html">Card</a>(_scsh3.reader);
 </pre>
-<p>Now we can start to reset the card. There are two ways of resetting.
-<br><b>Cold Reset:</b></br>
-The cold reset always starts by the first connection between card and card reader.
-At the beginning of the cold reset the card is cut off from the power supply. 
-In the next step the card gets energy and a reset signal. The terminal is now waiting for an answer (ATR).
-<br><b>Warm Reset:</b></br>
-During the warm reset the terminal is sending a reset signal to the card without disconnecting the power supply. 
-</p>
+<p>Now we can reset the card. There are two ways of resetting.</p>
+<p><b>Cold Reset:</b></p>
+The cold reset is the initial start of all communication between the card and the reader.
+If the card is already powered up, then a cold reset will first deactivate power supply.
+Then power is supplied to the card and the reset line is used to signal a reset to the chip.
+The terminal then waits for an answer (ATR).
+<p><b>Warm Reset:</b></p>
+<p>During warm reset the terminal is sending a reset signal to the card without disconnecting power supply.</p>
+<p>In our case we want a cold reset.</p>
 <pre>
 var <a href="http://www.openscdp.org/scsh3/atr.html">atr</a> = card.reset(Card.RESET_COLD);
 </pre>
 <h3>ATR - Answer to Reset</h3>
-<p>After the reset signal from the terminal the card will answer with a bytestring called ATR. 
-This string contains certain informations about the card which are necessary for the communication between card and terminal. 
-After a warm reset the card answers with a different ATR, e.g. to get a faster connection. </p>
-<p>To get the data the card was sending, we use the class <a href="http://www.openscdp.org/scsh3/atr.html">atr</a>.
-There are two methods to get the informations: "<a href="http://www.openscdp.org/scsh3/atr.html#toByteString">toByteString</a>()" and "<a href="http://www.openscdp.org/scsh3/atr.html#toString">toString</a>()".</p>
+<p>After the reset signal from the terminal, the card will answer with a bytestring called ATR. 
+This string contains certain information about the card which are necessary for the communication between card and terminal.
+After a warm reset the card answers with a different ATR, e.g. to switch to a slower communication rate. </p>
+<p>To get the data the card was sending, we use the class <a href="http://www.openscdp.org/scsh3/atr.html">ATR</a>.
+There are two methods to extract details from the ATR: "<a href="http://www.openscdp.org/scsh3/atr.html#toByteString">toByteString</a>()" and "<a href="http://www.openscdp.org/scsh3/atr.html#toString">toString</a>()".</p>
 <pre>
 var atrbin = atr.toByteString();
 
@@ -89,13 +92,21 @@ TA3 : FE  IFSC = 254      [information field size]
 TB3 : 45  CWT  =  43 etu  [character waiting time]
           BWT  =  12 etu  [block waiting time]
 65630D025002800008377020100500 ec..P....7p ...</pre>
-<p>The first byte of the string is the initial character "T0". It defines which of the two transmission technique, "direct convention (3B)" or "indirect convention (3F)", should be used.
- In this case we have the byte 3B and a direct convention. </p>
- <p>The second Byte is the format character T0. Here we get the lenght of the historical charaters. In this ATR the last 15 bytes are the historical characters. It contains some informations e.g. the card's features and OS</p>
- <p>TA1 to TC3 are interface characters. They are necessary for the transmission between card and terminal. They contains informations like voltage, speed and timeouts.</p>
-<p>TA3 determines the information field size. So the terminal know the max. size of a block which will be send to the terminal.  </p>
-<p>The Character TB3 is relevant for the character and block waiting time. The character waiting time is the max. timeout between one byte to another and the block waiting time between to blocks.
-If the waiting time is higher as determined, the terminal will issue an error message.</p>
+<p>The first byte of the string is the initial character "T0". It defines which of the two 
+   transmission technique, "direct convention (3B)" or "indirect convention (3F)", should be used.
+   In our case we have the byte 3B and a direct convention. </p>
+<p>The second byte is the format character T0. Here we obtain the length of the historical characters.
+   In our ATR the last 15 bytes are the historical characters. They contain some information e.g. the
+   card's features and operating system version.</p>
+<p>TA1 to TC3 are interface characters. They are necessary to determine the transmission between 
+   the card and the terminal. They contains informations like voltage, transmission rates and timeouts.</p>
+<p>TA3 determines the information field size. The terminal used this value to determine the max. size of a block 
+   send to the card.</p>
+<p>The character TB3 is relevant for the character and block waiting time. The character waiting 
+   time is the max. timeout between two subsequent bytes and the block waiting the time between twi subsequent blocks.
+   If the waiting time is higher than determined, then terminal will issue an timeout error.</p>
+<p>All waiting times are expressed as Elementary Time Unit (ETU), which is the time required to transmit a single bit.
+   The default communication rate is 9600 bits per second, which translates to an ETU of 1/9600 seconds.</p>
 <p><a href="Overview.html">< back</a> <a href="Read EMV.html">next ></a></p>
 <!-- #EndEditable -->
 <br>
