@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project name="doc" basedir="." default="applyTemplate">
 
-	<property name="jsdoc" location="C:/usr/local/jsdoc/jsdoc.pl"/>
+	<property name="jsdoc" location="C:/Programme/jsdoc/jsdoc.pl"/>
 	<property name="build" location="build"/>
 	<property name="doc" location="doc"/>
 	
@@ -11,7 +11,7 @@
 	</target>
 
 
-	<target name="applyTemplate" depends="convertJS,convertTutorialJS">
+	<target name="applyTemplate" depends="convertJS">
 		<apply executable="perl" dir="${doc}" force="true">
 			<arg value="stt.pl" />
 			<fileset dir="." includes="**/*.html"/>
@@ -82,6 +82,14 @@
 		</apply>
 	</target>
 
+	<target name="jsdoc_emv">
+	    <echo message="${doc}"/>
+		<apply executable="perl" addsourcefile="true" dir="${basedir}/emv" parallel="true" relative="true" verbose="true">
+			<arg line="${jsdoc} --directory '${doc}/emv/jsdoc'" />
+			<!-- Collect the JS-files -->
+			<fileset dir="${basedir}/emv" includes="**/*.js"/>
+		</apply>
+	</target>
 
 	<target name="package" depends="init, applyTemplate, jsdoc">
 		<property name="bundlename" value="scripts-${DSTAMP}.zip"/>
