@@ -4,6 +4,15 @@ body {
     font-size: 10pt;
 }
 
+#navigator { 
+	float: left;
+	width: 10em; 
+}
+
+#main {
+	margin-left: 10em;
+	width: 46em;
+}
 p,a,td {
     font-size: 10pt;
 }
@@ -28,6 +37,23 @@ pre {
     background: #f8f8f8;
     border: 1px solid #d8d8d8;
     overflow: auto;
+}
+
+pre.sourcecode {
+    font-size: 9pt;
+    background: #f8f8f8;
+    border: 1px solid #d8d8d8;
+    overflow: auto;
+	counter-reset: LineNumberCounter;
+}
+
+pre.sourcecode:hover code:before {
+    content: "   ";
+}
+
+pre.sourcecode code:before {
+    content: counter(LineNumberCounter, decimal-leading-zero ) " ";
+	counter-increment: LineNumberCounter;
 }
 
 p.signature {
@@ -55,5 +81,3 @@ table.content th {
     border: 1px solid #d8d8d8;
     text-align: left;
 }
-
-#navigator { position:fixed; top:100px; left:0px; width:130px; height:500px; background-color:#afa; }
