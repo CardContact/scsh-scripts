@@ -49,19 +49,33 @@ Both amount fields have an implicit decimal pointer which is determined in the A
 <h3>CV Rule Byte 1</h3>
 <p>
 Source: <a href="http://www.emvco.com/specifications.aspx?id=155">EMV Book 3</a>
-<table>
-	<tr>
-		<th>b8</th>
-		<th>b7</th>
-		<th>b6</th>
-		<th>b5</th>
-		<th>b4</th>
-		<th>b3</th>
-		<th>b2</th>
-		<th>b1</th>
-		<th>Meaning</th>
-	</tr>
-	<tr>
+<table class="content">
+  <colgroup>
+    <col width="25">
+    <col width="25">
+    <col width="25">
+	<col width="25">
+	<col width="25">
+	<col width="25">
+	<col width="25">
+	<col width="25">
+	<col>
+  </colgroup>
+
+	<thead align="center">
+		<tr>
+			<td> <b>b8</b> </td>
+			<td> <b>b7</b> </td>
+			<td> <b>b6</b> </td>
+			<td> <b>b5</b> </td>
+			<td> <b>b4</b> </td>
+			<td> <b>b3</b> </td>
+			<td> <b>b2</b> </td>
+			<td> <b>b1</b> </td>
+			<td> <b>Meaning</b></td>
+		</tr>
+	</thead>
+	<tbody align="center">
 		<td>0</td>
 		<td></td>
 		<td></td>
@@ -226,6 +240,7 @@ Source: <a href="http://www.emvco.com/specifications.aspx?id=155">EMV Book 3</a>
 		<td>1</td>
 		<td>This value is not available for use</td>
 	</tr>
+	</tbody>
 </table>
 </p>
 <h3>CV Rule Byte 2</h3>

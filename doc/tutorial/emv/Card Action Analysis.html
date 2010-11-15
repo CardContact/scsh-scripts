@@ -64,18 +64,33 @@ The data object is a constructed data object. The value field contains TLV coded
 <p>The CID reveal what kind of Application Cryptogramm is returned. It can optionally contain an advice message if the transaction will rejected.</p>
 <p>
 Source: <a href="http://www.emvco.com/specifications.aspx?id=155">EMV Book 3</a>
-<table>
-	<tr>
-		<th>b8</th>
-		<th>b7</th>
-		<th>b6</th>
-		<th>b5</th>
-		<th>b4</th>
-		<th>b3</th>
-		<th>b2</th>
-		<th>b1</th>
-		<th>Meaning</th>
-	</tr>
+<table class="content">
+  <colgroup>
+    <col align="center" width="25">
+    <col align="center" width="25">
+    <col align="center" width="25">
+	<col align="center" width="25">
+	<col align="center" width="25">
+	<col align="center" width="25">
+	<col align="center" width="25">
+	<col align="center" width="25">
+	<col>
+  </colgroup>
+
+	<thead align="center">
+		<tr>
+			<td> <b>b8</b> </td>
+			<td> <b>b7</b> </td>
+			<td> <b>b6</b> </td>
+			<td> <b>b5</b> </td>
+			<td> <b>b4</b> </td>
+			<td> <b>b3</b> </td>
+			<td> <b>b2</b> </td>
+			<td> <b>b1</b> </td>
+			<td> <b>Meaning</b></td>
+		</tr>
+	</thead>
+	<tbody align="center">
 	<tr>
 		<td>0</td>
 		<td>0</td>
@@ -219,6 +234,7 @@ Source: <a href="http://www.emvco.com/specifications.aspx?id=155">EMV Book 3</a>
 		<td>x</td>
 		<td>Other values RFU</td>
 	</tr>
+	</tbody>
 </table>
 </p>
 
