@@ -1,0 +1,977 @@
+<!-- #BeginTemplate "templatesubsubdir.dwt" -->
+<!doctype html public "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<!-- #BeginEditable "TITLE" -->
+<title>Terminal Action Analysis</title>
+<!-- #EndEditable -->
+<link rel=stylesheet type="text/css" href="../../style.css">
+<meta name="author" content="Andreas Schwier">
+</head>
+<body>
+
+
+<div align="left"><a href="http://www.cardcontact.de"><img src="../../banner.jpg" width="750" height="80" border="0"></a></div></td>
+<div id="navigator">
+<br>
+    <p><b>Script Collection</b></p>
+    <a href="../../index.html">Home</a><br>
+    <a href="http://www.openscdp.org/scripts/download.html">Download</a><br>
+    <br>
+    <br>
+    <a href="../../eGK/index.html">German eGK</a><br>
+    <a href="../../HPC/index.html">German HPC</a><br>
+
+    <a href="../../kvk/index.html">German KVK</a><br><br>
+    <a href="../../icao/index.html">ICAO MRTD</a><br>
+    <a href="../../gp/index.html">GP Card</a><br>
+    <a href="../../musclecard/index.html">MuscleCard</a><br>
+    <a href="../../pkcs15/index.html">PKCS#15 Card</a><br>
+    <a href="../../emv/index.html">EMV</a><br>
+    <br>
+    <a href="../../tutorial/index.html">Tutorial</a><br>
+    <br>
+    <a href="http://www.openscdp.org">OpenSCDP</a><br>
+    <a href="http://www.cardcontact.de/company/contact.html">Contact</a><br>
+    </div>
+<div id="main">
+<!-- #BeginEditable "BODY" -->
+<p><a href="terminalriskmanagement.html">< back</a> <a href="index.html">index</a> <a href="cardactionanalysis.html">Next ></a></p>
+<h1>Terminal Action Analysis</h1>
+
+<p>
+The terminal has to decides either to proceed the transaction offline, to go online or to reject the transaction.
+The Terminal will send the decision with a Generate AC command to the card.</p>
+
+<p>The decision is based on the Transaction Verification Results. 
+There are several lists called Issuer Action Code (IAC) and Terminal Action Code (TAC) which give a directive to evaluate the TVR.</p>
+
+<h2 id="TVR">Structure</h2>
+<p>IAC, TAC and TVR have the same structure.</p>
+<p>Source: <a href="http://www.emvco.com/specifications.aspx?id=155">EMV Book 3</a></p>
+<p>Byte 1:</p>
+<p>
+<table class="content">
+  <colgroup>
+    <col width="25">
+    <col width="25">
+    <col width="25">
+	<col width="25">
+	<col width="25">
+	<col width="25">
+	<col width="25">
+	<col width="25">
+	<col>
+  </colgroup>
+
+	<thead align="center">
+		<tr>
+			<td> <b>b8</b> </td>
+			<td> <b>b7</b> </td>
+			<td> <b>b6</b> </td>
+			<td> <b>b5</b> </td>
+			<td> <b>b4</b> </td>
+			<td> <b>b3</b> </td>
+			<td> <b>b2</b> </td>
+			<td> <b>b1</b> </td>
+			<td> <b>Meaning</b></td>
+		</tr>
+	</thead>
+	<tbody align="center">
+		<tr>
+			<td>1</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>Offline data authentication was not performed</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>1</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>SDA failed</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>1</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>ICC data missing</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>1</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>Card appears on terminal exception file</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>1</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>DDA failed</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>1</td>
+			<td>x</td>
+			<td>x</td>
+			<td>CDA failed</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>0</td>
+			<td>x</td>
+			<td>RFU</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>0</td>
+			<td>RFU</td>
+		</tr>
+	</tbody>
+ </table>
+</p>
+
+<p>Byte 2:</p>
+<p>
+<table class="content">
+  <colgroup>
+    <col align="center" width="25">
+    <col align="center" width="25">
+    <col align="center" width="25">
+	<col align="center" width="25">
+	<col align="center" width="25">
+	<col align="center" width="25">
+	<col align="center" width="25">
+	<col align="center" width="25">
+	<col>
+  </colgroup>
+
+	<thead align="center">
+		<tr>
+			<td> <b>b8</b> </td>
+			<td> <b>b7</b> </td>
+			<td> <b>b6</b> </td>
+			<td> <b>b5</b> </td>
+			<td> <b>b4</b> </td>
+			<td> <b>b3</b> </td>
+			<td> <b>b2</b> </td>
+			<td> <b>b1</b> </td>
+			<td> <b>Meaning</b></td>
+		</tr>
+	</thead>
+	<tbody align="center">
+		<tr>
+			<td>1</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>ICC and terminal have different applicatioin versions</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>1</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>Expired application</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>1</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>Application not yet effective</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>1</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>Requested service not allowed for card product</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>1</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>New Card</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>0</td>
+			<td>x</td>
+			<td>x</td>
+			<td>RFU</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>0</td>
+			<td>x</td>
+			<td>RFU</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>0</td>
+			<td>RFU</td>
+		</tr>
+	</tbody>
+ </table>
+</p>
+
+<p>Byte 3:</p>
+<p>
+<table class="content">
+  <colgroup>
+    <col align="center" width="25">
+    <col align="center" width="25">
+    <col align="center" width="25">
+	<col align="center" width="25">
+	<col align="center" width="25">
+	<col align="center" width="25">
+	<col align="center" width="25">
+	<col align="center" width="25">
+	<col>
+  </colgroup>
+
+	<thead align="center">
+		<tr>
+			<td> <b>b8</b> </td>
+			<td> <b>b7</b> </td>
+			<td> <b>b6</b> </td>
+			<td> <b>b5</b> </td>
+			<td> <b>b4</b> </td>
+			<td> <b>b3</b> </td>
+			<td> <b>b2</b> </td>
+			<td> <b>b1</b> </td>
+			<td> <b>Meaning</b></td>
+		</tr>
+	</thead>
+	<tbody align="center">
+		<tr>
+			<td>1</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>Cardholder verification was not successful</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>1</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>Unrecognised CVM</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>1</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>PIN Try Limit exceeded</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>1</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>PIN entry required and PIN pad not present or not working</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>1</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>PIN entry required, PIN pad present, but PIN was not entered</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>1</td>
+			<td>x</td>
+			<td>x</td>
+			<td>Online PIN entered</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>0</td>
+			<td>x</td>
+			<td>RFU</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>0</td>
+			<td>RFU</td>
+		</tr>
+		</tbody>
+ </table>
+</p>
+
+<p>Byte 4:</p>
+<p>
+<table class="content">
+  <colgroup>
+    <col align="center" width="25">
+    <col align="center" width="25">
+    <col align="center" width="25">
+	<col align="center" width="25">
+	<col align="center" width="25">
+	<col align="center" width="25">
+	<col align="center" width="25">
+	<col align="center" width="25">
+	<col>
+  </colgroup>
+
+	<thead align="center">
+		<tr>
+			<td> <b>b8</b> </td>
+			<td> <b>b7</b> </td>
+			<td> <b>b6</b> </td>
+			<td> <b>b5</b> </td>
+			<td> <b>b4</b> </td>
+			<td> <b>b3</b> </td>
+			<td> <b>b2</b> </td>
+			<td> <b>b1</b> </td>
+			<td> <b>Meaning</b></td>
+		</tr>
+	</thead>
+	<tbody align="center">
+		<tr>
+			<td>1</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>Transaction exceeds floor limit</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>1</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>Lower consecutive offline limit exceeded</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>1</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>Upper consecutive offline limit exceeded</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>1</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>Transaction selected randomly for online processing</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>1</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>Merchant forced transaction online</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>0</td>
+			<td>x</td>
+			<td>x</td>
+			<td>RFU</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>0</td>
+			<td>x</td>
+			<td>RFU</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>0</td>
+			<td>RFU</td>
+		</tr>
+		</tbody>
+ </table>
+</p>
+
+<p>Byte 5:</p>
+<p>
+<table class="content">
+  <colgroup>
+    <col align="center" width="25">
+    <col align="center" width="25">
+    <col align="center" width="25">
+	<col align="center" width="25">
+	<col align="center" width="25">
+	<col align="center" width="25">
+	<col align="center" width="25">
+	<col align="center" width="25">
+	<col>
+  </colgroup>
+
+	<thead align="center">
+		<tr>
+			<td> <b>b8</b> </td>
+			<td> <b>b7</b> </td>
+			<td> <b>b6</b> </td>
+			<td> <b>b5</b> </td>
+			<td> <b>b4</b> </td>
+			<td> <b>b3</b> </td>
+			<td> <b>b2</b> </td>
+			<td> <b>b1</b> </td>
+			<td> <b>Meaning</b></td>
+		</tr>
+	</thead>
+	<tbody align="center">
+		<tr>
+			<td>1</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>Default TDOL used</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>1</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>Issuer authentication failed</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>1</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>Script processing failed before final GENERATE AC</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>0</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>RFU</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>0</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>RFU</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>0</td>
+			<td>x</td>
+			<td>x</td>
+			<td>RFU</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>0</td>
+			<td>x</td>
+			<td>RFU</td>
+		</tr>
+		<tr>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>0</td>
+			<td>RFU</td>
+		</tr>
+		<tbody>
+ </table>
+</p>
+<h2>Issuer Action Code - Online, Denial, Default</h2>
+
+<p>There are three kinds of every IAC/TAC list: Online, Denial and Default.</p>
+
+
+<h3>IAC - Online</h3>
+<p>This specifies the issuer's conditions to approve a transaction online.</p>
+<p>Example:
+<pre>
+Issuer Action Code - Online: FC68BC9800
+  Byte 1: 
+    Offline data authentication was not performed (b8)
+    SDA failed (b7)
+    ICC data missing (b6)
+    Card appears on terminal exception file (b5)
+    DDA failed (b4)
+    CDA failed (b3)
+  Byte 2: 
+    Expired application (b7)
+    Application not yet effective (b6)
+    New card (b4)
+  Byte 3: 
+    Cardholder verification was not successful (b8)
+    PIN Try Limit exceeded (b6)
+    PIN entry required and PIN pad not present or not working (b5)
+    PIN entry required, PIN pad present, but PIN was not entered (b4)
+    Online PIN entered (b3)
+  Byte 4: 
+    Transaction exceeds floor limit (b8)
+    Transaction selected randomly for online processing (b5)
+    Merchant forced transaction online (b4)
+  Byte 5: 
+</pre>
+TVR byte two b7 is set to 1 (New Card). This match with byte two b7 from the Issuer Action Code - Online.<br>
+As a Result of this the Terminal will decide to proceed the transaction online.</p>
+
+<h3>IAC - Denial</h3>
+<p>This specifies the issuer's conditions to reject a transaction.</p>
+<p>Example:
+<pre>
+Issuer Action Code - Denial: 0010180000
+  Byte 1: 
+  Byte 2: 
+    Requested service not allowed for card product (b5)
+  Byte 3: 
+    PIN entry required and PIN pad not present or not working (b5)
+    PIN entry required, PIN pad present, but PIN was not entered (b4)
+  Byte 4: 
+  Byte 5: 
+</pre>
+The transaction will be rejected, if byte three b5 is set to 1 in the TVR and IAC.
+</p>
+
+<h3>IAC - Default</h3>
+<p>If the Terminal has no online ability, the IAC - Default list specifies the issuers's conditions to reject a transaction.</p>
+<p>
+Example:
+<pre>
+Issuer Action Code - Default: FC40AC8000
+  Byte 1: 
+    Offline data authentication was not performed (b8)
+    SDA failed (b7)
+    ICC data missing (b6)
+    Card appears on terminal exception file (b5)
+    DDA failed (b4)
+    CDA failed (b3)
+  Byte 2: 
+    Expired application (b7)
+  Byte 3: 
+    Cardholder verification was not successful (b8)
+    PIN Try Limit exceeded (b6)
+    PIN entry required, PIN pad present, but PIN was not entered (b4)
+    Online PIN entered (b3)
+  Byte 4: 
+    Transaction exceeds floor limit (b8)
+  Byte 5: 
+</pre>
+If TVR and IAC both have byte four b8 set to 1 the transaction will be rejected.
+</p>
+
+
+<h2>Terminal Action Code - Online, Denial, Default</h2>
+<p>The TAC specifies the terminal's conditions. It is similar to the IAC.</p>
+
+
+<h2 id="GenerateAC">Generate AC</h2>
+<p>
+If the terminal made an decision, it will send with a Generate AC command to the card.
+Depending on the decision, the terminal requires different Application Cryptograms from the card.</p>
+<p>
+Source: <a href="http://www.emvco.com/specifications.aspx?id=155">EMV Book 3</a>
+<table class="content">
+	<tr>
+		<th>Type</th>
+		<th>Abbrevation</th>
+		<th>Meaning</th>
+	</tr>
+	<tr>
+		<td>Application Authentication Cryptogram</td>
+		<td>AAC</td>
+		<td>Transaction declined</td>
+	</tr>
+	<tr>
+		<td>Application Authorisation Referral</td>
+		<td>AAR</td>
+		<td>Referral requested by the card</td>
+	</tr>
+	<tr>
+		<td>Authorisation Request Cryptogram</td>
+		<td>ARQC</td>
+		<td>Online authorisation requested</td>
+	</tr>
+	<tr>
+		<td>Transaction Certificate</td>
+		<td>TC</td>
+		<td>Transaction approved</td>
+	</tr>
+</table>
+</p>
+<p>The Command Message has the following structure:</p>
+<p>
+<table class="content">
+	<tr>
+		<th>Code</th>
+		<th>Value</th>
+	</tr>
+	<tr>
+		<td>CLA</td>
+		<td>'80'</td>
+	</tr>
+	<tr>
+		<td>INS</td>
+		<td>'AE'</td>
+	</tr>
+	<tr>
+		<td>P1</td>
+		<td>Reference control parameter (see table below)</td>
+	</tr>
+	<tr>
+		<td>P2</td>
+		<td>'00'</td>
+	</tr>
+	<tr>
+		<td>Lc</td>
+		<td>Var.</td>
+	</tr>
+	<tr>
+		<td>Data</td>
+		<td>Transaction-related data</td>
+	</tr>
+	<tr>
+		<td>Le</td>
+		<td>'00'</td>
+	</tr>
+</table>
+</p>
+<p>Coding of P1:</p>
+<p>
+<table>
+		<tr>
+			<th>b8</th>
+			<th>b7</th>
+			<th>b6</th>
+			<th>b5</th>
+			<th>b4</th>
+			<th>b3</th>
+			<th>b2</th>
+			<th>b1</th>
+			<th>Meaning</th>
+		</tr>
+		<tr>
+			<td>0</td>
+			<td>0</td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td>AAC</td>
+		</tr>
+		<tr>
+			<td>0</td>
+			<td>1</td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td>TC</td>
+		</tr>
+		<tr>
+			<td>1</td>
+			<td>0</td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td>ARQC</td>
+		</tr>
+		<tr>
+			<td>1</td>
+			<td>1</td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td>RFU</td>
+		</tr>
+		<tr>
+			<td></td>
+			<td></td>
+			<td>x</td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td>RFU</td>
+		</tr>
+		<tr>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td>0</td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td>CDA signature not requested</td>
+		</tr>
+		<tr>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td>1</td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td>CDA signature requested</td>
+		</tr>
+		<tr>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>x</td>
+			<td>RFU</td>
+		</tr>
+</table>
+</p>
+<p>The transaction-related data is depending on a Card Risk Management Data Objetct List 1(CDOL1).<br>
+This CDOL is given by the card. It contains the tagname and length of the expected data.
+</p>
+
+<h2>Example</h2>
+
+<pre>
+Card Risk Management Data Object List 1 (CDOL1): 9F02069F030695055F2A029A039C019F37049F4C089F4502
+  // Tag - Length - Meaning
+  9f02 - 06 - Authorised amount of the transaction (excluding adjustments)
+  9f03 - 06 - Secondary amount associated with the transaction representing a cashback amount
+  95 - 05 - Terminal Verification Results
+  5f2a - 02 - Transaction Currency Code
+  9a - 03 - Transaction Date
+  9c - 01 - Transaction Type
+  9f37 - 04 - Unpredictable Number
+  9f4c - 08 - ICC Dynamic Number
+  9f45 - 02 - Data Authentication Code
+</pre>
+<p>First we create an ByteString which corresponds to the CDOL1 above.<br> 
+To obtain the ICC Dynamic Number we send a Get Challenge command  to the card. The card will return an 8-byte unpredictable number.</p>
+<pre>
+var authorisedAmount = new ByteString("000000000001", HEX);
+var secondaryAmount = new ByteString("000000000000", HEX);
+var tvr = new ByteString("0000000000", HEX);
+var transCurrencyCode = new ByteString("0978", HEX);
+var transDate = new ByteString("090730", HEX);
+var transType = new ByteString("21", HEX);
+var unpredictableNumber = crypto.generateRandom(4);
+var iccDynamicNumber = card.sendApdu(0x00, 0x84, 0x00, 0x00, 0x00);
+var DataAuthCode = e.cardDE[0x9F45];
+
+var Data = authorisedAmount.concat(secondaryAmount).concat(tvr).concat(transCurrencyCode).concat(transDate).concat(transType).concat(unpredictableNumber).concat(iccDynamicNumber).concat(DataAuthCode); 
+</pre>
+<p>Then we set P1 to '40', to request an Transaction Certificate (offline transaction) and execute the Generate AC command.</p>
+<pre>
+var p1 = 0x40;
+
+var generateAC = card.sendApdu(0x80, 0xAE, p1, 0x00, Data, 0x00);
+</pre>
+<p>The Generate AC command was succesful if the card returns SW1/SW2=9000.</p>
+<pre>
+96 C: 00 84 00 00 - GET CHALLENGE      Le=0 
+   R: SW1/SW2=9000 (Normal processing: No error) Lr=8
+      0000  8D 51 F4 6C 9F 40 5F 71                          .Q.l.@_q
+96 C: 80 AE 40 00 - UNKNOWN_INS Lc=37 
+      0005  00 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00  ................
+      0015  00 09 78 09 07 30 21 2C 76 4F 65 8D 51 F4 6C 9F  ..x..0!,vOe.Q.l.
+      0025  40 5F 71 D1 79                                   @_q.y
+      Le=0 
+   R: SW1/SW2=9000 (Normal processing: No error) Lr=32
+      0000  77 1E 9F 27 01 80 9F 36 02 02 13 9F 26 08 2D F3  w..'...6....&.-.
+      0010  83 3C 61 85 5B EA 9F 10 07 06 84 23 00 31 02 08  .<a.[......#.1..
+</pre>
+<p><a href="terminalriskmanagement.html">< back</a> <a href="index.html">index</a> <a href="cardactionanalysis.html">Next ></a></p>
+<!-- #EndEditable -->
+<br>
+<p class="copyright">&copy; Copyright 2003 - 2010 <a href="http://www.cardcontact.de">CardContact</a>
+Software & System Consulting, Minden, Germany</p>
+</div>
+</body>
+</html><!-- #EndTemplate -->
