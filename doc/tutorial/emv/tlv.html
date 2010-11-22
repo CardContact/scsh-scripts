@@ -43,13 +43,12 @@
 <h2>ASN.1 - Abstract Syntax Notation One</h2>
 
 <p>
-ASN.1 is a language to describe data structure.<br> 
-There are different data types: primitiv (boolean, integer, UTF8 string) and constructed (sequence).<br>
-<br>
-e.g.
-</p>
+ASN.1 is a formal language to describe data structures. It consists of primitive data objects (boolean, integer, UTF8 string) 
+that can be constructed to define more complex data structures (Sequences, Sets).</p>
+
+<p>e.g.</p>
 <pre>
-Sequence
+Record ::= SEQUENCE
 {
  Name::= UTF8 String
  Age::= Integer
@@ -57,19 +56,22 @@ Sequence
  Smoker::= [0] Boolean OPTIONAL
 }
 </pre>
+
+<p>Based on ASN.1, instances of data structures can be defined:</p>
 <pre>
-Sequence
+Record
 {
- Name::= "Müller"
+ Name::= "M&ouml;ller"
  Age::= "30"
  Vegetarian::= "false"
- Smoker::= "false"
+ Smoker::= "true"
 }
 </pre>
 <h2>TLV - [T]ag [L]ength [V]alue</h2>
 <p>
-To encode the ASN.1 data we use the TLV Structure. Every data object consists of a tag, a length byte and the value/data.<br>
-The tag defines if the object is an integer, boolean or something else. 
+To encode ASN.1 instances in a computer readable form, a notation called TLV is used.
+Every data object consists of a tag, a length byte and the value/data.<br>
+The tag defines, for example, if the object is an integer, boolean or something else. 
 <pre><font color="#FF0000">Tag</font>
 <font color="#FF0000">30</font> : Sequence
 <font color="#FF0000">OC</font> : UTF8 String
@@ -78,19 +80,19 @@ The tag defines if the object is an integer, boolean or something else.
 </pre>
 </p>
 <pre>
-Here we have the ASN.1 example encodet to the TLV structure:
+Here we have the ASN.1 example from above encoded as TLV structure:
 
 <font color="#FF0000">30</font> <font color="#00C000">11</font> <font color="#FF0000">OC</font> <font color="#00C000">06</font> <font color="#0000FF">4D 7E 6C 6C 65 72</font> <font color="#FF0000">02</font> <font color="#00C000">01</font> <font color="#0000FF">1E</font> <font color="#FF0000">01</font> <font color="#00C000">01</font> <font color="#0000FF">00</font> <font color="#FF0000">80</font> <font color="#00C000">01</font> <font color="#0000FF">00</font>
 
-Legend/Explanation
+which means
 
 <font color="#FF0000">Tag</font> <font color="#00C000">Length</font> <font color="#0000FF">Value</font>
 
-<font color="#FF0000">30</font> <font color="#00C000">11</font>                   Sequence with a length of 17
-<font color="#FF0000">OC</font> <font color="#00C000">06</font> <font color="#0000FF">4D 7E 6C 6C 65 72</font> UTF8 String with a length of 6 and the value Müller
+<font color="#FF0000">30</font> <font color="#00C000">11</font>                   Sequence with a length of 17 bytes
+<font color="#FF0000">OC</font> <font color="#00C000">06</font> <font color="#0000FF">4D 7E 6C 6C 65 72</font> UTF8 String with a length of 6 bytes and the value M&ouml;ller
 <font color="#FF0000">02</font> <font color="#00C000">01</font> <font color="#0000FF">1E</font>                Integer with a length of 1 and the value 30
-<font color="#FF0000">01</font> <font color="#00C000">01</font> <font color="#0000FF">00</font>                Optional Boolean with a length of 1 and the value false
-<font color="#FF0000">80</font> <font color="#00C000">01</font> <font color="#0000FF">00</font>                Optional Boolean with a length of 1 and the value false
+<font color="#FF0000">01</font> <font color="#00C000">01</font> <font color="#0000FF">00</font>                Optional Boolean with the value false
+<font color="#FF0000">80</font> <font color="#00C000">01</font> <font color="#0000FF">FF</font>                Optional Boolean with the value true
 </pre>
 
 <h3>Coding of the Tag</h3>
@@ -119,7 +121,7 @@ Legend/Explanation
 			<td> <b>b3</b> </td>
 			<td> <b>b2</b> </td>
 			<td> <b>b1</b> </td>
-			<td> <b>explanation</b></td>
+			<td> <b>Meaning</b></td>
 		</tr>
 	</thead>
 	<tbody align="center">
@@ -209,7 +211,7 @@ Legend/Explanation
 			<td>1</td>
 			<td>1</td>
 			<td>1</td>
-			<td>there is a 2nd byte with tag value</td>
+			<td>tag continoues on a 2nd byte</td>
 		</tr>
 	</body>
 </table>
@@ -255,7 +257,7 @@ Optional Byte 2:<br>
 			<td></td>
 			<td></td>
 			<td></td>
-			<td>b8 = 0 : this is the last byte</td>
+			<td>b8 = 0 : this is the last byte of the tag</td>
 		</tr>
 		<tr>
 			<td></td>
@@ -272,15 +274,17 @@ Optional Byte 2:<br>
 </table>
 
 </p>
-<p>Tags are divided into four classes.
-b8 and b7 are defining the class.<br>
-Universal classes are basic data types like integer, boolean, etc.<br>
-The application class belongs to an application or norm.
-Context specific and private are not in the norm and created for special cases. For example the second optional boolean "smoker" is a context specific class so that you don't mix up the two booleans "vegetarian" and "smoker". <br>
-<br>
-e.g.<br>
+<p>Tags are divided into four classes defined by b8 and b7.</p>
+<p>The universal class contains basic data types like integer, boolean, etc.</p>
+<p>The application class is used for data elements defined by an application specification or industry standard (e.g. EMV).</p>
+<p>The context specific class is used for data elements that are unique within it's enclosing context (Like the concept of local variables
+   in a programming language). For example the second optional boolean "smoker" is a context specific class so that it has
+   a tag different from "vegetarian".</p> 
+<p>The private class is used for all privately defined data objects.</p>
+
+<p>Example</p>
 <pre>
-The Sequence tag '30' decoded:
+The SEQEUNCE tag '30' decodes to :
 b8 b7 b6 b5 b4 b3 b2 b1
 0  0                    = universal class 
       1                 = constructed
@@ -294,42 +298,41 @@ b8 b7 b6 b5 b4 b3 b2 b1
 The UTF8 String tag '0C' decoded:
 b8 b7 b6 b5 b4 b3 b2 b1
 0  0                    = universal class
-      0                 = primitiv
+      0                 = primitive
          0  1  1  0  0  = tag value
 
 0000 1100
    '0C'
 </pre>
- </p>
  
- <h3>Length byte</h3>
- <p>Depending on the value we have one or more length bytes. <br>
-The byte has the following structure: </p>
- <table class="content">
-		<tr>
-			<th>No of Bytes</th>
-			<th>Length</th>
-			<th>Coding</th>
-		</tr>
-		<tr>
+<h3>Length field</h3>
+<p>Depending on the length of the value field we have one or more bytes in the length field.</p>
+<p>The length field has the following structure:</p>
+<table class="content">
+	<tr>
+		<th>Number of length bytes</th>
+		<th>Length of value</th>
+		<th>Coding</th>
+	</tr>
+	<tr>
 		<td>1</td>
 		<td>0-127</td>
 		<td>0xxxxxx</td>
-		</tr>
-		<tr>
+	</tr>
+	<tr>
 		<td>2</td>
 		<td>128-255</td>
 		<td>10000001 xxxxxxxx</td>
-		</tr>
-		<tr>
+	</tr>
+	<tr>
 		<td>3</td>
 		<td>256-65535</td>
 		<td>10000010 xxxxxxxx xxxxxxxx</td>
-		</tr>
+	</tr>
  </table>
-<p>According to this structure you can have any more length bytes. <br>
-<br></p>
-<p> Here we have two examples which are output with the reademv script from a Master Card<br>
+<p>For length encodings > 127, the first byte contains the number of subsequent bytes, while the most significant bit is set to 1.
+The actual length is then encoded as integer value on the subsequent bytes with the most significant byte first.</p>
+<p>Here we have two examples read from a credit card using the reademv.js script:</p>
 <br>
 Example 1:</p>
 <pre>
@@ -340,7 +343,7 @@ A2 C: 00 A4 04 00 - SELECT Lc=7
       0000  6F 1A 84 07 A0 00 00 00 04 10 10 A5 0F 50 0A 4D  o............P.M
       0010  61 73 74 65 72 43 61 72 64 87 01 01              asterCard...
 
-// We will concentrate us on the Response Value:
+// We will focus on the response value:
 6F 1A 84 07 A0 00 00 00 04 10 10 A5 0F 50 0A 4D 61 73 74 65 72 43 61 72 64 87 01 01
 </pre>
 <p>Tag: "6F"<br>
@@ -376,7 +379,7 @@ Application class<br>
 Constructed data object<br>
 <br>
 Length: "81 C0"<br>
-1st byte '81' = binary 10000001 . There are two length bytes. <br>
+1st byte '81' = binary 10000001 . There are two length bytes in the range 128 and 255.<br>
 2nd byte 'C0' = binary 11000000 = decimal 192. There are 192 value bytes.<br>
 <br>
 Value:<br>
