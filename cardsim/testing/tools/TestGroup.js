@@ -41,7 +41,7 @@ function TestGroup(name, parameter) {
 
 	this.name = name;
 	this.parameter = parameter;
-	this.logfile = new String("--- TestGroup " + name + "\n");
+//	this.logfile = new String("--- TestGroup " + name + "\n");
 	this.marker = null;
 	
 //	print("TestGroup constructor called");
@@ -55,7 +55,8 @@ function TestGroup(name, parameter) {
  * @param {String} message the message to add to the log
  */
 TestGroup.prototype.log = function(message) {
-	this.logfile += message + "\n";
+	GPSystem.trace(message);
+//	this.logfile += message + "\n";
 //	print(message);
 }
 
@@ -260,10 +261,11 @@ TestGroup.prototype.runTestCaseInternal = function(casename, runner) {
 	this.currentTestCase = this.name + "/" + casename;
 	this.testRunner = runner;
 
-	this.logfile = "";
+//	this.logfile = "";
 
 	var starttime = new Date();
-	logentry = "TestCase " + this.currentTestCase + " started " + starttime;
+	GPSystem.markTrace();
+	logentry = "+ TestCase " + this.currentTestCase + " started " + starttime;
 	print(logentry);
 	this.log(logentry);
 	try {
@@ -272,17 +274,18 @@ TestGroup.prototype.runTestCaseInternal = function(casename, runner) {
 		func.call(this);
 		this.tearDown();
 		var endtime = new Date();
-		logentry = "TestCase " + this.currentTestCase + " completed on " + endtime + " after " + (endtime.valueOf() - starttime.valueOf()) + " ms";
+		logentry = "+ TestCase " + this.currentTestCase + " completed on " + endtime + " after " + (endtime.valueOf() - starttime.valueOf()) + " ms";
 		print(logentry);
 		this.log(logentry);
 		if (runner) {
-			runner.hasPassed(this.currentTestCase, this.logfile);
+			var logfile = GPSystem.copyTrace();
+			runner.hasPassed(this.currentTestCase, logfile);
 		}
 		result = true;
 	}
 	catch(e) {
 		var endtime = new Date();
-		logentry = "TestCase " + this.currentTestCase + " failed on " + endtime + " after " + (endtime.valueOf() - starttime.valueOf()) + " ms";
+		logentry = "+ TestCase " + this.currentTestCase + " failed on " + endtime + " after " + (endtime.valueOf() - starttime.valueOf()) + " ms";
 		print(logentry);
 		this.log(logentry);
 		
@@ -296,7 +299,8 @@ TestGroup.prototype.runTestCaseInternal = function(casename, runner) {
 		}
 		
 		if (runner) {
-			runner.hasFailed(this.currentTestCase, this.logfile);
+			var logfile = GPSystem.copyTrace();
+			runner.hasFailed(this.currentTestCase, logfile);
 		}
 	}
 	return result;
