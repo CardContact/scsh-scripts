@@ -30,7 +30,7 @@
 			<!-- Collect the JS-files -->
 			<fileset dir="${basedir}">
 				<include name="**/*.js"/>
-				<exclude name="nPA/**"/>
+				<exclude name="eID/**"/>
 				<exclude name="icao/**"/>
 				<exclude name="cardsim/**"/>
 				<exclude name="build/**"/>
@@ -80,16 +80,23 @@
 			<!-- Collect the JS-files -->
 			<fileset dir="${basedir}/cardsim" includes="**/*.js"/>
 		</apply>
-	</target>
-
-	<target name="jsdoc_emv">
-	    <echo message="${doc}"/>
+		<apply executable="perl" addsourcefile="true" dir="${basedir}/eID" parallel="true" relative="true">
+			<arg line="${jsdoc} --directory ${doc}/eID/jsdoc" />
+			<!-- Collect the JS-files -->
+			<fileset dir="${basedir}/eID" includes="**/*.js"/>
+		</apply>
 		<apply executable="perl" addsourcefile="true" dir="${basedir}/emv" parallel="true" relative="true" verbose="true">
 			<arg line="${jsdoc} --directory '${doc}/emv/jsdoc'" />
 			<!-- Collect the JS-files -->
 			<fileset dir="${basedir}/emv" includes="**/*.js"/>
 		</apply>
 	</target>
+
+<!--
+	<target name="jsdoc_emv">
+	    <echo message="${doc}"/>
+	</target>
+-->
 
 	<target name="package" depends="init, applyTemplate, jsdoc">
 		<property name="bundlename" value="scripts-${DSTAMP}.zip"/>
