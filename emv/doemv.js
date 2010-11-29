@@ -21,7 +21,7 @@
  *  along with OpenSCDP; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
- * @fileoverview Class supporting EMV cards
+ * @fileoverview Example script performing an emv transaction.
  */
 
 
@@ -63,11 +63,11 @@ e.readApplData();
 
 v.displayDataElements();
 
-var issuerPublicKeyModulus = d.retrievalIssuerPublicKey();
+var issuerPublicKeyModulus = d.retrieveIssuerPublicKey();
 
 d.verifySSAD(issuerPublicKeyModulus);
 
-var  iccPublicKeyModulus = d.retrievalICCPublicKey(issuerPublicKeyModulus);
+var  iccPublicKeyModulus = d.retrieveICCPublicKey(issuerPublicKeyModulus);
 d.dynamicDataAuthentication(iccPublicKeyModulus);
 
 e.generateAC();

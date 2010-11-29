@@ -21,7 +21,7 @@
  *  along with OpenSCDP; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
- * @fileoverview Class supporting EMV cards
+ * @fileoverview The class EMV contains necessary functions for transaction process.
  */
 
 /**
@@ -140,8 +140,8 @@ EMV.prototype.getProcessingOptions = function(pdol) {
 }
 
 /**
- * <p>Select and read Payment System Environment on either
- * contact or contactless card</p>
+ * Select and read Payment System Environment on either
+ * contact or contactless card
  *
  * @param {boolean} contactless the PSE AID
  */
@@ -308,8 +308,8 @@ EMV.prototype.addCardDEFromList = function(tlvlist) {
 }
 
 /**
- * Inform the ICC that a new transaction is beginning
- * Store AIP and AFL into the cardDE array
+ * Inform the ICC that a new transaction is beginning.
+ * Store AIP and AFL into the cardDE array.
  */
 EMV.prototype.initApplProc = function() {
 	var pdol = this.cardDE[EMV.PDOL];
@@ -344,8 +344,8 @@ EMV.prototype.initApplProc = function() {
 }
 
 /**
- * Read application data as indicated in the Application File Locator
- * Collect input to data authentication
+ * Read application data as indicated in the Application File Locator.
+ * Collect input to data authentication.
  *
  */
 EMV.prototype.readApplData = function() {

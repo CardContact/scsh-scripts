@@ -21,7 +21,7 @@
  *  along with OpenSCDP; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
- * @fileoverview Class supporting EMV cards
+ * @fileoverview The class DataAuthentication supports Static Data Authentication and Dynamic Data Authentication.
  */
 
 /**
@@ -38,7 +38,7 @@ function DataAuthentication(emv) {
 }
 
 /**
- * Get RID from EMV data model
+ * Get the Registered Application Provider Identifier from EMV data model
  *
  * @type ByteString
  * @return the 5 byte RID
@@ -90,9 +90,9 @@ DataAuthentication.prototype.getSchemePublicKey = function() {
 }
 
 /**
- * Decrypt the Issuer PK Certificate
+ * Decryption of the Issuer Public Key Certificate
  *
- * @return the decrypted Issuer PK Certificate
+ * @return the decrypted Issuer Public Key Certificate
 */
 DataAuthentication.prototype.decryptIssuerPKCertificate = function() {
 	var certificate = this.emv.cardDE[0x90];
@@ -107,7 +107,7 @@ DataAuthentication.prototype.decryptIssuerPKCertificate = function() {
  * @type Key
  * @return the Issuer Public Key
 */
-DataAuthentication.prototype.retrievalIssuerPublicKey = function() {
+DataAuthentication.prototype.retrieveIssuerPublicKey = function() {
 	var key = this.getSchemePublicKey();
 	var modulus = key.getComponent(Key.MODULUS);
 	var cert = this.decryptIssuerPKCertificate();		
@@ -231,7 +231,7 @@ DataAuthentication.prototype.verifySSAD = function(issuerPublicKeyModulus) {
  * @type Key
  * @return the ICC Public Key
 */
-DataAuthentication.prototype.retrievalICCPublicKey = function(issuerPublicKeyModulus) {
+DataAuthentication.prototype.retrieveICCPublicKey = function(issuerPublicKeyModulus) {
 	var issuerPublicKeyModulus =  issuerPublicKeyModulus;
 	var key = new Key();
 	key.setType(Key.PUBLIC);
@@ -308,7 +308,8 @@ DataAuthentication.prototype.retrievalICCPublicKey = function(issuerPublicKeyMod
 }	
 
 /**
- * Dynamic Data Authentication
+ * Generation and verification of the dynamic signature.
+ * A successfully retrieval of the ICC Public Key is required.
  *
  * @param {Key} key the ICC Public Key
 */
