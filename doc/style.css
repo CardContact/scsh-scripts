@@ -2,10 +2,10 @@ body {
 	background-color: white;
 	font-family: Verdana, Arial, Helvetica, sans-serif;
 	font-size: 10pt;
+	margin-left: 5em;
+	padding: 0;
 	width: 60em;
 	min-width: 750px;
-	padding: 0;
-	margin-left: 5em;
 }
 
 #navigator { 

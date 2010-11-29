@@ -8,11 +8,9 @@
 <meta name="author" content="Andreas Schwier">
 </head>
 <body>
-
-
 <div align="left"><a href="http://www.cardcontact.de"><img src="../../banner.jpg" width="750" height="80" border="0"></a></div></td>
 <div id="navigator">
-<br>
+	<br>
     <p><b>Script Collection</b></p>
     <a href="../../index.html">Home</a><br>
     <a href="http://www.openscdp.org/scripts/download.html">Download</a><br>
@@ -34,7 +32,7 @@
     <br>
     <a href="http://www.openscdp.org">OpenSCDP</a><br>
     <a href="http://www.cardcontact.de/company/contact.html">Contact</a><br>
-    </div>
+</div>
 <div id="main">
 <!-- #BeginEditable "BODY" -->
 <h1>Text goes here</h1>

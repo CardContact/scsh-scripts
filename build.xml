@@ -137,7 +137,7 @@
 	</target>
 
 
-	<target name="publish" depends="package">
+	<target name="publish">
 		<property name="bundlename" value="scripts-${DSTAMP}.zip"/>
 		<property name="bundle" location="released/${bundlename}"/>
 
