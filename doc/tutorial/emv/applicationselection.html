@@ -54,8 +54,9 @@ If there is no PSE, the terminal will use a list of AIDs and get the right by tr
  * Send SELECT APDU
  */
 EMV.prototype.select = function(dfname, first) {
-	var fci = this.card.<a href="http://www.openscdp.org/scsh3/card.html#sendApdu">sendApdu</a>(0x00, 0xA4, 0x04, (first ? 0x00 : 0x02), dfname, 0x00);
-	return(fci);
+    var fci = this.card.<a href="http://www.openscdp.org/scsh3/card.html#sendApdu">sendApdu</a>
+              (0x00, 0xA4, 0x04, (first ? 0x00 : 0x02), dfname, 0x00);
+    return(fci);
 }
 
 
@@ -66,12 +67,13 @@ EMV.prototype.select = function(dfname, first) {
  * Return empty ByteString if no data was read
  */
 EMV.prototype.readRecord = function(sfi, recno) {
-	var data = this.card.sendApdu(0x00, 0xB2, recno, (sfi << 3) | 0x04, 0);
-	if (this.card.SW1 == 0x6C) {
-		var data = this.card.sendApdu(0x00, 0xB2, recno, (sfi << 3) | 0x04, this.card.SW2);
-	}
-	
-	return(data);
+    var data = this.card.sendApdu(0x00, 0xB2, recno, (sfi << 3) | 0x04, 0);
+    if (this.card.SW1 == 0x6C) {
+        var data = this.card.sendApdu
+                   (0x00, 0xB2, recno, (sfi << 3) | 0x04, this.card.SW2);
+    }
+
+    return(data);
 }
 </pre>
 <p>First we select the PSE (1PAY.SYS.DDF01)</p>
@@ -81,15 +83,15 @@ EMV.prototype.readRecord = function(sfi, recno) {
  * contact or contactless card
  */
 EMV.prototype.selectPSE = function(contactless) {
-	this.PSE = null;
+    this.PSE = null;
 
-	var dfname = (contactless ? EMV.PSE2 : EMV.PSE1);
-	var fci = this.select(dfname, true);
-	print(fci);
-	if (fci.length == 0) {
-		GPSystem.trace("No " + dfname.toString(ASCII) + " found");
-		return;
-	}
+    var dfname = (contactless ? EMV.PSE2 : EMV.PSE1);
+    var fci = this.select(dfname, true);
+    print(fci);
+    if (fci.length == 0) {
+        GPSystem.trace("No " + dfname.toString(ASCII) + " found");
+        return;
+    }
 </pre>
 <pre>
 A2 C: 00 A4 04 00 - SELECT Lc=14 
@@ -106,67 +108,67 @@ To process we need the SFI.<br>
 Therefore we have to decode first the returned FCI.
 </p>
 <pre>
-	// Decode FCI Template
-	var tl = new <a href="http://www.openscdp.org/scsh3/tlvlist.html">TLVList</a>(fci, TLV.EMV);
-	var t = tl.<a href="http://www.openscdp.org/scsh3/tlvlist.html#index">index</a>(0);
+    // Decode FCI Template
+    var tl = new <a href="http://www.openscdp.org/scsh3/tlvlist.html">TLVList</a>(fci, TLV.EMV);
+    var t = tl.<a href="http://www.openscdp.org/scsh3/tlvlist.html#index">index</a>(0);
 </pre>
 <pre>
 var t:
 6F 15 84 0E 31 50 41 59 2E 53 59 53 2E 44 44 46 30 31 A5 03 88 01 01
 </pre>
 <pre>
-	assert(t.getTag() == EMV.FCI);	// EMV.FCI = 0x6F
-	var tl = new TLVList(t.getValue(), TLV.EMV);
-	assert(tl.length >= 2);
+    assert(t.getTag() == EMV.FCI);	// EMV.FCI = 0x6F
+    var tl = new TLVList(t.getValue(), TLV.EMV);
+    assert(tl.length >= 2);
 </pre>
 <pre>
 var tl:
 84 0E 31 50 41 59 2E 53 59 53 2E 44 44 46 30 31 A5 03 88 01 01
 </pre>
 <pre>	
-	// Decode DF Name
-	t = tl.index(0);
+    // Decode DF Name
+    t = tl.index(0);
 </pre>
 <pre>
 var t:
 84 0E 31 50 41 59 2E 53 59 53 2E 44 44 46 30 31
 </pre>
 <pre>
-	assert(t.getTag() == EMV.DFNAME);	// EMV.DFNAME = 0x84;
+    assert(t.getTag() == EMV.DFNAME);	// EMV.DFNAME = 0x84;
 </pre>
 <pre>	
-	// Decode FCI Proprietary Template
-	t = tl.index(1);
+    // Decode FCI Proprietary Template
+    t = tl.index(1);
 </pre>
 <pre>
 var t:
 A5 03 88 01 01
 </pre>
 <pre>
-	assert(t.getTag() == EMV.FCI_ISSUER);	// EMV.FCI_ISSUER = 0xA5;
-	
-	var tl = new TLVList(t.getValue(), TLV.EMV);
+    assert(t.getTag() == EMV.FCI_ISSUER);	// EMV.FCI_ISSUER = 0xA5;
+
+    var tl = new TLVList(t.getValue(), TLV.EMV);
 </pre>
 <pre>
-	
-	// Decode SFI of the Directory Elementary File
-	t = tl.index(0);
+
+    // Decode SFI of the Directory Elementary File
+    t = tl.index(0);
 </pre>
 <pre>
 var t:
 88 01 01
 </pre>
 <pre>
-	assert(t.getTag() == EMV.SFI);	// EMV.SFI = 0x88;
-	var sfi = t.getValue();
-	assert(sfi.length == 1);
-	sfi = sfi.byteAt(0);
+    assert(t.getTag() == EMV.SFI);	// EMV.SFI = 0x88;
+    var sfi = t.getValue();
+    assert(sfi.length == 1);
+    sfi = sfi.byteAt(0);
 </pre>
 <pre>
 sfi: 0x01
 </pre>
 <pre>
-	this.PSE = new Array();
+    this.PSE = new Array();
 </pre>
 
 <h3>Read Records</h3>
@@ -175,31 +177,33 @@ sfi: 0x01
 Now we create a loop to read all records in this AEF, started with record number 1.
 </p>
 <pre>
-	// Read all records from Directory Elementary File
-	var recno = 1;
-	do	{
-		var data = this.readRecord(sfi, recno++);
-		if (data.length > 0) {
-			var tl = new TLVList(data, TLV.EMV);
-			assert(tl.length == 1);
-			var t = tl.index(0);
-			assert(t.getTag() == EMV.TEMPLATE);
-			var tl = new TLVList(t.getValue(), TLV.EMV);
-			assert(tl.length >= 1);
-			for (var i = 0; i < tl.length; i++) {
-				var t = tl.index(i);
-				assert(t.getTag() == 0x61);
-				this.PSE.push(new TLVList(t.getValue(), TLV.EMV));
-			}
-		}
-	} while (data.length > 0);
+    // Read all records from Directory Elementary File
+    var recno = 1;
+    do	{
+        var data = this.readRecord(sfi, recno++);
+        if (data.length > 0) {
+            var tl = new TLVList(data, TLV.EMV);
+            assert(tl.length == 1);
+            var t = tl.index(0);
+            assert(t.getTag() == EMV.TEMPLATE);
+            var tl = new TLVList(t.getValue(), TLV.EMV);
+            assert(tl.length >= 1);
+            for (var i = 0; i < tl.length; i++) {
+                var t = tl.index(i);
+                assert(t.getTag() == 0x61);
+                this.PSE.push(new TLVList(t.getValue(), TLV.EMV));
+            }
+        }
+    } while (data.length > 0);
 }
 </pre>
 <p>
 At this time we have two entries in this PSE:
-<pre>61 1F 4F 08 A0 00 00 00 25 01 05 01 50 10 50 65 72 73 6F 6E 61 6C 20 41 63 63 6F 75 6E 74 87 01 01</pre>
+<pre>61 1F 4F 08 A0 00 00 00 25 01 05 01 50 10 50 65 72 73 6F 6E 61 6C 20 41 63 63 6F 75 6E
+74 87 01 01</pre>
 and
-<pre>61 1E 4F 07 A0 00 00 00 29 10 10 50 10 50 65 72 73 6F 6E 61 6C 20 41 63 63 6F 75 6E 74 87 01 02</pre>
+<pre>61 1E 4F 07 A0 00 00 00 29 10 10 50 10 50 65 72 73 6F 6E 61 6C 20 41 63 63 6F 75 6E 74
+87 01 02</pre>
 </p>
 
 <h3>Check Priority</h3>
@@ -210,7 +214,7 @@ and
  * Return array of PSE entries or null if none defined
  */
 EMV.prototype.getPSE = function() {
-	return this.PSE;
+    return this.PSE;
 }
 
 /**
@@ -218,36 +222,36 @@ EMV.prototype.getPSE = function() {
  */
 EMV.prototype.getAID = function() {
 
-	var prio = 0xFFFF;
-	var aid = null;
-	var pse = e.getPSE();
-	if (pse == null) {
-		return null;
-	}
-	// Iterate through PSE entries
-	for (var i = 0; i < pse.length; i++) {
-		var t = pse[i].find(EMV.AID);
-		assert(t != null);
-		var entryAid = t.getValue();
-		print(entryAid);
+    var prio = 0xFFFF;
+    var aid = null;
+    var pse = e.getPSE();
+    if (pse == null) {
+    return null;
+    }
+    // Iterate through PSE entries
+    for (var i = 0; i < pse.length; i++) {
+        var t = pse[i].find(EMV.AID);
+        assert(t != null);
+        var entryAid = t.getValue();
+        print(entryAid);
 
-		var t = pse[i].find(EMV.LABEL);
-		assert(t != null);
-		print(t.getValue().toString(ASCII));
+        var t = pse[i].find(EMV.LABEL);
+        assert(t != null);
+        print(t.getValue().toString(ASCII));
 
-		var entryPrio = 0xFFFE;
-		var t = pse[i].find(EMV.PRIORITY);
-		if (t != null) {
-			entryPrio = t.getValue().toUnsigned();
-			entryPrio &= 0x0F;
-		}
-		if (entryPrio < prio) {
-			prio = entryPrio;
-			aid = entryAid;
-		}
-	}
-	this.cardDE[EMV.AID] = aid;
-	return aid;
+        var entryPrio = 0xFFFE;
+        var t = pse[i].find(EMV.PRIORITY);
+        if (t != null) {
+            entryPrio = t.getValue().toUnsigned();
+            entryPrio &= 0x0F;
+        }
+        if (entryPrio < prio) {
+            prio = entryPrio;
+            aid = entryAid;
+        }
+    }
+    this.cardDE[EMV.AID] = aid;
+    return aid;
 }
 </pre>
 <p>
@@ -265,9 +269,9 @@ In the second run the value for the entryPrio is: 0x02. 0x02 &= 0x0F is 0x02. 0x
  * Select application and return FCI
  */
 EMV.prototype.selectADF = function(aid) {
-	var fci = this.select(aid, true);
-	print(fci);
-	this.cardDE[EMV.AID] = aid;
+    var fci = this.select(aid, true);
+    print(fci);
+    this.cardDE[EMV.AID] = aid;
 }
 </pre>
 
@@ -280,15 +284,15 @@ EMV.prototype.selectADF = function(aid) {
  * contact or contactless card
  */
 EMV.prototype.selectPSE = function(contactless) {
-	this.PSE = null;
+    this.PSE = null;
 
-	var dfname = (contactless ? EMV.PSE2 : EMV.PSE1);
-	var fci = this.select(dfname, true);
-	print(fci);
-	if (fci.length == 0) {
-		GPSystem.trace("No " + dfname.toString(ASCII) + " found");
-		return;
-	}
+    var dfname = (contactless ? EMV.PSE2 : EMV.PSE1);
+    var fci = this.select(dfname, true);
+    print(fci);
+    if (fci.length == 0) {
+        GPSystem.trace("No " + dfname.toString(ASCII) + " found");
+        return;
+    }
 </pre>
 <pre>
 96 C: 00 A4 04 00 - SELECT Lc=14 
@@ -304,16 +308,16 @@ No 1PAY.SYS.DDF01 found
  * Try a list of predefined AID in order to select an application
  */
 EMV.prototype.tryAID = function() {
-	for (var i = 0; i < EMV.AIDLIST.length; i++) {
-		var le = EMV.AIDLIST[i];
-		var aid = new ByteString(le.aid, HEX);
-		var fci = this.select(aid, true);
+    for (var i = 0; i < EMV.AIDLIST.length; i++) {
+        var le = EMV.AIDLIST[i];
+        var aid = new ByteString(le.aid, HEX);
+        var fci = this.select(aid, true);
 		
-		if (fci.length > 0) {
-			this.cardDE[EMV.AID] = aid;
-			return;
-		}
-	}
+        if (fci.length > 0) {
+            this.cardDE[EMV.AID] = aid;
+            return;
+        }
+    }
 }
 
 

@@ -94,53 +94,54 @@ Every 4 bytes stick together.
  *
  */
 EMV.prototype.readApplData = function() {
-	// Application File Locator must exist
-	assert(typeof(this.cardDE[EMV.AFL]) != "undefined");
-	var afl = this.cardDE[EMV.AFL];
-	
-	// Must be a multiple of 4
-	assert((afl.length & 0x03) == 0);
+    // Application File Locator must exist
+    assert(typeof(this.cardDE[EMV.AFL]) != "undefined");
+    var afl = this.cardDE[EMV.AFL];
 
-	// Collect input to data authentication	
-	var da = new <a href="http://www.openscdp.org/scsh3/bytebuffer.html">ByteBuffer</a>();
-	
-	while(afl.length > 0) {
-		var sfi = afl.<a href="http://www.openscdp.org/scsh3/bytestring.html#byteAt">byteAt</a>(0) >> 3;	// Short file identifier
-		var srec = afl.byteAt(1);	// Start record
-		var erec = afl.byteAt(2);	// End record
-		var dar = afl.byteAt(3);	// Number of records included in data authentication
-		
-		for (; srec <= erec; srec++) {
-			// Read all indicated records
-			var data = this.readRecord(sfi, srec);
-			print(data);
-			
-			// Decode template
-			var tl = new <a href="http://www.openscdp.org/scsh3/tlvlist.html">TLVList</a>(data, TLV.EMV);
-			assert(tl.length == 1);
-			var t = tl.<a href="http://www.openscdp.org/scsh3/tlvlist.html#index">index</a>(0);
-			assert(t.getTag() == EMV.TEMPLATE);
+    // Must be a multiple of 4
+    assert((afl.length & 0x03) == 0);
 
-			// Add data authentication input			
-			if (dar > 0) {
-				if (sfi <= 10) {	// Only value
-					da.<a href="http://www.openscdp.org/scsh3/bytebuffer.html#append">append</a>(t.getValue());
-				} else {		// Full template
-					da.append(data);
-				}
-				dar--;
-			}
+    // Collect input to data authentication	
+    var da = new <a href="http://www.openscdp.org/scsh3/bytebuffer.html">ByteBuffer</a>();
 
-			// Add card based data elements	to internal list
-			var tl = new TLVList(t.getValue(), TLV.EMV);
-			this.addCardDEFromList(tl);
-		}
+    while(afl.length > 0) {
+        var sfi = afl.<a href="http://www.openscdp.org/scsh3/bytestring.html#byteAt">byteAt</a>(0) >> 3;   // Short file identifier
+        var srec = afl.byteAt(1);        // Start record
+        var erec = afl.byteAt(2);        // End record
+        var dar = afl.byteAt(3);         // Number of records included in
+                                         // data authentication
 
-		// Continue with next entry in AFL
-		afl = afl.<a href="http://www.openscdp.org/scsh3/bytestring.html#bytes">bytes</a>(4);
-	}
-	this.daInput = da.toByteString();
-	print(this.daInput);
+        for (; srec <= erec; srec++) {
+            // Read all indicated records
+            var data = this.readRecord(sfi, srec);
+            print(data);
+
+            // Decode template
+            var tl = new <a href="http://www.openscdp.org/scsh3/tlvlist.html">TLVList</a>(data, TLV.EMV);
+            assert(tl.length == 1);
+            var t = tl.<a href="http://www.openscdp.org/scsh3/tlvlist.html#index">index</a>(0);
+            assert(t.getTag() == EMV.TEMPLATE);
+
+            // Add data authentication input			
+            if (dar > 0) {
+                if (sfi <= 10) {	// Only value
+                    da.<a href="http://www.openscdp.org/scsh3/bytebuffer.html#append">append</a>(t.getValue());
+                } else {		// Full template
+                    da.append(data);
+                }
+                dar--;
+            }
+
+            // Add card based data elements	to internal list
+            var tl = new TLVList(t.getValue(), TLV.EMV);
+            this.addCardDEFromList(tl);
+        }
+
+        // Continue with next entry in AFL
+        afl = afl.<a href="http://www.openscdp.org/scsh3/bytestring.html#bytes">bytes</a>(4);
+    }
+    this.daInput = da.toByteString();
+    print(this.daInput);
 }
 </pre>
 <p>

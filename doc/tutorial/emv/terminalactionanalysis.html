@@ -920,14 +920,16 @@ This CDOL is given by the card. It contains the tagname and length of the expect
 <h2>Example</h2>
 
 <pre>
-Card Risk Management Data Object List 1 (CDOL1): 9F02069F030695055F2A029A039C019F37049F4C089F4502
-  // Tag - Length - Meaning
+Card Risk Management Data Object List 1 (CDOL1): 
+9F02069F030695055F2A029A039C019F37049F4C089F4502
+// Tag - Length - Meaning
   9f02 - 06 - Authorised amount of the transaction (excluding adjustments)
-  9f03 - 06 - Secondary amount associated with the transaction representing a cashback amount
-  95 - 05 - Terminal Verification Results
+  9f03 - 06 - Secondary amount associated with the transaction representing a cashback
+              amount
+    95 - 05 - Terminal Verification Results
   5f2a - 02 - Transaction Currency Code
-  9a - 03 - Transaction Date
-  9c - 01 - Transaction Type
+    9a - 03 - Transaction Date
+    9c - 01 - Transaction Type
   9f37 - 04 - Unpredictable Number
   9f4c - 08 - ICC Dynamic Number
   9f45 - 02 - Data Authentication Code
@@ -945,7 +947,10 @@ var unpredictableNumber = crypto.generateRandom(4);
 var iccDynamicNumber = card.sendApdu(0x00, 0x84, 0x00, 0x00, 0x00);
 var DataAuthCode = e.cardDE[0x9F45];
 
-var Data = authorisedAmount.concat(secondaryAmount).concat(tvr).concat(transCurrencyCode).concat(transDate).concat(transType).concat(unpredictableNumber).concat(iccDynamicNumber).concat(DataAuthCode); 
+var Data = authorisedAmount.concat(secondaryAmount).concat(tvr)
+           .concat(transCurrencyCode).concat(transDate)
+           .concat(transType).concat(unpredictableNumber)
+           .concat(iccDynamicNumber).concat(DataAuthCode); 
 </pre>
 <p>Then we set P1 to '40', to request an Transaction Certificate (offline transaction) and execute the Generate AC command.</p>
 <pre>
@@ -965,7 +970,7 @@ var generateAC = card.sendApdu(0x80, 0xAE, p1, 0x00, Data, 0x00);
       Le=0 
    R: SW1/SW2=9000 (Normal processing: No error) Lr=32
       0000  77 1E 9F 27 01 80 9F 36 02 02 13 9F 26 08 2D F3  w..'...6....&.-.
-      0010  83 3C 61 85 5B EA 9F 10 07 06 84 23 00 31 02 08  .<a.[......#.1..
+      0010  83 3C 61 85 5B EA 9F 10 07 06 84 23 00 31 02 08  .&lt;a.[......#.1..
 </pre>
 <p><a href="terminalriskmanagement.html">< back</a> <a href="index.html">index</a> <a href="cardactionanalysis.html">Next ></a></p>
 <!-- #EndEditable -->

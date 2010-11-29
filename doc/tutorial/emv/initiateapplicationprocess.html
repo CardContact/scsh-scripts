@@ -76,14 +76,14 @@ EMV.prototype.initApplProc = function() {
  * 
  */
 EMV.prototype.getProcessingOptions = function(pdol) {
-	if (pdol == null) {
-		//var pdol = new ByteString("8300", HEX);                       // OTHER
-		var pdol = new ByteString("830B0000000000000000000000", HEX);	// VISA
-		
-	}
-	var data = this.card.sendApdu(0x80, 0xA8, 0x00, 0x00, pdol, 0);
-	
-	return(data);
+    if (pdol == null) {
+        //var pdol = new ByteString("8300", HEX);                       // OTHER
+        var pdol = new ByteString("830B0000000000000000000000", HEX);   // VISA
+
+    }
+    var data = this.card.sendApdu(0x80, 0xA8, 0x00, 0x00, pdol, 0);
+
+    return(data);
 }
 </pre>
 <p>
@@ -136,19 +136,19 @@ Source: <a href="http://www.emvco.com/specifications.aspx?id=155">EMV Book 3</a>
  Here an example for VISA cards:
  </p>
  <pre>
- FCI:
- 6F [ APPLICATION 15 ] IMPLICIT SEQUENCE SIZE( 40 )
-  84 [ CONTEXT 4 ] SIZE( 7 )
-    0000  A0 00 00 00 03 10 10                             .......
-  A5 [ CONTEXT 5 ] IMPLICIT SEQUENCE SIZE( 29 )
-    50 [ APPLICATION 16 ] SIZE( 4 )
-      0000  56 49 53 41                                      VISA
-    87 [ CONTEXT 7 ] SIZE( 1 )
-      0000  01                                               .
-    9F38 [ CONTEXT 56 ] SIZE( 12 )										
-	0000  9F 33 03 9F 1A 02 9F 35 01 9F 40 05              .3.....5..@. // PDOL
-    5F2D [ APPLICATION 45 ] SIZE( 2 )
-      0000  64 65                                            
+FCI:
+6F [ APPLICATION 15 ] IMPLICIT SEQUENCE SIZE( 40 )
+ 84 [ CONTEXT 4 ] SIZE( 7 )
+   0000  A0 00 00 00 03 10 10                             .......
+ A5 [ CONTEXT 5 ] IMPLICIT SEQUENCE SIZE( 29 )
+   50 [ APPLICATION 16 ] SIZE( 4 )
+     0000  56 49 53 41                                      VISA
+   87 [ CONTEXT 7 ] SIZE( 1 )
+     0000  01                                               .
+   9F38 [ CONTEXT 56 ] SIZE( 12 )
+     0000  9F 33 03 9F 1A 02 9F 35 01 9F 40 05              .3.....5..@. // PDOL
+   5F2D [ APPLICATION 45 ] SIZE( 2 )
+     0000  64 65
  </pre>
  <p>
  This VISA-Card needs for the transaction the following data:
@@ -189,11 +189,11 @@ Source: <a href="http://www.emvco.com/specifications.aspx?id=155">EMV Book 3</a>
 <pre>
 96 C: 80 A8 00 00 - UNKNOWN_INS Lc=13 
       0005  83 0B 00 00 00 00 00 00 00 00 00 00 00           .............
-      Le=0 
+      Le=0
    R: SW1/SW2=9000 (Normal processing: No error) Lr=36
       0000  77 22 82 02 78 00 94 1C 10 01 04 00 10 05 05 00  w"..x...........
       0010  08 06 06 01 08 07 07 01 08 08 09 01 08 0A 0A 00  ................
-      0020  08 01 04 00                     
+      0020  08 01 04 00
 </pre>
 <p>
 The initApplProc function extract now the AIP and AFL information of the response and store them in the cardDE array. 
