@@ -109,25 +109,25 @@ CVC.TAG_SIG = 0x5F37;
 
 /** Table of tag names */
 CVC.OBJECTNAMES = []
-CVC.OBJECTNAMES[CVC.TAG_AT] = "Authentication Template 67";
-CVC.OBJECTNAMES[CVC.TAG_CVC] = "CV Certificate 7F21";
-CVC.OBJECTNAMES[CVC.TAG_BODY] = "Certificate Body 7F4E";
-CVC.OBJECTNAMES[CVC.TAG_CPI] = "Certificate Profile Indicator 5F29";
-CVC.OBJECTNAMES[CVC.TAG_CAR] = "Certification Authority Reference 42";
-CVC.OBJECTNAMES[CVC.TAG_PUK] = "Public Key 7F49";
-CVC.OBJECTNAMES[CVC.TAG_ECC_P] = "Prime Modulus 81";
-CVC.OBJECTNAMES[CVC.TAG_ECC_A] = "First coefficient a 82";
-CVC.OBJECTNAMES[CVC.TAG_ECC_B] = "Second coefficient b 83";
-CVC.OBJECTNAMES[CVC.TAG_ECC_G] = "Base Point G 84";
-CVC.OBJECTNAMES[CVC.TAG_ECC_N] = "Order of the base point 85";
-CVC.OBJECTNAMES[CVC.TAG_ECC_Q] = "Public Point y 86";
-CVC.OBJECTNAMES[CVC.TAG_ECC_H] = "Cofactor f 87";
-CVC.OBJECTNAMES[CVC.TAG_CHR] = "Certificate Holder Reference 5F20";
-CVC.OBJECTNAMES[CVC.TAG_CHAT] = "Certificate Holder Authentication Template 7F4C";
-CVC.OBJECTNAMES[CVC.TAG_EXTN] = "Extension 65";
-CVC.OBJECTNAMES[CVC.TAG_CED] = "Certificate Effective Date 5F25";
-CVC.OBJECTNAMES[CVC.TAG_CXD] = "Certificate Expiration Date 5F24";
-CVC.OBJECTNAMES[CVC.TAG_SIG] = "Signature 5F37";
+CVC.OBJECTNAMES[CVC.TAG_AT] = "Authentication Template";
+CVC.OBJECTNAMES[CVC.TAG_CVC] = "CV Certificate";
+CVC.OBJECTNAMES[CVC.TAG_BODY] = "Certificate Body";
+CVC.OBJECTNAMES[CVC.TAG_CPI] = "Certificate Profile Indicator";
+CVC.OBJECTNAMES[CVC.TAG_CAR] = "Certification Authority Reference";
+CVC.OBJECTNAMES[CVC.TAG_PUK] = "Public Key";
+CVC.OBJECTNAMES[CVC.TAG_ECC_P] = "Prime Modulus";
+CVC.OBJECTNAMES[CVC.TAG_ECC_A] = "First coefficient a";
+CVC.OBJECTNAMES[CVC.TAG_ECC_B] = "Second coefficient b";
+CVC.OBJECTNAMES[CVC.TAG_ECC_G] = "Base Point G";
+CVC.OBJECTNAMES[CVC.TAG_ECC_N] = "Order of the base point";
+CVC.OBJECTNAMES[CVC.TAG_ECC_Q] = "Public Point y";
+CVC.OBJECTNAMES[CVC.TAG_ECC_H] = "Cofactor f";
+CVC.OBJECTNAMES[CVC.TAG_CHR] = "Certificate Holder Reference";
+CVC.OBJECTNAMES[CVC.TAG_CHAT] = "Certificate Holder Authentication Template";
+CVC.OBJECTNAMES[CVC.TAG_EXTN] = "Extension";
+CVC.OBJECTNAMES[CVC.TAG_CED] = "Certificate Effective Date";
+CVC.OBJECTNAMES[CVC.TAG_CXD] = "Certificate Expiration Date";
+CVC.OBJECTNAMES[CVC.TAG_SIG] = "Signature";
 
 
 /** Table of rights description for id-IS */
