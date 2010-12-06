@@ -174,7 +174,6 @@ DataAuthentication.prototype.retrieveIssuerPublicKey = function() {
  * @param {Key} key the Issuer Public Key
 */
 DataAuthentication.prototype.verifySSAD = function(issuerPublicKeyModulus) {
-	print("-- Data Authentication --");
 	var issuerPublicKeyModulus =  issuerPublicKeyModulus;
 	var key = new Key();
 	key.setType(Key.PUBLIC);
@@ -221,7 +220,7 @@ DataAuthentication.prototype.verifySSAD = function(issuerPublicKeyModulus) {
 	assert(hashConcat.equals(hashSSAD));
 	this.emv.cardDE[0x9F45] = decryptedSSAD.bytes(3, 2);
 	
-	print("SDA was successful");
+	print("<-----------------------------SDA was successful------------------------------>\n");
 }
 
 /**
@@ -349,7 +348,7 @@ DataAuthentication.prototype.dynamicDataAuthentication = function(iccPublicKeyMo
 	
 	// Step 7: Compare recovered hash with generated hash
 	var hashSDAD = decryptedSDAD.bytes(decryptedSDAD.length - 21, 20);
-	print("DDA was successful");	
+	print("<-----------------------------DDA was successful------------------------------>\n");
 }
 
 

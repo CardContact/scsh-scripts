@@ -40,7 +40,7 @@ function EMVView(emv) {
  * Display the data elements into a human readable form
  */
 EMVView.prototype.displayDataElements = function(){
-	print("-- Display Data Elements --");
+	print("<----------------------------Display Data Elements-----------------------------");
 	print();
 	var cardDE = this.emv.getCardDataElements();
 	
@@ -52,6 +52,7 @@ EMVView.prototype.displayDataElements = function(){
 			this.decodeDataElement(tag, value);
 		}
 	}
+	print("------------------------------------------------------------------------------>\n");
 }
 
 /**

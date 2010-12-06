@@ -72,8 +72,8 @@ d.dynamicDataAuthentication(iccPublicKeyModulus);
 
 e.generateAC();
 
-var getData = card.sendApdu(0x80, 0xCA, 0x9F, 0x36, 0x00);
-print(getData);
+//var getData = card.sendApdu(0x80, 0xCA, 0x9F, 0x36, 0x00);
+//print(getData);
 
 
 card.close();
