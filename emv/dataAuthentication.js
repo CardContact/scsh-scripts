@@ -85,6 +85,9 @@ DataAuthentication.prototype.getSchemePublicKey = function() {
 	var rid = this.getRID();
 	var index = this.getPubKeyIndex();
 	
+	if (typeof(this.schemePublicKeyTable[rid.toString(HEX)]) == "undefined") {
+		throw new GPError("DataAuthentication", GPError.OBJECT_NOT_FOUND, 0, "No scheme public key found for RID " + rid.toString(HEX));
+	}
 	var key = this.schemePublicKeyTable[rid.toString(HEX)][index];
 	return(key);
 }

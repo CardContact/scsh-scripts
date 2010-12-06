@@ -123,7 +123,7 @@
 
 		<copy todir="${build}/doc">
 			<fileset dir="${doc}">
-				<include name="**/style.css"/>
+				<include name="**/*.css"/>
 				<include name="**/*.jpg"/>
 				<include name="**/*.png"/>
 			</fileset> 
