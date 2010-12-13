@@ -35,6 +35,7 @@
 				<exclude name="cardsim/**"/>
 				<exclude name="build/**"/>
 				<exclude name="tutorial/**"/>
+				<exclude name="perso/**"/>
 				<exclude name=".settings.js"/>
 			</fileset>
 
@@ -92,11 +93,6 @@
 		</apply>
 	</target>
 
-<!--
-	<target name="jsdoc_emv">
-	    <echo message="${doc}"/>
-	</target>
--->
 
 	<target name="package" depends="init, applyTemplate, jsdoc">
 		<property name="bundlename" value="scripts-${DSTAMP}.zip"/>
@@ -137,7 +133,7 @@
 	</target>
 
 
-	<target name="publish">
+	<target name="publish" depends="init">
 		<property name="bundlename" value="scripts-${DSTAMP}.zip"/>
 		<property name="bundle" location="released/${bundlename}"/>
 

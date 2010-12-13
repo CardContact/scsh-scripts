@@ -50,7 +50,7 @@ and supporting middleware to perform cryptographic operations like signing and e
 <p>The project is still work in progress and the
 <a href="http://web.inf.tu-dresden.de/~ko189283/MuscleCard/MuscleCardArticle.html">article from Karsten Ohme</a>
 gives a good overview of the current architecture.</p>
-<p>The Smart Card Shell contains a set of scripts to load the MuscleCard applet into a JavaCard,
+<p>The Script Collection contains a set of scripts to load the MuscleCard applet into a JavaCard,
 to create cryptographic keys and examples how to use them. The scripts can be used without any further tools
 installed, a working Global Platform compliant JavaCard should be sufficient.</p>
 
@@ -59,10 +59,6 @@ installed, a working Global Platform compliant JavaCard should be sufficient.</p
 <p>First thing you need is a working JavaCard.  The scripts have been tested with
 <a href="http://www.usasmartcard.com">JCOP 3.1, JCOP 4.1</a> and
 <a href="http://store.gemplus.com">Cyberflex 64K cards</a>.</p>
-<p>The scripts are included in the Smart Card Shell download starting with version 3.5.308. Scripts
-included in previous versions might not work as described here. Please see the
-<a href="http://www.openscdp.org/scsh3/download.html">download page</a>
-for a recent version.</p>
 <p>Before you start, make sure that the card manager applet in the JavaCard has been initialised with
 the Global Platform sample keys. Maybe you want to try the "gp/explore.js" script first and authenticate
 against the card (Expand the "Card Manager" node and right click on "Authenticate"). If that works, then the proper
@@ -70,7 +66,7 @@ keys have been set.</p>
 <pre>
 &gt;load("gp/explore.js");
 Exception selecting EF_DIR. Assuming no EF_DIR...
-Function (CARD_COMM_ERROR/27270) - SELECT failed with SW1/SW2 = 6A86 "Checking error: Incorrect P1-P2"
+Function (CARD_COMM_ERROR/27270) - SELECT failed with SW1/SW2 = 6A86 "Incorrect P1-P2"
 Issuer Identification Number(42)
 Card Image Number(45)
 Card Data(66)
@@ -80,8 +76,8 @@ Confirmation Counter(c2)
 Sending INIT-UPDATE with host challenge...
 Using SCP01...
 Input to session key derivation: 1D 68 94 96 E2 DE CC 35 08 FB 07 53 DF A7 EC EB
-Input to card cryptogram verification: E2 DE CC 35 DF A7 EC EB 08 FB 07 53 1D 68 94 96 80 00 00 00 00 00 00 00
-Input to host cryptogram calculation: 08 FB 07 53 1D 68 94 96 E2 DE CC 35 DF A7 EC EB 80 00 00 00 00 00 00 00
+Input to card cryptogram verification: E2 DE CC 35 DF A7 EC EB 08 FB 07 53 1D 68 94 ...
+Input to host cryptogram calculation: 08 FB 07 53 1D 68 94 96 E2 DE CC 35 DF A7 EC ...
 Host cryptogram: 90 B7 93 60 0F 31 20 14
 Performing external authentication...
 Done...
@@ -110,8 +106,8 @@ Selecting card manager application...
 Sending INIT-UPDATE with host challenge...
 Using SCP01...
 Input to session key derivation: DD E3 A9 53 90 87 1F 17 28 89 21 B8 B2 10 A0 77
-Input to card cryptogram verification: 90 87 1F 17 B2 10 A0 77 28 89 21 B8 DD E3 A9 53 80 00 00 00 00 00 00 00
-Input to host cryptogram calculation: 28 89 21 B8 DD E3 A9 53 90 87 1F 17 B2 10 A0 77 80 00 00 00 00 00 00 00
+Input to card cryptogram verification: 90 87 1F 17 B2 10 A0 77 28 89 21 B8 DD E3 A9 ..
+Input to host cryptogram calculation: 28 89 21 B8 DD E3 A9 53 90 87 1F 17 B2 10 A0 ..
 Host cryptogram: 34 AB DE 13 89 C6 B9 E4
 Performing external authentication...
 Done...
@@ -147,7 +143,7 @@ SW1/SW2=9C05 to any APDU received.</p>
 <pre>
 &gt;load("musclecard/init.js");
 Applet not initialized
-08 4D 75 73 63 6C 65 30 30 10 10 08 31 32 33 34 35 36 37 38 08 31 32 33 34 35 36 37 38 10 10 08 31 32 33 34 35 36 37 38 08 31 32 33 34 35 36 37 38 00 00 10 00 00 00 00
+08 4D 75 73 63 6C 65 30 30 10 10 08 31 32 33 34 35 36 37 38 08 31 32 33 34 35 36 37 ...
 9000
 Response to MSCGetStatus command APDU: 00 01 00 06 00 00 10 00 00 00 0F FE 02 00 00 00
 Card Edge Major Version        : 0
@@ -227,7 +223,7 @@ List PINs: PIN0,PIN1 (3)
 Generating key...
 0000  00 01 04 00                                      ....
 
-Modulus : 8F 00 7E DF 85 C7 4A 8A 31 16 60 8C 4D 35 A5 FA 76 38 9A D5 BB 46 8F 09 72 51 54 B0 16 64 A9 14 9D D8 2C 05 F6 2D FF 12 7F B1 59 F7 23 7B 3E 55 EF E9 DA D7 D1 DF 1B FA FD E6 D9 B5 EC E9 BB 03 3D A4 F5 32 62 27 B0 7D C7 52 06 4E 79 D4 77 F7 F1 73 C9 18 6D FE 13 90 DA BA 16 8D 93 B8 C2 A8 C3 65 C5 85 90 A6 E3 F1 90 FC 0E 2C 6B 89 67 6A FD 87 1E F3 D8 5E 26 5A 81 AB CB 14 A1 E6 BC F7
+Modulus : 8F 00 7E DF 85 C7 4A 8A 31 16 60 8C 4D 35 A5 FA 76 38 9A D5 BB 46 8F 09 72 ..
 Exponent: 01 00 01
 &gt;
 </pre>
@@ -255,7 +251,7 @@ value.</p>
 Reading public key...
 0000  00 01 08 00                                      ....
 
-Modulus : 87 26 18 14 08 23 9E 16 B4 CE D5 74 92 2E 41 C7 03 C6 2A 8D 62 00 74 61 2E A9 CF 8D 2A 19 A1 73 E8 61 44 D2 07 66 7E F1 B7 41 82 42 F6 CC 0B FA F3 B1 9F 00 2E 2E 12 42 DF 75 AA BB 82 B0 E4 D7 A3 06 0C C7 ED 1B EC E1 99 68 D8 50 C0 30 F7 68 60 0B CB 8F CE 41 ED 3C 0C 66 64 1D 96 3A 8F 8A 9F EE 4C 14 48 78 E4 4F 74 86 21 F9 14 9F 1C 1B F3 00 B6 A1 BA 4C 8B DC 14 51 4F 66 D9 FA CA EE 29 1B C3 88 51 11 09 BE B5 58 F8 A1 45 99 E5 A9 0E 92 F7 18 6E 8D 96 B2 63 DA 4F F8 04 0A 56 85 E5 1A 2B F7 86 0A 57 C0 53 D7 92 6A E3 8F 63 65 97 1D F3 FA 4F FA 72 2E C2 62 61 6B CA 1A 29 8F 6B F7 07 13 FD 17 5D EC 52 81 05 D9 2E 42 BC 7B 02 5A 7A 89 69 36 C2 3E 5B 01 0A 44 F9 44 76 02 A0 6C 6F 94 32 87 1C 56 F8 CD 66 1B E4 D6 37 2B FA 55 18 24 B0 50 CE 90 21 47 C4 F2 D0 5F 61 6B
+Modulus : 87 26 18 14 08 23 9E 16 B4 CE D5 74 92 2E 41 C7 03 C6 2A 8D 62 00 74 61 2E ..
 Exponent: 01 00 01
 Signing data...
 0000  49 89 E1 73 C0 4A FD 17 EB 32 8A 40 EE 1C 3A DE  I.ásÀJý.ë2.@î.:Þ

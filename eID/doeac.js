@@ -34,14 +34,18 @@ var crypto = new Crypto();
 
 // Allocate a certificate store that contains the required certificate chain and
 // a key for terminal authentication
-var certstorepath = GPSystem.mapFilename("cvc", GPSystem.CWD);
-var terminalpath = "/UTCVCA/UTDVCA/UTTERM";
+//var certstorepath = GPSystem.mapFilename("cvc", GPSystem.CWD);
+//var terminalpath = "/UTCVCA/UTDVCA/UTTERM";
+var certstorepath = GPSystem.mapFilename("cvcref", GPSystem.CWD);
+var terminalpath = "/DETESTePass/DEDVTRPBDR7/DETMTRPQS01";
 
+// Create object to access certificate store
 var certstore = new CVCertificateStore(certstorepath);
 
 // Allocate a card object for access to the card
 var card = new Card(_scsh3.reader);
 
+// Reset the card
 card.reset(Card.RESET_COLD);
 
 // Define the CHAT object we use for the PACE protocol
@@ -61,14 +65,21 @@ var pwd = new ByteString(can, ASCII);
 var sm = eac.performPACE(0, EAC20.ID_CAN, pwd, chat);
 
 print("Performing TA...");
+
+// Determine current trust anchor in nPA
 var car = eac.getTrustAnchorCAR(false);
 
-// Determine terminal key and build certificate chain to trust anchor
+// Determine current terminal key and build certificate chain to trust anchor
 var terminalchr = certstore.getCurrentCHR(terminalpath);
+if (terminalchr == null) {
+	throw new Error("Could not determine current terminal key for " + terminalpath + ". Valid certificate chain and terminal key installed ?");
+}
+
+// Determine a certificate chain from the trust anchor to the terminal key
 var cvcchain = certstore.getCertificateChain(terminalpath, terminalchr, car);
 
 if (cvcchain == null) {
-	throw new Error("No matching certificate chain for CAR " + car);
+	throw new Error("No matching certificate chain for CAR " + car + ". Valid certificate chain and terminal key installed ?");
 }
 
 eac.verifyCertificateChain(cvcchain);
@@ -76,14 +87,14 @@ eac.verifyCertificateChain(cvcchain);
 // Get key for terminal certificate
 var termkey = certstore.getPrivateKey(terminalpath, terminalchr);
 
-// Create authentication data object. Here empty
-var ad = new ASN1(0x67);
+// Create the authentication data object. Here empty
+var ad = null;
 
 // Prepare for the later chip authentication step
-eac.prepareChipAuthentication(0);
+eac.prepareChipAuthentication(0x41);
 
 // Perform terminal authentication
-eac.performTerminalAuthentication(termkey, ad.getBytes());
+eac.performTerminalAuthentication(termkey, ad);
 
 print("Reading EF.CardSecurity...");
 eac.readCardSecurity();
@@ -91,9 +102,49 @@ eac.readCardSecurity();
 print("Performing CA...");
 eac.performChipAuthentication();
 
-print("Reading using secure messaging...");
-var mf = eac.mf;
-var ef = new CardFile(mf, ":011C");
-var data = ef.readBinary(0);
-print(data);
+print("Reading files from eID application using secure messaging...");
+var mf = eac.getMF();
 
+// Select DF
+var dfeid = new CardFile(mf, "#E80704007F00070302");
+
+// Read DG using short file identifier
+var dg1 = new CardFile(dfeid, ":01");
+print("DG1 (Document Type):");
+print(dg1.readBinary());
+
+var dg2 = new CardFile(dfeid, ":02");
+print("DG2 (Issuing State):");
+print(dg2.readBinary());
+
+var dg3 = new CardFile(dfeid, ":03");
+print("DG3 (Date of Expiration):");
+print(dg3.readBinary());
+
+var dg4 = new CardFile(dfeid, ":04");
+print("DG4 (Given Name):");
+print(dg4.readBinary());
+
+var dg5 = new CardFile(dfeid, ":05");
+print("DG5 (Surname):");
+print(dg5.readBinary());
+
+var dg6 = new CardFile(dfeid, ":06");
+print("DG6 (Artist Name):");
+print(dg6.readBinary());
+
+var dg7 = new CardFile(dfeid, ":07");
+print("DG7 (Academic Grade):");
+print(dg7.readBinary());
+
+var dg8 = new CardFile(dfeid, ":08");
+print("DG8 (Date of Birth):");
+print(dg8.readBinary());
+
+var dg9 = new CardFile(dfeid, ":09");
+print("DG9 (Place of Birth):");
+print(dg9.readBinary());
+
+var dg17 = new CardFile(dfeid, ":11");
+print("DG17 (Place of Residence):");
+print(dg17.readBinary());

@@ -67,6 +67,78 @@ var eac = new EAC20(crypto, card);
 <pre>
 eac.readCardInfo();
 </pre>
+<p>Ein Blick in den Trace zeigt die APDUs, die zwischen Terminal und nPA ausgestauscht werden.</p>
+<p>Zunächst wird mit einer SELECT APDU das EF mit dem File Identifier 011C ausgewählt und 
+   anschließend das EF mittels READ BINARY APDU ausgelesen.</p>
+<pre>
+14 C: 00 A4 02 04 - SELECT Lc=2 
+      0005  01 1C                                            ..
+      Le=0 
+   R: SW1/SW2=9000 (Normal processing: No error) Lr=32
+      0000  62 1E 80 02 00 AB 82 01 21 83 02 01 1C 88 01 E0  b.......!.......
+      0010  8A 01 05 AB 0B 84 01 B0 84 01 B1 84 01 A4 90 00  ................
+14 C: 00 B0 00 00 - READ BINARY      Le=0 
+   R: SW1/SW2=9000 (Normal processing: No error) Lr=171
+      0000  31 81 82 30 0D 06 08 04 00 7F 00 07 02 02 02 02  1..0............
+      0010  01 02 30 12 06 0A 04 00 7F 00 07 02 02 03 02 02  ..0.............
+      0020  02 01 02 02 01 41 30 12 06 0A 04 00 7F 00 07 02  .....A0.........
+      0030  02 04 02 02 02 01 02 02 01 0D 30 1C 06 09 04 00  ..........0.....
+      0040  7F 00 07 02 02 03 02 30 0C 06 07 04 00 7F 00 07  .......0........
+      0050  01 02 02 01 0D 02 01 41 30 2B 06 08 04 00 7F 00  .......A0+......
+      0060  07 02 02 06 16 1F 65 50 41 20 2D 20 42 44 72 20  ......http://www 
+      0070  47 6D 62 48 20 2D 20 54 65 73 74 6B 61 72 74 65  .openscdp.org/ci
+      0080  20 76 32 2E 30 04 49 03 1A 99 19 28 80 0A 01 B4  n.xml.I....(....
+      0090  21 FA 07 00 00 00 00 00 00 00 00 00 00 00 00 00  !...............
+      00A0  00 00 00 00 00 20 10 09 01 11 29                 ..... ....)
+</pre>
+<p>Die gelesenen Daten sind TLV kodiert. In dekodierter Form ergibt sich eine Liste von
+   5 SecurityInfo Objekten:</p>
+<pre>
+SecurityInfos:
+SET SIZE( 130 )
+  SEQUENCE SIZE( 13 )
+    OBJECT IDENTIFIER = { id-TA }
+    INTEGER SIZE( 1 )
+      0000  02                                               .
+  SEQUENCE SIZE( 18 )
+    OBJECT IDENTIFIER = { id-CA-ECDH-AES-CBC-CMAC-128 }
+    INTEGER SIZE( 1 )
+      0000  02                                               .
+    INTEGER SIZE( 1 )
+      0000  41                                               A
+  SEQUENCE SIZE( 18 )
+    OBJECT IDENTIFIER = { id-PACE-ECDH-GM-AES-CBC-CMAC-128 }
+    INTEGER SIZE( 1 )
+      0000  02                                               .
+    INTEGER SIZE( 1 )
+      0000  0D                                               .
+  SEQUENCE SIZE( 28 )
+    OBJECT IDENTIFIER = { id-CA-ECDH }
+    SEQUENCE SIZE( 12 )
+      OBJECT IDENTIFIER = { standardizedDomainParameter }
+      INTEGER SIZE( 1 )
+        0000  0D                                               .
+    INTEGER SIZE( 1 )
+      0000  41                                               A
+  SEQUENCE SIZE( 43 )
+    OBJECT IDENTIFIER = { id-CI }
+    IA5-STRING SIZE( 31 )
+      0000  65 50 41 20 2D 20 42 44 72 20 47 6D 62 48 20 2D  http://www.opens
+      0010  20 54 65 73 74 6B 61 72 74 65 20 76 32 2E 30     cdp.org/cin.xml
+</pre>
+<p><code>id-TA</code> definiert die Version des Protokollteils für die Terminal Authentifizierung (hier V2).</p>
+<p><code>id-CA-ECDH-AES-CBC-CMAC-128</code> definiert das für die Chip Authentifizierung zu verwendende
+   Kryptoverfahren, hier also Diffie-Hellman mit ECC, einer AES CBC Verschlüsselung, einem Message Authentication
+   Code nach CMAC und einem 128 Bit AES Sitzungsschlüssel. Dabei wird Version 2 des Protokolls und der 
+   Chip-Authentifizierungsschlüssel mit der ID '41' verwendet.</p>
+<p><code>id-PACE-ECDH-GM-AES-CBC-CMAC-128</code> definiert das für PACE zu verwendende Kryptoverfahren, hier
+   also Diffie-Hellman mit ECC, einem Generic Mapping, einer AES CBC Verschlüsselung, einem Message Authentication
+   Code nach CMAC und einem 128 Bit AES Sitzungsschlüssel. Dabei wird Version 2 des Protokolls und der 
+   standardisierte Domainparameter Nr. 13 verwendet (brainpool256r1).</p>
+<p><code>id-CA-ECDH</code> definiert die für die Chip Authentifizierung zu verwendenden Domainparameter, hier also
+   den standardisierten Domainparameter Nr. 13 (brainpool256r).</p>
+<p><code>id-CI</code> definiert die URL unter der eine Anwendung die Beschreibung der Kartenfunktionen laden kann.</p>
+
 
 <p>Wird fortgesetzt...</p>
 <!-- #EndEditable -->

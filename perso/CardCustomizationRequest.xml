@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CardCustomization xmlns="http://namespaces.globalplatform.org/systems-messaging/1.1.0"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:schemaLocation="http://namespaces.globalplatform.org/systems-messaging/1.1.0 file:/C:/document/Specification/globalplatform/system/Messaging/piv.xsd">
+    <ModuleIdentifierCode Identifier="ELECTRICAL">
+        <CardConfiguration CollatorStatus="4">
+            <CRN Number="2A01020304"/>
+        </CardConfiguration>
+        <ApplicationData>
+            <AID AID="D276000001" Order="1"/>
+            <ApplicationProfileUniqueID>2B0601040181C31F0000</ApplicationProfileUniqueID>
+            <ProcessingStep Action="PERSONALIZE" Requirement="01"><Script>PERSONALIZE</Script></ProcessingStep>
+            <ICCData>
+                <DataSet>
+                    <Data DataElement="SerialNo" Value="12345678"/>
+                </DataSet>
+            </ICCData>
+        </ApplicationData>
+    </ModuleIdentifierCode>
+</CardCustomization>
+

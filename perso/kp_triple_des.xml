@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<gp:KeyProfile xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://namespaces.globalplatform.org/systems-profiles/1.1.0 http://namespaces.globalplatform.org/systems-profiles/1.1.0/GP.systems.profiles.1.1.0.KeyProfile.xsd"
+    xmlns:gp="http://namespaces.globalplatform.org/systems-profiles/1.1.0"
+    UniqueID="2B0601040181C31F100005" ProfileVersion="1.1.0" ErrataVersion="0">
+    <gp:Description>Triple DES Test Key</gp:Description>
+    <gp:Revisions arrayElement="Revision" arrayIndex="#">
+        <gp:Revision Version="1.0.0" Date="2005-12-09" Time="00:00:00" By="www.openscdp.org"
+            Digest="00000000"/>
+    </gp:Revisions>
+    <gp:KeyInfo Name="TripleDESTest" Type="SECRET" SubType="DES" Size="196" Mode="TEST"/>
+    <gp:Attribute Sensitive="false" Importable="true" Exportable="true"/>
+    <gp:Usage Encrypt="true" Decrypt="true" DecryptEncrypt="true" Sign="true" Verify="true"
+        Wrap="true" Unwrap="true" UnwrapWrap="true" Derive="true"/>
+    <gp:Value Format="DES" arrayElement="Component" arrayIndex="#">
+        <gp:Component Value="7CA110454A1A6E570131D9619DC1376E9DC1376E0131D961" Encoding="HEX"/>
+    </gp:Value>
+</gp:KeyProfile>

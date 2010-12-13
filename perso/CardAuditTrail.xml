@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CardAuditTrail xmlns="http://namespaces.globalplatform.org/systems-messaging/1.1.0"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:schemaLocation="http://namespaces.globalplatform.org/systems-messaging/1.1.0 file:/C:/document/Specification/globalplatform/system/Messaging/piv.xsd">
+  <LogIdentifierCode Identifier="ELECTRICAL">
+    <CardConfigurationLog>
+      <CRN Number="2A01020304"/>
+      <PhysicalCardIdentifier IdentifierType="CIN" IdentifierValue="1234">
+        <CardLifeCycleState>CardLifeCycleState</CardLifeCycleState>
+      </PhysicalCardIdentifier>
+    </CardConfigurationLog>
+    <ApplicationLog>
+      <AID AID="D276000001" Order="1"/>
+      <ApplicationProfileUniqueID>2B0601040181C31F0000</ApplicationProfileUniqueID>
+      <LogData>
+      	<DataSet>
+      	  <Data DataElement="UID" Value="1234"/>
+      	</DataSet>
+      </LogData>
+    </ApplicationLog>
+  </LogIdentifierCode>
+</CardAuditTrail>

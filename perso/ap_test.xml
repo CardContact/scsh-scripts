@@ -1,0 +1,67 @@
+<ApplicationProfile xmlns="http://namespaces.globalplatform.org/systems-profiles/1.2.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://namespaces.globalplatform.org/systems-profiles/1.2.0 http://namespaces.globalplatform.org/systems-profiles/1.2.0/GP.systems.profiles.1.2.0.ApplicationProfile.xsd"
+    UniqueID="2B0601040181C31F0000" ProfileVersion="1.1.0">
+    <Revisions arrayElement="Revision" arrayIndex="#">
+        <Revision Version="1.0.0" Date="2005-12-23" Time="12:00:00" By="CardContact" Digest=""/>
+    </Revisions>
+    <ConflictRules arrayElement="ConflictRule" arrayIndex="Name"/>
+    <ApplicationInfo Version="1.0.0" Type="OTHER" Subtype="APP" Owner="" Developer="" Provider=""
+        Domain="" VolatileDataSpaceMin="0" NonVolatileDataSpaceMin="0" NonVolatileDataSpaceMax="100"
+        VolatileDataSpaceMax="111">
+        <Privileges DAPVerification="true"/>
+        <LifeCycles arrayElement="LifeCycle" arrayIndex="Name">
+            <LifeCycle Name="One" Value="01"/>
+            <LifeCycle Name="SELECTABLE" Value="1111"/>
+            <LifeCycle Name="Two" Value="02"/>
+            <LifeCycle Name="Three" Value="03"/>
+        </LifeCycles>
+<!--        <Codes arrayIndex="" arrayElement=""></Codes> -->
+    </ApplicationInfo>
+    <Key Name="single1" ProfileID="2B0601040181C31F100001" External="true"/>
+    <Key Name="double" ProfileID="2B0601040181C31F100004" External="true"/>
+    <Key Name="triple" ProfileID="2B0601040181C31F100005" External="true"/>
+    <DataElement Name="helloWorld" External="false" Type="ByteString" Value="Hello World" Encoding="ASCII"/>
+    <DataElement Name="external" External="true" Type="ByteString"/>
+    <DataElement Name="SerialNo" External="true" Type="ByteString" Encoding="ASCII"/>
+    <DataElement Name="UID" External="false" Update="true" Type="ByteString" Encoding="HEX"/>
+    <Function Name="testfunction" Param="p1, p2">
+        <Script><![CDATA[
+            
+            GPSystem.trace("Parameter p1: " + p1);
+            GPSystem.trace("Parameter p2: " + p2);
+            GPSystem.trace(this.data["external"].toString(ASCII));
+            
+            ]]></Script>
+    </Function>
+    
+    <ScriptFragment Name="PERSONALIZE" StartLifeCycle="one" EndLifeCycle="two">
+        <KeyDeclaration Name="single1" External="false"/>
+        <KeyDeclaration Name="double" External="true"/>
+        <Script><![CDATA[
+//                    assert(this instanceof Application);
+
+                    GPSystem.trace("Hello World");
+                    GPSystem.trace(this.key["single1"].profile.UniqueID);
+                    GPSystem.trace(this.key["double"].profile.UniqueID);
+                    GPSystem.trace(this.key["triple"].profile.UniqueID);
+                    GPSystem.trace(this.data["helloWorld"].toString(ASCII));
+                    GPSystem.trace(this.data["external"].toString(ASCII));
+                    global = "global";
+
+                    this.testfunction("Parameter1", "Parameter2");
+                    
+                    for (i in this.data) {
+                    	GPSystem.trace(i + " = " + this.data[i]);
+                    }
+                    this.data["UID"] = new ByteString("1234", HEX);
+                    
+                    var atr = this.card.reset(Card.RESET_COLD);
+                    GPSystem.trace(atr);
+                    
+                    var efdir = new CardFile(this.card, ":2F00");
+                    var rec = efdir.readRecord(1);
+
+            ]]></Script>
+    </ScriptFragment>
+</ApplicationProfile>
