@@ -34,10 +34,8 @@ var crypto = new Crypto();
 
 // Allocate a certificate store that contains the required certificate chain and
 // a key for terminal authentication
-//var certstorepath = GPSystem.mapFilename("cvc", GPSystem.CWD);
-//var terminalpath = "/UTCVCA/UTDVCA/UTTERM";
-var certstorepath = GPSystem.mapFilename("cvcref", GPSystem.CWD);
-var terminalpath = "/DETESTePass/DEDVTRPBDR7/DETMTRPQS01";
+var certstorepath = GPSystem.mapFilename("cvc", GPSystem.CWD);
+var terminalpath = "/UTCVCA/UTDVCA/UTTERM";
 
 // Create object to access certificate store
 var certstore = new CVCertificateStore(certstorepath);
