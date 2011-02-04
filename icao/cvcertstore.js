@@ -233,7 +233,7 @@ CVCertificateStore.prototype.getCVCACertificateFor = function(cvcaref) {
 	
 	var f = new java.io.File(fn);
 	if (!f.exists()) {
-		fn = this.path + "/" + path + "/" + chr.toString() + ".selfsigned.cvcert";
+		fn = this.path + "/" + cvcaref.getHolder() + "/" + cvcaref.toString() + ".selfsigned.cvcert";
 	}
 	
 	var bin = CVCertificateStore.loadBinaryFile(fn);
