@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="ISO-8859-1" standalone="no"?>
+<!DOCTYPE testsuite SYSTEM "../testsuite.dtd">
+<?xml-stylesheet type="text/xsl" href="../testsuite.xsl" ?>
+
+<testsuite>
+  <testsuiteid> Sample test suite </testsuiteid>
+  <version>1.0.0</version>
+  <date>2011-04-01</date>
+  <author>OpenSCDP</author>
+  <company>www.openscdp.org</company>
+  <shortdescription>
+		Group of sample test cases
+   </shortdescription>
+  <description>
+		Group of sample test cases
+  </description>
+  
+  <specificationname>
+		Reference specification
+  </specificationname>
+  <specificationversion>
+		First Version
+  </specificationversion>
+
+  <globalpreconditions>
+  </globalpreconditions>
+        
+  <testcases>
+    <testcase>
+		GT_TestCase_1.xml
+    </testcase>
+    <testcase>
+		GT_TestCase_2.xml
+    </testcase>
+  </testcases>
+</testsuite>

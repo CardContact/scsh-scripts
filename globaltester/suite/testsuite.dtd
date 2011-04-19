@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!ELEMENT testsuite (testsuiteid, version, date, author, company, shortdescription, description, specificationname, specificationversion , globalpreconditions, testcases)>
+<!ELEMENT testsuiteid (#PCDATA)>
+<!ELEMENT version (#PCDATA)>
+<!ELEMENT date (#PCDATA)>
+<!ELEMENT author (#PCDATA)>
+<!ELEMENT company (#PCDATA)>
+<!ELEMENT shortdescription (#PCDATA)>
+<!ELEMENT description (#PCDATA)>
+<!ELEMENT specificationname (#PCDATA)>
+<!ELEMENT specificationversion (#PCDATA)>
+<!ELEMENT globalpreconditions (#PCDATA)>
+<!ELEMENT testcases (testcase+)>  <!-- one or more testcases needed -->
+<!ELEMENT testcase (#PCDATA)>

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="ISO-8859-1" standalone="no"?>
+<!DOCTYPE testsuite SYSTEM "testcase.dtd"[]>
+<?xml-stylesheet type="text/xsl" href="testcase.xsl" ?>
+
+<testsuite>
+
+  <testsuiteid>SuiteID</testsuiteid>
+  <version>1.0</version>
+  <date>2007-11-02</date>
+  <author>Andreas Schwier</author>
+  <company>OpenSCDP</company>
+  <shortdescription>
+	Testcase Example
+  </shortdescription>
+  <description>
+	Testcase Example
+  </description>
+  <references>  </references>
+  <globalpreconditions>
+  
+  </globalpreconditions>
+
+  <testcase>
+	<testcaseid>TC1</testcaseid>
+	<shortdescription>Testcase 1</shortdescription>
+	<description>
+		Testcase Example 1
+	</description>
+	<quality>Mandatory</quality>
+
+	<preconditions><![CDATA[
+		print("Section precondition executing...");
+		load("../lib/TestSetup.js");
+	]]></preconditions>
+	
+	<testscript><![CDATA[
+		print("Section testscript executing...");
+	]]></testscript>
+
+	<postconditions>
+		<condition><![CDATA[
+		print("Section condition 1 executing...");
+	]]></condition>
+		<condition><![CDATA[
+		print("Section condition 2 executing...");
+	]]></condition>
+	</postconditions>
+  </testcase>
+</testsuite>
