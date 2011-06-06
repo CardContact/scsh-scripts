@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="doctp.xsl" ?>
+<testprocedure 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="http://www.openscdp.org/schema/testframework-1.0.xsd"
+	id="tp_cvc" arrayElement="teststep" arrayIndex="id">
+	<name>CVC Check</name>
+	<description>
+		<p>Checks the syntax of a card verifiable certificate in accordance with TR-03110</p>
+	</description>
+	<reference>
+		<p>TR-03110</p>
+	</reference>
+
+
+
+<!-- Each test step must be declared with an id that starts with a 3 digit number -->
+	<teststep id="001CheckASN1">
+		<name>CheckASN</name>
+		<description>
+			<p>Check the ASN1 syntax of a card verifiable certificate</p>
+		</description>
+		<requirement>
+			<p>The CVC must be a well formed DER encoded ASN.1 object</p>
+		</requirement>
+		<reference>
+			<p>TR-03110</p>
+		</reference>
+		<Script><![CDATA[
+
+	var cvc = this.parameter.dut;
+	
+	var a = new ASN1(cvc);
+	
+	this.log("Decoded CVC:");
+	this.log(a);
+	
+		]]></Script>
+	</teststep>
+
+
+</testprocedure>

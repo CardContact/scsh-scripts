@@ -147,7 +147,7 @@ CVC.ATRIGHTS = [
 	"Age Verification",
 	"Community ID Verification",
 	"Restricted Identification",
-	"RFU (Bit 3)",
+	"Privileged Terminal",
 	"CAN allowed",
 	"PIN Management",
 	"Install Certificate",
@@ -173,8 +173,8 @@ CVC.ATRIGHTS = [
 
 	"Read Access DG 17 (Place of Residence)",
 	"Read Access DG 18 (Community ID)",
-	"Read Access DG 19",
-	"Read Access DG 20",
+	"Read Access DG 19 (Conditions I-eAT)",
+	"Read Access DG 20 (Conditions II-eAT)",
 	"Read Access DG 21",
 	"RFU (Bit 29)",
 	"RFU (Bit 30)",
@@ -182,12 +182,13 @@ CVC.ATRIGHTS = [
 
 	"RFU (Bit 32)",
 	"Write Access DG 21",
-	"Write Access DG 20",
-	"Write Access DG 19",
+	"Write Access DG 20 (Conditions II-eAT)",
+	"Write Access DG 19 (Conditions I-eAT)",
 	"Write Access DG 18 (Community ID)",
 	"Write Access DG 17 (Place of Residence)"
 ];
 CVC.idAT = new ByteString("id-AT", OID);
+
 
 
 /** Table of rights description for id-ST */

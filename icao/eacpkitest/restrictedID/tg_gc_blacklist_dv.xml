@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="doctg.xsl" ?>
+<testgroup 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="http://www.openscdp.org/schema/testframework-1.0.xsd"
+	id="tg_gc_blacklist" arrayElement="testcase,function" arrayIndex="id,Name">
+	<name>Blacklist tests</name>
+	<description>
+		<p>Tests for a blacklist download service</p>
+	</description>
+	<reference>
+		<p>TR-03110, TR-03129</p>
+	</reference>
+
+
+
+<!-- Each test case must be declared with an id that starts with a 3 digit number -->
+	<testcase id="001GetCompleteBlackList">
+		<name>GetBlackList(complete_list)</name>
+		<description>
+			<p>Issue a GetBlackList webservice call to the DVSD instance requesting a complete list</p>
+		</description>
+		<requirement>
+			<p>The DVSD must respond with a CMS object containing the blacklist</p>
+		</requirement>
+		<reference>
+			<p>PH BerCA</p>
+		</reference>
+		<Script><![CDATA[
+
+	var dvsd = new RIConnection(this.parameter.baseURL + "/dvsd");
+	
+	dvsd.verbose = true;
+	dvsd.setTrustAndKeystore(this.parameter.keystore, this.parameter.keystore, this.parameter.privateKeyPIN);
+
+	var blacklist = dvsd.getCompleteBlackList();
+	
+	var cms = new CMSSignedData(blacklist);
+	var content = new ASN1(cms.getSignedContent());
+	this.log("Blacklist contents:");
+	this.log(content);
+
+	
+		]]></Script>
+	</testcase>
+
+	
+	
+<!-- Each test case must be declared with an id that starts with a 3 digit number -->
+	<testcase id="002GetDeltaBlackList">
+		<name>GetBlackList(delta_list)</name>
+		<description>
+			<p>Issue a GetBlackList webservice call to the DVSD instance requesting delta lists list</p>
+		</description>
+		<requirement>
+			<p>The DVSD must respond with two CMS objects containing the added and removed list</p>
+		</requirement>
+		<reference>
+			<p>PH BerCA</p>
+		</reference>
+		<Script><![CDATA[
+
+	var dvsd = new RIConnection(this.parameter.baseURL + "/dvsd");
+	dvsd.verbose = true;
+
+	var deltalists = dvsd.getDeltaBlackLists("69");
+	
+	for (var i = 0; i < 2; i++) {
+		var cms = new CMSSignedData(deltalists[i]);
+		var content = new ASN1(cms.getSignedContent());
+		this.log("Blacklist contents:");
+		this.log(content);
+	}
+		]]></Script>
+	</testcase>
+	
+	
+	
+	<!-- Each test case must be declared with an id that starts with a 3 digit number -->
+	<testcase id="003GetSectorPublicKey">
+		<name>GetSectorPublicKey</name>
+		<description>
+			<p>Issue a GetSectorPublicKey webservice call to the DVSD instance requesting delta lists list</p>
+		</description>
+		<requirement>
+			<p>The DVSD must respond with two CMS objects containing the added and removed list</p>
+		</requirement>
+		<reference>
+			<p>PH BerCA</p>
+		</reference>
+		<Script><![CDATA[
+				 
+	var dvsd = new RIConnection(this.parameter.baseURL + "/dvsd");
+	dvsd.verbose = true;
+	 
+	var sectorID = new ByteString("DA9192E1CCDC0F568C37E557A2ABB4D8F861D1CFEAA5DB59D251B85BBF814C81", HEX);
+	var sectorPublicKey = dvsd.getSectorPublicKey(sectorID);
+	 
+	     ]]></Script>
+	 </testcase>
+	
+</testgroup>

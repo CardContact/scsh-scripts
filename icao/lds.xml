@@ -1,7 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <FileStructure arrayElement="EF" arrayIndex="#">
-    <EF fid="1E" type="T" format="asn1" name="EF_COM" />
-    <EF fid="01" type="T" format="asn1" name="EF_DG1" />
-    <EF fid="02" type="T" format="asn1" name="EF_DG2" />
-    <EF fid="1D" type="T" format="asn1" name="EF_SOD" />
+    <EF fid="1E" type="T" format="asn1" name="EF.COM" />
+    <EF fid="01" type="T" format="asn1" name="EF.DG1 (MRZ)" />
+    <EF fid="02" type="T" format="asn1" name="EF.DG2 (Encoded face)" />
+    <EF fid="03" type="T" format="asn1" name="EF.DG3 (Encoded finger)" />
+    <EF fid="04" type="T" format="asn1" name="EF.DG4 (Encoded iris)" />
+    <EF fid="05" type="T" format="asn1" name="EF.DG5 (Displayed portrait)" />
+    <EF fid="06" type="T" format="asn1" name="EF.DG6 (RFU)" />
+    <EF fid="07" type="T" format="asn1" name="EF.DG7 (Displayed signature)" />
+    <EF fid="08" type="T" format="asn1" name="EF.DG8 (Data features)" />
+    <EF fid="09" type="T" format="asn1" name="EF.DG9 (Structure features)" />
+    <EF fid="0A" type="T" format="asn1" name="EF.DG10 (Substance features)" />
+    <EF fid="0B" type="T" format="asn1" name="EF.DG11 (Additional personal data)" />
+    <EF fid="0C" type="T" format="asn1" name="EF.DG12 (Additional document data)" />
+    <EF fid="0D" type="T" format="asn1" name="EF.DG13 (Discretionary data)" />
+    <EF fid="0E" type="T" format="asn1" name="EF.DG14 (Security options secondary biometrics)" />
+    <EF fid="0F" type="T" format="asn1" name="EF.DG15 (Active authentication public key info)" />
+    <EF fid="10" type="T" format="asn1" name="EF.DG16 (Person to notify)" />
+    <EF fid="1D" type="T" format="asn1" name="EF.SOD" />
 </FileStructure>    

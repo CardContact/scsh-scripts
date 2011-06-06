@@ -80,6 +80,61 @@ function calculateBACKey(crypto, mrz2, keyno) {
 
 
 
+/*
+ * Calculate a single Basic Access Control (BAC) key from a 3-line
+ * Machine Readable Zone (MRZ).
+ *
+ * The function extracts the Document Number, Date of Birth and Date of Expiration
+ * from the second line of the machine readable zone
+ *
+ * E.g. MRZ of Silver Data Set
+ *   I<UTOL898902C<3<<<<<<<<<<<<<<<
+ *        '-DocNo--'
+ *   6908061F9406236UTO<<<<<<<<<<<1
+ *   '-DoB-' '-DoE-'
+ *   ERIKSON<<ANNA<MARIA<<<<<<<<<<<
+ *
+ * This extract is then hashed, concatenated with a key number and
+ * hashed again.
+  
+ * crypto	Crypto object used for hashing
+ * mrz		String containing second line of MRZ
+ * keyno	Number of key to calculate (1 for Kenc and 2 for Kmac)
+ *
+ * Returns	Key object
+ */
+function calculateBACKeyFrom3LineMRZ(crypto, mrz, keyno) {
+
+	// Convert to byte string
+	var strbin = new ByteString(mrz, ASCII);
+
+	// Extract Document Number, Date of Birth and Date of Expiration
+	var hash_input = strbin.bytes(5, 10);
+	hash_input = hash_input.concat(strbin.bytes(30, 7));
+	hash_input = hash_input.concat(strbin.bytes(38, 7));
+	print("Hash Input   : " + hash_input.toString(ASCII));
+
+	// Hash input	
+	var mrz_hash = crypto.digest(Crypto.SHA_1, hash_input);
+	print("MRZ Hash     : " + mrz_hash);
+
+	// Extract first 16 byte and append 00000001 or 00000002
+	var bb = new ByteBuffer(mrz_hash.bytes(0, 16));
+	bb.append(new ByteString("000000", HEX));
+	bb.append(keyno);
+
+	// Hash again to calculate key value	
+	var keyval = crypto.digest(Crypto.SHA_1, bb.toByteString());
+	keyval = keyval.bytes(0, 16);
+	print("Value of Key : " + keyval);
+	var key = new Key();
+	key.setComponent(Key.DES, keyval);
+
+	return key;
+}
+
+
+
 // The SecureChannel object is required as a credential for the CardFile objects
 // SecureChannel objects must at least implement a wrap() method. The unwrap()
 // method is optional, but called when defined

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="doctg.xsl" ?>
+<testgroup 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="http://www.openscdp.org/schema/testframework-1.0.xsd"
+	id="tg_gc_spoc" arrayElement="testcase,function" arrayIndex="id,Name">
+	<name>SPOC Tests</name>
+	<description>
+		<p>Good case tests for a SPOC instance</p>
+	</description>
+	<reference>
+		<p>TR-03110, TR-03129</p>
+	</reference>
+
+
+
+<!-- Each test case must be declared with an id that starts with a 3 digit number -->
+	<testcase id="001GetCACertificatesSPOC">
+		<name>GetCACertificates for SPOC</name>
+		<description>
+			<p>Issue a GetCACertificate webservice call to the SPOC instance</p>
+		</description>
+		<requirement>
+			<p>The SPOC must respond with 0..n CV certificates</p>
+		</requirement>
+		<reference>
+			<p>TR-03129, chapter 4.2 - Distribution of CV Certificates</p>
+		</reference>
+		<procedures arrayElement="procedure" arrayIndex="#">
+			<procedure id="tp_cvc"/>
+		</procedures>
+		<Script><![CDATA[
+
+	var spoc = new TAConnection(this.parameter.taURL, true);
+
+	spoc.verbose = true;
+
+	var certlist = spoc.getCACertificates();
+
+	for (var i = 0; i < certlist.length; i++) {
+		var cvc = new CVC(certlist[i]);
+		this.log(cvc);
+	}
+/*
+	this.assertTrue(certlist.length >= 2, "spoc must return at least two certificates, one of CVCA and one of spoc");
+
+	var param = { dut: certlist[0]};
+	var result = this.runTestProcedure("tp_cvc", param);
+
+	var param = { dut: certlist[1]};
+	var result = this.runTestProcedure("tp_cvc", param);
+
+	// Determine PKI path from DV certificate
+	for (var i = 0; i < certlist.length; i++) {
+		var cvc = new CVC(certlist[i]);
+		var level = cvc.getCHAT().get(1).value.byteAt(0) & 0xC0;
+		if ((level == 0x80) || (level == 0x40)) {
+			this.parameter.dvcapath = "/" + cvc.getCAR().getHolder() + "/" + cvc.getCHR().getHolder();
+		}
+	}
+
+	var certstore = this.parameter.certstore;
+//	certstore.insertCertificates2(this.parameter.crypto, certlist, true, this.parameter.dvcapath);
+*/
+
+		]]></Script>
+	</testcase>
+
+</testgroup>

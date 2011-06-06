@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="doctg.xsl" ?>
+<testgroup 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="http://www.openscdp.org/schema/testframework-1.0.xsd"
+	id="tg_gc_dvca" arrayElement="testcase,function" arrayIndex="id,Name">
+	<name>DVCA Tests</name>
+	<description>
+		<p>Good case tests for a DVCA instance</p>
+	</description>
+	<reference>
+		<p>TR-03110, TR-03129</p>
+	</reference>
+
+
+
+<!-- Each test case must be declared with an id that starts with a 3 digit number -->
+	<testcase id="001GetCACertificatesDVCA">
+		<name>GetCACertificates for DVCA</name>
+		<description>
+			<p>Issue a GetCACertificate webservice call to the DVCA instance</p>
+		</description>
+		<requirement>
+			<p>The DVCA must respond with at least two CV certificates</p>
+		</requirement>
+		<reference>
+			<p>TR-03129, chapter 4.2 - Distribution of CV Certificates</p>
+		</reference>
+		<procedures arrayElement="procedure" arrayIndex="#">
+			<procedure id="tp_cvc"/>
+		</procedures>
+		<Script><![CDATA[
+
+	var dvca = new TAConnection(this.parameter.taURL);
+
+	dvca.verbose = true;
+
+	var certlist = dvca.getCACertificates();
+
+	this.assertTrue(certlist.length >= 2, "DVCA must return at least two certificates, one of CVCA and one of DVCA");
+
+	var param = { dut: certlist[0]};
+	var result = this.runTestProcedure("tp_cvc", param);
+
+	var param = { dut: certlist[1]};
+	var result = this.runTestProcedure("tp_cvc", param);
+
+	// Determine PKI path from DV certificate
+	for (var i = 0; i < certlist.length; i++) {
+		var cvc = new CVC(certlist[i]);
+		var level = cvc.getCHAT().get(1).value.byteAt(0) & 0xC0;
+		if ((level == 0x80) || (level == 0x40)) {
+			this.parameter.dvcapath = "/" + cvc.getCAR().getHolder() + "/" + cvc.getCHR().getHolder();
+		}
+	}
+
+	var certstore = this.parameter.certstore;
+//	certstore.insertCertificates2(this.parameter.crypto, certlist, true, this.parameter.dvcapath);
+
+		]]></Script>
+	</testcase>
+
+	
+	
+	<testcase id="011RequestInitialCertificateDVCA">
+		<name>RequestInitialCertificate from DVCA</name>
+		<description>
+			<p>Issue a RequestCertificate webservice call to the DVCA instance</p>
+		</description>
+		<requirement>
+			<p>The DVCA must respond with a new certificate</p>
+		</requirement>
+		<reference>
+			<p>TR-03129, chapter 4.2 - Distribution of CV Certificates</p>
+		</reference>
+		<Script><![CDATA[
+
+	if (this.parameter.dvcapath == null) {
+		this.assertTrue(false, "Run 001GetCACertificatesDVCA first to determine PKI");
+	}
+
+	var dvca = new TAConnection(this.parameter.taURL);
+	dvca.verbose = true;
+
+	var certstore = this.parameter.certstore;
+	var path = this.parameter.dvcapath + "/" + this.parameter.holderID;
+	var dp = certstore.getDefaultDomainParameter(path);
+	var algo = certstore.getDefaultPublicKeyOID(path);
+	var car = certstore.getCurrentCHR(this.parameter.dvcapath);
+
+	var tcc = new CVCCA(this.parameter.crypto, certstore, null, null, path);
+	
+	tcc.setKeySpec(dp, algo);
+	
+	// Create a new request
+
+	var req = tcc.generateInitialRequest(car);
+	this.log(req);
+	this.log(req.getASN1());
+	
+	var certlist = dvca.requestCertificate(req);
+	
+	this.assertTrue(certlist.length >= 1, "DVCA must return at least one certificates");
+	
+	var certstore = this.parameter.certstore;
+	certstore.insertCertificates2(this.parameter.crypto, certlist, true, this.parameter.dvcapath);
+	
+		]]></Script>
+	</testcase>
+
+
+
+
+	<testcase id="021RequestRenewalCertificateDVCA">
+		<name>RequestRenewalCertificate from DVCA</name>
+		<description>
+			<p>Issue a RequestCertificate webservice call to the DVCA instance</p>
+		</description>
+		<requirement>
+			<p>The DVCA must respond with a new certificate</p>
+		</requirement>
+		<reference>
+			<p>TR-03129, chapter 4.2 - Distribution of CV Certificates</p>
+		</reference>
+		<Script><![CDATA[
+
+	if (this.parameter.dvcapath == null) {
+		this.assertTrue(false, "Run 001GetCACertificatesDVCA first to determine PKI");
+	}
+
+	var dvca = new TAConnection(this.parameter.taURL);
+	dvca.verbose = true;
+
+	var certstore = this.parameter.certstore;
+	var path = this.parameter.dvcapath + "/" + this.parameter.holderID;
+	var dp = certstore.getDefaultDomainParameter(path);
+	var algo = certstore.getDefaultPublicKeyOID(path);
+	var car = certstore.getCurrentCHR(this.parameter.dvcapath);
+
+	var tcc = new CVCCA(this.parameter.crypto, certstore, null, null, path);
+	
+	tcc.setKeySpec(dp, algo);
+	
+	// Create a new request
+
+	var req = tcc.generateRequest(car);
+	this.log(req);
+	this.log(req.getASN1());
+	
+	var certlist = dvca.requestCertificate(req);
+	
+	this.assertTrue(certlist.length >= 1, "DVCA must return at least one certificates");
+	
+	var certstore = this.parameter.certstore;
+	certstore.insertCertificates2(this.parameter.crypto, certlist, true, this.parameter.dvcapath);
+	
+		]]></Script>
+	</testcase>
+</testgroup>
