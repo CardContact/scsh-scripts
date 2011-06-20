@@ -24,30 +24,43 @@
  * @fileoverview Example to read from a Mifare classic card using a shell script
  */
 
+load("mifare.js");
+
+
 var card = new Card(_scsh3.reader);
 
 card.reset(Card.RESET_COLD);
 
-print("UID: " + card.sendApdu(0xFF,0xCA,0x00,0x00,0, [0x9000]));
+var mif = new Mifare(card);
+
+print("UID: " + mif.getUID());
 
 var keyid = 0x1A;
 
 var key = new ByteString("FFFFFFFFFFFF", HEX);
-card.sendApdu(0xFF,0x82,0x20,keyid, key, [0x9000]);
+mif.loadKey(keyid, key);
 
 var dump = new ByteBuffer();
 
 for (var block = 0; block < 16*4; block++) {
-	var bb = new ByteBuffer();
-	bb.append(0x01);							// Version
-	bb.append(ByteString.valueOf(block, 2));
-	bb.append(0x60);
-	bb.append(keyid);
-	card.sendApdu(0xFF,0x86,0x00,0x00, bb.toByteString(), [0x9000]);
-
-	// Read sector
-
-	dump.append(card.sendApdu(0xFF,0xB0,block >> 8,block & 0xFF,0,[0x9000]));
+	mif.authenticate(block, Mifare.KEY_A, keyid);
+	dump.append(mif.readBlock(block));
 }
 
 print(dump.toByteString());
+
+var s = mif.newSector(0);
+s.setKeyId(keyid);
+s.readAll();
+print(s.toString());
+
+s.setKeyA(new ByteString("A0A1A2A3A4A5", HEX));
+print(s.toString());
+s.setKeyB(new ByteString("B0B1B2B3B4B5", HEX));
+print(s.toString());
+s.setHeaderDataByte(new ByteString("AA", HEX));
+print(s.toString());
+
+var data = new ByteString("Hello World !!!!", ASCII);
+s.update(1, data);
+ 
