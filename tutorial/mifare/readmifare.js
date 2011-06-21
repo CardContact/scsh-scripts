@@ -35,7 +35,7 @@ var mif = new Mifare(card);
 
 print("UID: " + mif.getUID());
 
-var keyid = 0x1A;
+var keyid = 0x01;
 
 var key = new ByteString("FFFFFFFFFFFF", HEX);
 mif.loadKey(keyid, key);

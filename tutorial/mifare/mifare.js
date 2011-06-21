@@ -83,7 +83,7 @@ Mifare.prototype.loadKey = function(keyid, key) {
  * @return the 16 byte block content read from the card
  */
 Mifare.prototype.readBlock = function(block) {
-	return this.card.sendApdu(0xFF, 0xB0, block >> 8, block & 0xFF, 0, [0x9000]);
+	return this.card.sendApdu(0xFF, 0xB0, block >> 8, block & 0xFF, 16, [0x9000]);
 }
 
 
