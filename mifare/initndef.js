@@ -70,7 +70,7 @@ var ndef = new ByteString("030CD1010855016E66632E636F6DFE00", HEX);
 
 for (var i = 1; i < 16; i++) {
 	var s = mif.newSector(i);
-	s.setKeyId(keyid);
+	s.setKeyId(keyaid);
 	s.readAll(Mifare.KEY_A);
 	print(s.toString());
 
