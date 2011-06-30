@@ -153,6 +153,8 @@ EMV.prototype.selectPSE = function(contactless) {
 	var fci = this.select(dfname, true);
 	print(fci);
 	print("------------------------------------------------------------------------------>\n");
+	
+
 	if (fci.length == 0) {
 		GPSystem.trace("No " + dfname.toString(ASCII) + " found");
 		return;
@@ -165,43 +167,68 @@ EMV.prototype.selectPSE = function(contactless) {
 	var tl = new TLVList(t.getValue(), TLV.EMV);
 	assert(tl.length >= 2);
 	
-	// Decode DF Name
-	t = tl.index(0);
-	assert(t.getTag() == EMV.DFNAME);
-	
-	// Decode FCI Proprietary Template
-	t = tl.index(1);
-	assert(t.getTag() == EMV.FCI_ISSUER);
-	
-	var tl = new TLVList(t.getValue(), TLV.EMV);
-	
-	// Decode SFI of the Directory Elementary File
-	t = tl.index(0);
-	assert(t.getTag() == EMV.SFI);
-	var sfi = t.getValue();
-	assert(sfi.length == 1);
-	sfi = sfi.byteAt(0);
+	if(contactless) {
+		// Decode FCI Proprietary Template
+		t = tl.find(EMV.FCI_ISSUER);
+		assert(t.getTag() == EMV.FCI_ISSUER);	
 
-	this.PSE = new Array();
-	
-	// Read all records from Directory Elementary File
-	var recno = 1;
-	do	{
-		var data = this.readRecord(sfi, recno++);
-		if (data.length > 0) {
-			var tl = new TLVList(data, TLV.EMV);
-			assert(tl.length == 1);
-			var t = tl.index(0);
-			assert(t.getTag() == EMV.TEMPLATE);
-			var tl = new TLVList(t.getValue(), TLV.EMV);
-			assert(tl.length >= 1);
-			for (var i = 0; i < tl.length; i++) {
-				var t = tl.index(i);
-				assert(t.getTag() == 0x61);
-				this.PSE.push(new TLVList(t.getValue(), TLV.EMV));
+		var tl = new TLVList(t.getValue(), TLV.EMV);
+		
+		// Decode FCI Issuer Discretionary Data
+		t = tl.index(0);
+		assert(t.getTag() == EMV.FCI_ISSUER_DISCRETIONARY_DATA);
+		
+		tl = new TLVList(t.getValue(), TLV.EMV);
+				
+		this.PSE = new Array();
+		
+		for (var i = 0; i < tl.length; i++) {
+			t = tl.index(i);
+			assert(t.getTag() == EMV.DIRECTORY_ENTRY);
+			this.PSE.push(new TLVList(t.getValue(), TLV.EMV));
+		}while (data.length > 0);
+	}
+	else {
+		
+		// Decode DF Name
+		t = tl.index(0);
+		assert(t.getTag() == EMV.DFNAME);
+		
+		// Decode FCI Proprietary Template
+		t = tl.index(1);
+		assert(t.getTag() == EMV.FCI_ISSUER);
+		
+		var tl = new TLVList(t.getValue(), TLV.EMV);
+		
+		// Decode SFI of the Directory Elementary File
+		t = tl.index(0);
+		assert(t.getTag() == EMV.SFI);
+		var sfi = t.getValue();
+		assert(sfi.length == 1);
+		sfi = sfi.byteAt(0);
+
+		this.PSE = new Array();
+		
+		// Read all records from Directory Elementary File
+		var recno = 1;
+		do	{
+			var data = this.readRecord(sfi, recno++);
+			if (data.length > 0) {
+				var tl = new TLVList(data, TLV.EMV);
+				assert(tl.length == 1);
+				var t = tl.index(0);
+				assert(t.getTag() == EMV.TEMPLATE);
+				var tl = new TLVList(t.getValue(), TLV.EMV);
+				assert(tl.length >= 1);
+				for (var i = 0; i < tl.length; i++) {
+					var t = tl.index(i);
+					assert(t.getTag() == 0x61);
+					print(t.getValue());
+					this.PSE.push(new TLVList(t.getValue(), TLV.EMV));
+				}
 			}
-		}
-	} while (data.length > 0);
+		} while (data.length > 0);
+	}
 	print("------------------------------------------------------------------------------>\n");
 }
 
@@ -479,6 +506,8 @@ EMV.FCI_ISSUER = 0xA5;
 EMV.UN = 0x9F37;
 EMV.PDOL = 0x9F38;
 EMV.SDATL = 0x9F4A;
+EMV.FCI_ISSUER_DISCRETIONARY_DATA = 0xBF0C;
+EMV.DIRECTORY_ENTRY = 0x61;
 
 EMV.AIDLIST = new Array();
 EMV.AIDLIST[0] = { aid : "A00000002501", partial : true, name : "AMEX" };
