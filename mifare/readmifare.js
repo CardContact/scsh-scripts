@@ -35,18 +35,19 @@ var mif = new Mifare(card);
 
 print("UID: " + mif.getUID());
 
-var keyid = 0x01;
+var keyaid = 0x01;			// Use for ACR and Omnikey readers
+// var keyaid = 0x60;			// Use for SCS SDI 010 and 011
 
 for (var i = 0; i < 16; i++) {
 	var s = mif.newSector(i);
-	s.setKeyId(keyid);
+	s.setKeyId(keyaid);
 	
 	var key = new ByteString("FFFFFFFFFFFF", HEX);
-	mif.loadKey(keyid, key);
+	mif.loadKey(keyaid, key);
 	
 	if (!s.authenticate(0, Mifare.KEY_A)) {
 		var key = new ByteString("A0A1A2A3A4A5", HEX);
-		mif.loadKey(keyid, key);
+		mif.loadKey(keyaid, key);
 		
 		if (!s.authenticate(0, Mifare.KEY_A)) {
 			print("Unknown key A - skipping sector " + i);

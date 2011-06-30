@@ -35,14 +35,15 @@ var mif = new Mifare(card);
 
 print("UID: " + mif.getUID());
 
-var keyaid = 0x01;
+var keyaid = 0x01;			// Use for ACR and Omnikey readers
+// var keyaid = 0x60;			// Use for SCS SDI 010 and 011
 
 var key = new ByteString("FFFFFFFFFFFF", HEX);
-mif.loadKey(keyid, key);
+mif.loadKey(keyaid, key);
 
 
 var s = mif.newSector(0);
-s.setKeyId(keyid);
+s.setKeyId(keyaid);
 s.readAll(Mifare.KEY_A);
 print(s.toString());
 

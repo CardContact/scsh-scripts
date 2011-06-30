@@ -35,20 +35,23 @@ var mif = new Mifare(card);
 
 print("UID: " + mif.getUID());
 
-var keyid = 0x01;
+var keyaid = 0x01;			// Use for ACR and Omnikey readers
+// var keyaid = 0x60;			// Use for SCS SDI 010 and 011
+var keybid = 0x01;			// Use for ACR and Omnikey readers
+// var keybid = 0x61;			// Use for SCS SDI 010 and 011
 
 var empty = new ByteString("00000000000000000000000000000000", HEX);
 
 for (var i = 0; i < 16; i++) {
 	var s = mif.newSector(i);
-	s.setKeyId(keyid);
+	s.setKeyId(keyaid);
 	
 	var key = new ByteString("FFFFFFFFFFFF", HEX);
-	mif.loadKey(keyid, key);
+	mif.loadKey(keyaid, key);
 	
 	if (!s.authenticate(0, Mifare.KEY_A)) {
 		var key = new ByteString("A0A1A2A3A4A5", HEX);
-		mif.loadKey(keyid, key);
+		mif.loadKey(keyaid, key);
 		
 		if (!s.authenticate(0, Mifare.KEY_A)) {
 			print("Unknown key A - skipping sector " + i);
@@ -61,10 +64,10 @@ for (var i = 0; i < 16; i++) {
 	var ac = s.getACforBlock(3);
 	if (ac == Sector.AC_UPDATE_WITH_KEYB) {
 		var key = new ByteString("FFFFFFFFFFFF", HEX);
-		mif.loadKey(keyid, key);
+		mif.loadKey(keybid, key);
 		if (!s.authenticate(0, Mifare.KEY_B)) {
 			var key = new ByteString("B0B1B2B3B4B5", HEX);
-			mif.loadKey(keyid, key);
+			mif.loadKey(keybid, key);
 		
 			if (!s.authenticate(0, Mifare.KEY_B)) {
 				print("Unknown key B - skipping sector " + i);
@@ -82,10 +85,15 @@ for (var i = 0; i < 16; i++) {
 	s.setACforBlock(2, Sector.AC_ALWAYS);
 	s.setACforBlock(3, Sector.AC_UPDATE_AC_NOKEY_B);
 	
+	s.update(3);
+	
+	var key = new ByteString("FFFFFFFFFFFF", HEX);
+	mif.loadKey(keyaid, key);
+	s.authenticate(0, Mifare.KEY_A);
+	
 	if (i > 0) {
 		s.update(0, empty);
 	}
 	s.update(1, empty);
 	s.update(2, empty);
-	s.update(3);
 }
