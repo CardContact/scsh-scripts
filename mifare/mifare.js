@@ -47,6 +47,17 @@ Mifare.KEY_A = 0x60;
  */
 Mifare.KEY_B = 0x61;
 
+/**
+ * Mifare Public Key Values
+ */
+Mifare.PUBLICKEYS = [
+	new ByteString("FFFFFFFFFFFF", HEX),	// Empty cards
+	new ByteString("A0A1A2A3A4A5", HEX),	// MAD Key A
+	new ByteString("B0B1B2B3B4B5", HEX),	// Default Key B
+	new ByteString("D3F7D3F7D3F7", HEX),	// NDEF Key A
+];
+
+
 
 /**
  * Calculate CRC-8 checksum
@@ -294,6 +305,29 @@ Sector.prototype.update = function(block, data) {
  */
 Sector.prototype.authenticate = function(block, keytype) {
 	return this.mifare.authenticate((this.no << 2) + block, keytype, this.keyid);
+}
+
+
+
+/**
+ * Authenticate against block using list from public key table
+ *
+ * @param {Number} block the block number between 0 and 3
+ * @param {Number} keytype must be either Mifare.KEY_A or Mifare.KEY_B
+ * @type Number
+ * @return The key index in Mifare.PUBLICKEYS or -1 if not authenticated
+ */
+Sector.prototype.authenticatePublic = function(block, keytype) {
+	var i = 0;
+	var authenticated = false;
+
+	for (var i = 0; i < Mifare.PUBLICKEYS.length; i++) {
+		this.mifare.loadKey(this.keyid, Mifare.PUBLICKEYS[i]);
+		if (this.authenticate(block, keytype)) {
+			return i;
+		}
+	}
+	return -1;
 }
 
 
