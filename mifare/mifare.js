@@ -49,6 +49,38 @@ Mifare.KEY_B = 0x61;
 
 
 /**
+ * Calculate CRC-8 checksum
+ *
+ * Based on code from nfc-tools.
+ *
+ * @param {ByteString} data the data to calculate the checksum for
+ * @type Number
+ * @return the crc checksum
+ */
+Mifare.crc8 = function(data) {
+	var polynom = 0x1d;		// x8 + x4 + x3 + x2 + 1 = 110001101
+	var crc = 0xC7;			// start value 0xE3 mirrored is 0xC7
+	
+	for (var i = 0; i < data.length; i++) {
+		crc ^= data.byteAt(i);
+		for (var b = 0; b < 8; b++) {
+			var msb = crc & 0x80;
+			crc = (crc << 1) & 0xFF;
+			if (msb) {
+				crc ^= polynom;
+			}
+		}
+	}
+	return crc;
+}
+
+// var ref = new ByteString("01010801080108000000000000040003100310021002100000000000001130", HEX);
+// assert(ref.length = 31);
+// assert(Mifare.crc8(ref) == 0x89);
+
+
+
+/**
  * Read UID using Get Data command as defined in PCSC Part 3, chapter 3.2.2.1.3
  *
  * @type ByteString
@@ -63,6 +95,9 @@ Mifare.prototype.getUID = function() {
 /**
  * Load key value into reader using Load Key command as defined in PCSC Part 3, chapter 3.2.2.1.4
  *
+ * <p>The method supports the SCM SDI010 contactless reader which uses a proprietary LOAD KEY APDU with
+ *    preset key identifier 0x60 and 0x61. This command is activated if keyid is 0x60 or 0x61.</p>
+ * 
  * @param {Number} keyid the key identifier under which the key should be refered to in the reader
  * @param {ByteString} key the 6 byte key value
  */
@@ -70,7 +105,11 @@ Mifare.prototype.loadKey = function(keyid, key) {
 	assert(typeof(keyid) == "number");
 	assert(key.length == 6);
 	
-	this.card.sendApdu(0xFF, 0x82, 0x20,keyid, key, [0x9000]);
+	if ((keyid == 0x60) || (keyid == 0x61)) {
+		this.card.sendApdu(0xFF, 0x82, 0x00, keyid, key, [0x9000]);		// Load key command for SDI010
+	} else {
+		this.card.sendApdu(0xFF, 0x82, 0x20, keyid, key, [0x9000]);
+	}
 }
 
 
@@ -107,14 +146,22 @@ Mifare.prototype.updateBlock = function(block, data) {
  * @param {Number} block the block to authenticate against
  * @param {Number} keytype must be either Mifare.KEY_A or Mifare.KEY_B
  * @param {Number} keyid the key id of the key in the reader
+ * @type boolean
+ * @return true if authentication successfull
  */
 Mifare.prototype.authenticate = function(block, keytype, keyid) {
 	var bb = new ByteBuffer();
 	bb.append(0x01);							// Version
 	bb.append(ByteString.valueOf(block, 2));
 	bb.append(keytype);
-	bb.append(keyid);
-	this.card.sendApdu(0xFF,0x86,0x00,0x00, bb.toByteString(), [0x9000]);
+	if ((keyid != 0x60) && (keyid != 0x61)) {
+		bb.append(keyid);
+	} else {
+		bb.append(0x01);		// Support for SCM SDI 010
+	}
+	this.card.sendApdu(0xFF,0x86,0x00,0x00, bb.toByteString());
+	
+	return this.card.SW == 0x9000;
 }
 
 
@@ -131,7 +178,8 @@ Mifare.prototype.newSector = function(no) {
 
 
 /**
- * Create an object representing an on card sector. Do not call directly but use Mifare.prototype.newSector() instead,
+ * Create an object representing an on card sector. Do not call directly but use Mifare.prototype.newSector() instead.
+ *
  * @class Class representing a sector on a Mifare card
  * @constructor
  * @param {Mifare} mifare the card
@@ -141,24 +189,28 @@ function Sector(mifare, no) {
 	this.mifare = mifare;
 	this.no = no;
 	this.blocks = [];
-	this.keyid = no << 1;
+	this.keyid = 0;
 }
 
 
 Sector.MASK = [ 0x00E0EE, 0x00D0DD, 0x00B0BB, 0x007077 ];
+
 Sector.AC_TRAILER = [
-	"Key A: Write Key A | AC: Write Never | Key B: Read Key A / Write Key A",		// 000
-	"Key A: Write Key A | AC: Write Key A | Key B: Read Key A / Write Key A",		// 001
-	"Key A: Write Never | AC: Write Never | Key B: Read Key A / Write Never",		// 010
-	"Key A: Write Key B | AC: Write Key B | Key B: Never      / Write Key B",		// 011
-	"Key A: Write Key B | AC: Write Never | Key B: Never      / Write Key B",		// 100
-	"Key A: Write Never | AC: Write Key B | Key B: Never      / Write Never",		// 101
-	"Key A: Write Never | AC: Write Never | Key B: Never      / Write Never",		// 110
-	"Key A: Write Never | AC: Write Never | Key B: Never      / Write Never",		// 111
+	"000 - Key A: Write Key A | AC: Write Never | Key B: Read Key A / Write Key A",		// 000
+	"001 - Key A: Write Key A | AC: Write Key A | Key B: Read Key A / Write Key A",		// 001
+	"010 - Key A: Write Never | AC: Write Never | Key B: Read Key A / Write Never",		// 010
+	"011 - Key A: Write Key B | AC: Write Key B | Key B: Read Never / Write Key B",		// 011
+	"100 - Key A: Write Key B | AC: Write Never | Key B: Read Never / Write Key B",		// 100
+	"101 - Key A: Write Never | AC: Write Key B | Key B: Read Never / Write Never",		// 101
+	"110 - Key A: Write Never | AC: Write Never | Key B: Read Never / Write Never",		// 110
+	"111 - Key A: Write Never | AC: Write Never | Key B: Read Never / Write Never",		// 111
 	];
 
+// Key A is never readable
+// Access Conditions are always readable with Key A or Key AB if Key B is used for writing
+
 Sector.AC_FIXED_AC_NOKEY_B = 0;
-Sector.AC_UPDATE_AC_NOKEY_B = 1;
+Sector.AC_UPDATE_AC_NOKEY_B = 1;		// Transport configuration
 Sector.AC_READONLY_NOKEY_B = 2;
 Sector.AC_UPDATE_WITH_KEYB = 3;
 Sector.AC_FIXED_AC_UPDATE_WITH_KEYB = 4;
@@ -166,17 +218,17 @@ Sector.AC_UPDATE_AC_FIXED_KEYS = 5;
 Sector.AC_NEVER2 = 6;
 
 Sector.AC_DATA = [
-	"Read: Key AB | Write: Key AB | Inc: Key AB | Dec: Key AB",		// 000
-	"Read: Key AB | Write: Never  | Inc: Never  | Dec: Key AB",		// 001
-	"Read: Key AB | Write: Never  | Inc: Never  | Dec: Never ",		// 010
-	"Read: Key B  | Write: Key B  | Inc: Never  | Dec: Never ",		// 011
-	"Read: Key AB | Write: Key B  | Inc: Never  | Dec: Never ",		// 100
-	"Read: Key B  | Write: Never  | Inc: Never  | Dec: Never ",		// 101
-	"Read: Key AB | Write: Key B  | Inc: Key B  | Dec: Key AB",		// 110
-	"Read: Never  | Write: Never  | Inc: Never  | Dec: Never ",		// 111
+	"000 - Read: Key AB | Write: Key AB | Inc: Key AB | Dec: Key AB",		// 000
+	"001 - Read: Key AB | Write: Never  | Inc: Never  | Dec: Key AB",		// 001
+	"010 - Read: Key AB | Write: Never  | Inc: Never  | Dec: Never ",		// 010
+	"011 - Read: Key B  | Write: Key B  | Inc: Never  | Dec: Never ",		// 011
+	"100 - Read: Key AB | Write: Key B  | Inc: Never  | Dec: Never ",		// 100
+	"101 - Read: Key B  | Write: Never  | Inc: Never  | Dec: Never ",		// 101
+	"110 - Read: Key AB | Write: Key B  | Inc: Key B  | Dec: Key AB",		// 110
+	"111 - Read: Never  | Write: Never  | Inc: Never  | Dec: Never ",		// 111
 	];
 
-Sector.AC_ALWAYS = 0;					// All conditions with Key A or Key B
+Sector.AC_ALWAYS = 0;					// All conditions with Key A or Key B - Transport configuration
 Sector.AC_NONRECHARGEABLE = 1;			// Only decrement on read only application
 Sector.AC_READONLY = 2;					// Read only application
 Sector.AC_KEYBONLY = 3;					// Only using Key B
@@ -189,8 +241,7 @@ Sector.AC_NEVER  = 7;					// No access at all
 
 /**
  * Overwrite internal key id
- * <p>The key id for sectors is preset with twice the sector number</p>
- * @param {Number} keyId the key id for Key A. Key B is the id of Key A + 1
+ * @param {Number} keyId the key id for the Mifare key
  */
 Sector.prototype.setKeyId = function(keyId) {
 	this.keyid = keyid;
@@ -238,19 +289,26 @@ Sector.prototype.update = function(block, data) {
  * <p>Uses the internal key id for this sector for key A and the internal key id + 1 for key B.</p>
  * @param {Number} block the block number between 0 and 3
  * @param {Number} keytype must be either Mifare.KEY_A or Mifare.KEY_B
+ * @type boolean
+ * @return true if authentication successfull
  */
 Sector.prototype.authenticate = function(block, keytype) {
-	this.mifare.authenticate((this.no << 2) + block, keytype, this.keyid + (keytype - Mifare.KEY_A));
+	return this.mifare.authenticate((this.no << 2) + block, keytype, this.keyid);
 }
 
 
 
 /**
  * Read all blocks from a sector
+ *
+ * @param {Number} keytype key type to use for authentication (Mifare.KEY_A or Mifare.KEY_B. Defaults to key B.
  */
-Sector.prototype.readAll = function() {
+Sector.prototype.readAll = function(keytype) {
+	if (typeof(keytype) == "undefined") {
+		keytype = Mifare.KEY_A;
+	}
 	var bb = new ByteBuffer();
-	this.authenticate(0, Mifare.KEY_A);
+	this.authenticate(0, keytype);
 	for (var i = 0; i < 4; i++) {
 		bb.append(this.read(i));
 	}
@@ -341,7 +399,7 @@ Sector.prototype.setHeaderDataByte = function(db) {
 Sector.prototype.toString = function() {
 	var str = "";
 	for (var i = 0; i < 4; i++) {
-		str += "Block " + i + " - ";
+		str += "Sec" + this.no + " Blk" + i + " - ";
 		
 		var ac = this.getACforBlock(i);
 		if (i == 3) {
@@ -350,7 +408,11 @@ Sector.prototype.toString = function() {
 			str += Sector.AC_DATA[ac];
 		}
 		
-		str += "\n  " + this.blocks[i].toString(HEX) + "\n";
+		str += "\n";
+
+		if (typeof(this.blocks[i]) != "undefined") {
+			str += "  " + this.blocks[i].toString(HEX) + "\n";
+		}
 	}
 	return str;
 }

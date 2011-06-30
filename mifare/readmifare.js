@@ -37,30 +37,25 @@ print("UID: " + mif.getUID());
 
 var keyid = 0x01;
 
-var key = new ByteString("FFFFFFFFFFFF", HEX);
-mif.loadKey(keyid, key);
-
-var dump = new ByteBuffer();
-
-for (var block = 0; block < 16*4; block++) {
-	mif.authenticate(block, Mifare.KEY_A, keyid);
-	dump.append(mif.readBlock(block));
+for (var i = 0; i < 16; i++) {
+	var s = mif.newSector(i);
+	s.setKeyId(keyid);
+	
+	var key = new ByteString("FFFFFFFFFFFF", HEX);
+	mif.loadKey(keyid, key);
+	
+	if (!s.authenticate(0, Mifare.KEY_A)) {
+		var key = new ByteString("A0A1A2A3A4A5", HEX);
+		mif.loadKey(keyid, key);
+		
+		if (!s.authenticate(0, Mifare.KEY_A)) {
+			print("Unknown key A - skipping sector " + i);
+			continue;
+		}
+	}
+	s.read(0);
+	s.read(1);
+	s.read(2);
+	s.read(3);
+	print(s.toString());
 }
-
-print(dump.toByteString());
-
-var s = mif.newSector(0);
-s.setKeyId(keyid);
-s.readAll();
-print(s.toString());
-
-s.setKeyA(new ByteString("A0A1A2A3A4A5", HEX));
-print(s.toString());
-s.setKeyB(new ByteString("B0B1B2B3B4B5", HEX));
-print(s.toString());
-s.setHeaderDataByte(new ByteString("AA", HEX));
-print(s.toString());
-
-var data = new ByteString("Hello World !!!!", ASCII);
-s.update(1, data);
- 
