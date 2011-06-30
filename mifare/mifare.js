@@ -254,7 +254,7 @@ Sector.AC_NEVER  = 7;					// No access at all
  * Overwrite internal key id
  * @param {Number} keyId the key id for the Mifare key
  */
-Sector.prototype.setKeyId = function(keyId) {
+Sector.prototype.setKeyId = function(keyid) {
 	this.keyid = keyid;
 }
 
