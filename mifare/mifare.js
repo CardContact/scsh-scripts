@@ -428,6 +428,28 @@ Sector.prototype.setHeaderDataByte = function(db) {
 
 
 /**
+ * Convert binary data to ASCII code if within the range 0x20 to 0x7E
+ *
+ * @param {ByteString} data the input data
+ * @type String
+ * @return the ASCII string
+ */
+Sector.toASCII = function(data) {
+	var str = "";
+	for (var i = 0; i < data.length; i++) {
+		var c = data.byteAt(i);
+		if ((c >= 0x20) && (c < 0x7F)) {
+			str += String.fromCharCode(c);
+		} else {
+			str += ".";
+		}
+	}
+	return str;
+}
+
+
+
+/**
  * Return a human readable presentation of the sector
  */
 Sector.prototype.toString = function() {
@@ -445,7 +467,7 @@ Sector.prototype.toString = function() {
 		str += "\n";
 
 		if (typeof(this.blocks[i]) != "undefined") {
-			str += "  " + this.blocks[i].toString(HEX) + "\n";
+			str += "  " + this.blocks[i].toString(HEX) + "  " + Sector.toASCII(this.blocks[i]) + "\n";
 		}
 	}
 	return str;
