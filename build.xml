@@ -36,6 +36,8 @@
 				<exclude name="build/**"/>
 				<exclude name="tutorial/**"/>
 				<exclude name="perso/**"/>
+				<exclude name="globaltester/**"/>
+				<exclude name="mifare/**"/>
 				<exclude name=".settings.js"/>
 			</fileset>
 
@@ -90,6 +92,11 @@
 			<arg line="${jsdoc} --directory '${doc}/emv/jsdoc'" />
 			<!-- Collect the JS-files -->
 			<fileset dir="${basedir}/emv" includes="**/*.js"/>
+		</apply>
+		<apply executable="perl" addsourcefile="true" dir="${basedir}/mifare" parallel="true" relative="true" verbose="true">
+			<arg line="${jsdoc} --directory '${doc}/mifare/jsdoc'" />
+			<!-- Collect the JS-files -->
+			<fileset dir="${basedir}/mifare" includes="**/*.js"/>
 		</apply>
 	</target>
 
