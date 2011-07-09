@@ -106,6 +106,12 @@ Mifare.prototype.getUID = function() {
 /**
  * Load key value into reader using Load Key command as defined in PCSC Part 3, chapter 3.2.2.1.4
  *
+ * <p>The ACR 122U contactless reader supports key ids 0x00 and 0x01</p>
+ *
+ * <p>The Omnikey cardman 5321 reader supports key ids 0x00 to 0x1F</p>
+ * 
+ * <p>The ACR 122U contactless reader supports key ids 0x00 and 0x01</p>
+ *
  * <p>The method supports the SCM SDI010 contactless reader which uses a proprietary LOAD KEY APDU with
  *    preset key identifier 0x60 and 0x61. This command is activated if keyid is 0x60 or 0x61.</p>
  * 
@@ -200,7 +206,7 @@ function Sector(mifare, no) {
 	this.mifare = mifare;
 	this.no = no;
 	this.blocks = [];
-	this.keyid = 0;
+	this.keyid = [0, 1];
 }
 
 
@@ -253,9 +259,13 @@ Sector.AC_NEVER  = 7;					// No access at all
 /**
  * Overwrite internal key id
  * @param {Number} keyId the key id for the Mifare key
+ * @param {Number} keytype either Mifare.KEY_A (Default) or Mifare.KEY_B.
  */
-Sector.prototype.setKeyId = function(keyid) {
-	this.keyid = keyid;
+Sector.prototype.setKeyId = function(keyid, keytype) {
+	if (typeof(keytype) == "undefined") {
+		keytype = Mifare.KEY_A;
+	}
+	this.keyid[keytype - Mifare.KEY_A] = keyid;
 }
 
 
@@ -304,7 +314,7 @@ Sector.prototype.update = function(block, data) {
  * @return true if authentication successfull
  */
 Sector.prototype.authenticate = function(block, keytype) {
-	return this.mifare.authenticate((this.no << 2) + block, keytype, this.keyid);
+	return this.mifare.authenticate((this.no << 2) + block, keytype, this.keyid[keytype - Mifare.KEY_A]);
 }
 
 
@@ -322,7 +332,7 @@ Sector.prototype.authenticatePublic = function(block, keytype) {
 	var authenticated = false;
 
 	for (var i = 0; i < Mifare.PUBLICKEYS.length; i++) {
-		this.mifare.loadKey(this.keyid, Mifare.PUBLICKEYS[i]);
+		this.mifare.loadKey(this.keyid[keytype - Mifare.KEY_A], Mifare.PUBLICKEYS[i]);
 		if (this.authenticate(block, keytype)) {
 			return i;
 		}

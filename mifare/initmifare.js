@@ -35,8 +35,12 @@ var mif = new Mifare(card);
 
 print("UID: " + mif.getUID());
 
-// var keyaid = 0x01;			// Use for ACR and Omnikey readers
-var keyaid = 0x60;			// Use for SCS SDI 010 and 011
+if (_scsh3.reader.substr(0, 3) != "SCM") {
+	var keyaid = 0x00;			// Use for ACR and Omnikey readers
+} else {
+	print("SCM Reader detected.");
+	var keyaid = 0x60;			// Use for SCS SDI 010 and 011
+}
 
 var key = new ByteString("FFFFFFFFFFFF", HEX);
 mif.loadKey(keyaid, key);
