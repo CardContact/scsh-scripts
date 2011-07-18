@@ -201,10 +201,10 @@ DataAuthentication.prototype.verifySSAD = function(issuerPublicKeyModulus) {
 	var list = decryptedSSAD.bytes(1, (decryptedSSAD.length - 22));
 	var daInput = this.emv.getDAInput();
 	var sdaTagList = this.emv.cardDE[0x9F4A];
+	var value = new ByteBuffer();
 	if(typeof(sdaTagList != "undefined")) {
 		for(var i = 0; i < sdaTagList.length; i++) {
-			var tag = sdaTagList.byteAt(i);
-			var value = new ByteBuffer();
+			var tag = sdaTagList.byteAt(i);			
 			value = value.append(this.emv.cardDE[tag]);
 		}
 	}
