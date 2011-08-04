@@ -59,7 +59,7 @@ s.setACforBlock(1, Sector.AC_UPDATEKEYB);
 s.setACforBlock(2, Sector.AC_UPDATEKEYB);
 s.setACforBlock(3, Sector.AC_UPDATE_WITH_KEYB);
 
-var mad = new ByteString("0003E103E103E103E103E103E103E103E103E103E103E103E103E103E103E1", HEX);
+var mad = new ByteString("0103E103E103E103E103E103E103E103E103E103E103E103E103E103E103E1", HEX);
 var crc = Mifare.crc8(mad);
 var mad = ByteString.valueOf(crc,1).concat(mad);
 
@@ -72,15 +72,17 @@ print(s.toString());
 var empty = new ByteString("00000000000000000000000000000000", HEX);
 var ndef = new ByteString("030CD1010855016E66632E636F6DFE00", HEX);
 
-for (var i = 1; i < 16; i++) {
+//var ndef = new ByteString("0000030CD1010855016E66632E636F6D", HEX);
+
+for (var i = 1; i < 2; i++) {
 	var s = mif.newSector(i);
 	s.setKeyId(keyaid);
 	s.readAll(Mifare.KEY_A);
-	print(s.toString());
+	//print(s.toString());
 
 	s.setKeyA(new ByteString("D3F7D3F7D3F7", HEX));
 	s.setKeyB(new ByteString("B0B1B2B3B4B5", HEX));
-	s.setHeaderDataByte(new ByteString("69", HEX));
+	s.setHeaderDataByte(new ByteString("40", HEX)); //muss laut spec auf 0x40 stehen
 
 	s.setACforBlock(0, Sector.AC_UPDATEKEYB);
 	s.setACforBlock(1, Sector.AC_UPDATEKEYB);
@@ -91,4 +93,6 @@ for (var i = 1; i < 16; i++) {
 	s.update(1, empty);
 	s.update(2, empty);
 	s.update(3);
+	
+	print(s.toString());
 }
