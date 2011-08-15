@@ -1,6 +1,8 @@
-//---TEST---
 load("ndef.js");
-load("storeNdef.js");
+load("loader.js");
+
+var loader = new Loader();
+//loader.initialize();
 
 ///////////////////////////////////////////////////
 
@@ -12,6 +14,7 @@ var n2 = new Ndef(enc);
 //print(n.getUri());
 print(n2.getUri());
 print(enc);
+//loader.load(enc)
 
 ///////////////////////////////////////////////////
 
@@ -22,8 +25,6 @@ var telephoneNumber = new Ndef(enc);
 print(telephoneNumber.getUri());
 print(telephoneNumber.toString());
 
-// var loader = new Loader();
-// loader.initialize();
 // loader.load(telephoneNumber.getEncoded());
 
 ///////////////////////////////////////////////////
@@ -34,9 +35,7 @@ var n = Ndef.newUri("mms://example.com/download.wmv" );
 print(n.getUri());
 print(n.getEncoded()); 
 
-// var loader = new Loader();
-// loader.initialize();
-// loader.load(n.getEncoded());
+//loader.load(n.getEncoded());
 
 ///////////////////////////////////////////////////
 
@@ -54,31 +53,7 @@ var dec = new Ndef(enc);
 print(dec.toString());
 print(dec.getUri());
 print(dec.getEncoded());
-// print("bla");
-// print(dec.isIdLengthFlag());
 
-var loader = new Loader();
-loader.initialize();
-loader.load(dec.getEncoded());
+//loader.load(dec.getEncoded());
 
-///////////////////////////////////////////////////
-print("\n--------------Ndef Message--------------\n");
 
-load("vcard.js");
-
-var v = new Vcard();
-
-v.setFormattedName("Max Mustermann");
-v.setOrganization("CardContact");
-v.addTelephone(null, "0571");
-v.addEmail("CardContact@CardContact.de");
-v.addUrl("www.cardcontact.de");
-
-var enc = v.getEncoded();
-
-var n = Ndef.newMessage("text/x-vCard", enc);
-
-enc = n.getEncoded();
-print(enc);
-
-///////////////////////////////////////////////////

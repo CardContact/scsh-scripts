@@ -1,14 +1,14 @@
 load("ndef.js");
 load("vcard.js");
-load("storeNdef.js");
+load("loader.js");
 
 var v = new Vcard();
 
 v.setFormattedName("Max Mustermann");
 v.setOrganization("CardContact");
-v.addTelephone(null, "0571");
+v.addTelephone(null, "1234");
 v.addEmail("CardContact@CardContact.de");
-v.addUrl("www.cardcontact.de");
+v.setUrl("www.cardcontact.de");
 
 var enc = v.getEncoded();
 
