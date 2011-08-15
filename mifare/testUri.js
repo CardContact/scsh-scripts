@@ -1,5 +1,6 @@
 //---TEST---
 load("ndef.js");
+load("storeNdef.js");
 
 ///////////////////////////////////////////////////
 
@@ -10,6 +11,7 @@ var enc = n.getEncoded();
 var n2 = new Ndef(enc);
 //print(n.getUri());
 print(n2.getUri());
+print(enc);
 
 ///////////////////////////////////////////////////
 
@@ -20,6 +22,10 @@ var telephoneNumber = new Ndef(enc);
 print(telephoneNumber.getUri());
 print(telephoneNumber.toString());
 
+// var loader = new Loader();
+// loader.initialize();
+// loader.load(telephoneNumber.getEncoded());
+
 ///////////////////////////////////////////////////
 
 print("\n--------------Proprietary URI--------------\n");
@@ -27,7 +33,10 @@ print("\n--------------Proprietary URI--------------\n");
 var n = Ndef.newUri("mms://example.com/download.wmv" );
 print(n.getUri());
 print(n.getEncoded()); 
-// print(n.getPayload());
+
+// var loader = new Loader();
+// loader.initialize();
+// loader.load(n.getEncoded());
 
 ///////////////////////////////////////////////////
 
@@ -47,6 +56,10 @@ print(dec.getUri());
 print(dec.getEncoded());
 // print("bla");
 // print(dec.isIdLengthFlag());
+
+var loader = new Loader();
+loader.initialize();
+loader.load(dec.getEncoded());
 
 ///////////////////////////////////////////////////
 print("\n--------------Ndef Message--------------\n");
