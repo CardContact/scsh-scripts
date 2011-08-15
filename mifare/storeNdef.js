@@ -172,7 +172,13 @@ Loader.splitData = function(data) {
 	
 	while (data.length != 0) {
 		print("bin in while-schleife");
-		if (data.length >= 16) {
+		if (data.length == 16) {
+			print(data.bytes(0, 16));
+			arr.push(data.bytes(0, 16));
+			//data = data.bytes(17);
+			return arr.reverse();
+		}
+		else if (data.length > 16) {
 			print(data.bytes(0, 16));
 			arr.push(data.bytes(0, 16));
 			data = data.bytes(17);
