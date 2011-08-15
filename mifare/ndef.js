@@ -8,7 +8,7 @@ function Ndef(encoded) {
 	}
 }
 
-//Flags 
+//Flag Byte Constants
 Ndef.messageBegin = 0x80;
 Ndef.messageEnd = 0x40;
 Ndef.chunkFlag = 0x20;
@@ -19,55 +19,12 @@ Ndef.tnf = 0x07;
 
 //Uri Identifier Abbrevations
 Ndef.uriIdentifier = new Array(null, "http://www.", "https://www.", "http://", "https://", "tel:", "mailto:", "ftp://anonymous:anonymous@", "ftp://ftp.", "ftps://", "sftp://", "smb://", "nfs://", "ftp://", "dav://", "news:", "telnet://", "imap:", "rtsp://", "urn:", "pop", "sip:", "sips:", "tftp:", "btspp://", "btl2cap://", "btgoep://", "tcpobex://", "irdaobex://", "file://", "urn:epc:id:", "urn:epc:tag:", "urn:epc:pat:", "urn:epc:raw:", "urn:epc:", "urn:nfc:");
-
-/* Ndef.prototype.decode = function(encoded) {
-	this.flags = encoded.byteAt(0);
-	
-	Ndef.messageBegin = this.flags & 0x80;
-	Ndef.messageEnd = this.flags & 0x40;
-	Ndef.chunkFlag = this.flags & 0x20;
-	Ndef.shortRecord = this.flags & 0x10;
-	Ndef.idLengthFlag = this.flags & 0x08;
-	Ndef.tnf = this.flags & 0x07;
-	
-	this.typeLength = encoded.byteAt(1);
-	if (Ndef.shortRecord == 0x10) {
-		this.payloadLength = encoded.byteAt(2);
-		if (Ndef.idLengthFlag == 0x08) {
-			this.idLength = encoded.byteAt(3);
-			this.type = encoded.bytes(4, this.typeLength);
-			this.id = encoded.byteAt(4 + this.typeLength, this.idLength);			
-			this.payload = encoded.bytes(4 + this.typeLength + this.idLength);				
-		}
-		else {
-			this.type = encoded.bytes(3, this.typeLength);
-			this.payload = encoded.bytes(3 + this.typeLength);
-		}
-	}
-	else {
-		this.payloadLength = encoded.bytes(2, 4);
-		if (Ndef.idLengthFlag == 0x08) {
-			this.idLength = encoded.byteAt(6);
-			this.type = encoded.bytes(7, this.typeLength);
-			this.id = encoded.byteAt(7 + this.typeLength, this.idLength);			
-			this.payload = encoded.bytes(7 + this.typeLength + this.idLength);				
-		}
-		else {
-			this.type = encoded.bytes(6, this.typeLength);
-			this.payload = encoded.bytes(6 + this.typeLength);
-		}		
-	}
-}
- */
  
 /**
  *	Create Ndef object
  *	@param {ByteString} encoded the encoded Ndef ByteString
  */
 Ndef.prototype.decode = function(encoded) {
-	 // print("encoded:");
-	 // print(encoded);
-	
 	this.flags = encoded.byteAt(0);
 	this.typeLength = encoded.byteAt(1);
 	var ofs = 2;
@@ -99,54 +56,6 @@ Ndef.prototype.decode = function(encoded) {
 		this.payload += nextRecord.getPayload();
 	}
 
-/*			
-	if (this.isShortRecord()) {
-		//print("is Short Record");
-		this.payloadLength = encoded.byteAt(2);
-		if (this.isIdLengthFlag()) {
-			//print("IL");
-			this.idLength = encoded.byteAt(3);
-			this.type = encoded.bytes(4, this.typeLength);
-			this.id = encoded.bytes(4 + this.typeLength, this.idLength);			
-			this.payload = encoded.bytes(4 + this.typeLength + this.idLength, this.payloadLength);
-			if(this.isChunked()) {
-				var nextRecord = new Ndef(encoded.bytes(4 + this.typeLength + this.payloadLength));
-				this.payload += nextRecord.getPayload();
-			}
-		}
-		else {
-			//print("IL: false");
-			this.type = encoded.bytes(3, this.typeLength);
-			this.payload = encoded.bytes(3 + this.typeLength, this.payloadLength);
-			if (this.isChunked()) {
-				//print("isChunked");
-				var nextRecord = new Ndef(encoded.bytes(3 + this.typeLength + this.payloadLength));
-				this.payload += nextRecord.getPayload();
-			}
-		}
-	}
-	else {
-		this.payloadLength = encoded.bytes(2, 4).toUnsigned();
-		if (this.isIdLengthFlag()) {
-			this.idLength = encoded.byteAt(6);
-			this.type = encoded.bytes(7, this.typeLength);
-			this.id = encoded.bytes(7 + this.typeLength, this.idLength);			
-			this.payload = encoded.bytes(7 + this.typeLength + this.idLength, this.payloadLength);				
-			if(this.isChunked()) {
-				var nextRecord = new Ndef(encoded.bytes(7 + this.typeLength + this.payloadLength));
-				this.payload += nextRecord.getPayload();
-			}
-		}
-		else {
-			this.type = encoded.bytes(6, this.typeLength);
-			this.payload = encoded.bytes(6 + this.typeLength, this.payloadLength);
-			if(this.isChunked()) {
-				var nextRecord = new Ndef(encoded.bytes(6 + this.typeLength + this.payloadLength));
-				this.payload += nextRecord.getPayload();
-			}
-		}		
-	}
-*/
 	this.setMessageBegin(true);
 	this.setMessageEnd(true);
 	this.setChunked(false);
@@ -154,13 +63,19 @@ Ndef.prototype.decode = function(encoded) {
 }
 
 
-
+/**
+ *	Return the payload of the NDEF object.
+ *	@return {ByteString} the payload
+ */
 Ndef.prototype.getPayload = function() {
 	return new ByteString(this.payload, HEX);
 }
 
 
-
+/**
+ *	Return the decoded URI in readable form.
+ *	@return {String} the UTF-8 decoded URI
+ */
 Ndef.prototype.getUri = function() {
 	//type must be "U" 
 	var payload = new ByteString(this.payload, HEX);
@@ -178,58 +93,145 @@ Ndef.prototype.getUri = function() {
 }
 
 
-
+/**
+ *	Check if the Message Begin flag is set. The flag indicates the start of an NDEF message. 
+ *	@return {Boolean}
+ */
 Ndef.prototype.isMessageBegin = function() {
 	return (this.flags & Ndef.messageBegin) == 0x80;
 }
 
+
+/**
+ *	Set the Message Begin flag. The flag indicates the start of an NDEF message.
+ *	@param {Boolean} state
+ */
 Ndef.prototype.setMessageBegin = function(state) {
 	this.flags = this.flags & ~Ndef.messageBegin | (state ? Ndef.messageBegin : 0);
 	return this.flags & Ndef.messageBegin;
 }
 
+
+/**
+ *	Check if the Message End flag is set. The flag indicates the end of an NDEF message.
+ *	@return {Boolean}
+ */
 Ndef.prototype.isMessageEnd = function(state) {
 	return (this.flags & Ndef.messageBegin) == 0x40;
 }
 
+
+/**
+ *	Set the Message End flag. The flag indicates the end of an NDEF message.
+ *	@param {Boolean} state
+ */
 Ndef.prototype.setMessageEnd = function(state) {
 	this.flags = this.flags & ~Ndef.messageEnd | (state ? Ndef.messageEnd : 0);
 	return this.flags & Ndef.messageBegin;
 }
 
+
+/**
+ *	Check if the Chunk flag is set. 
+ *	The flag indicates that this is either the first or the middle record chunk of a chunked payload.
+ *	@return {Boolean}
+ */
 Ndef.prototype.isChunked = function() {
 	return (this.flags & Ndef.chunkFlag) == 0x20;
 }
 
+
+/**
+ *	Set the Chunk flag.
+ *	The flag indicates that this is either the first or the middle record chunk of a chunked payload.
+ *	@param {Boolean} state
+ */
 Ndef.prototype.setChunked = function(state) {
 	this.flags = this.flags & ~Ndef.chunkFlag | (state ? Ndef.chunkFlag : 0);
 	return this.flags & Ndef.chunkFlag;
 }
 
+
+/**
+ *	Check if the Short Record flag is set.
+ *	The flag indicates that the payload size will range between 0 to 255 octets.
+ *	@return {Boolean}
+ */
 Ndef.prototype.isShortRecord = function() {
 	return (this.flags & Ndef.shortRecord) == 0x10;
 }
 
+
+/**
+ *	Set the Short Record flag.
+ *	The flag indicates that the payload size will range between 0 to 255 octets.
+ *	@param {Boolean} state
+ */
 Ndef.prototype.setShortRecord = function(state) {
 	this.flags = this.flags & ~Ndef.shortRecord | (state ? Ndef.shortRecord : 0);
 	return this.flags & Ndef.shortRecord;
 }
 
+
+/**
+ *	Check if the ID Length flag is set.
+ *	The flag indicates that the ID Length field and the ID field are present. Otherwise the both are omitted from the record.
+ *	@return {Boolean}
+ */
 Ndef.prototype.isIdLengthFlag = function() {
 	return (this.flags & Ndef.idLengthFlag) == 0x08;
 }
 
+
+/**
+ *	Set the ID Length flag.
+ *	The flag indicates that the ID Length field and the ID field are present. Otherwise the both are omitted from the record.
+ *	@param {Boolean} state
+ */
 Ndef.prototype.setIdLengthFlag = function(state) {
 	this.flags = this.flags & ~Ndef.idLengthFlag | (state ? Ndef.idLengthFlag : 0);
 	return this.flags & Ndef.idLengthFlag;
 }
 
+
+/**
+ *	Set the TNF (Type Name Format) flag.
+ *	The flag indicates the structure of the type value.
+ *	
+ *	0x00 = Empty
+ *	0x01 = NFC Forum well-known type
+ *	0x02 = Media-type as defined in RFC 2046
+ *	0x03 = Absolute URI as defined in RFC 3986
+ *	0x04 = NFC Forum external type
+ *	0x05 = Unknown
+ *	0x06 = Unchanged
+ *	0x07 = Reserved
+ *
+ *	@param {Boolean} state
+ */
 Ndef.prototype.setTNF = function(tnf) {
 	if (tnf <= 7 && tnf >= 0) {
 		this.flags = this.flags & ~Ndef.tnf | tnf;
 	}
 }
 
+
+/**
+ *	Return the TNF flag
+ *	The flag indicates the structure of the type value.
+ *	
+ *	0x00 = Empty
+ *	0x01 = NFC Forum well-known type
+ *	0x02 = Media-type as defined in RFC 2046
+ *	0x03 = Absolute URI as defined in RFC 3986
+ *	0x04 = NFC Forum external type
+ *	0x05 = Unknown
+ *	0x06 = Unchanged
+ *	0x07 = Reserved
+ *
+ 
+ *	@return {ByteString} the TNF
+ */
 Ndef.prototype.getTNF = function() {
 	return this.flags & Ndef.tnf;
 }
@@ -260,7 +262,7 @@ Ndef.shortenString = function(str) {
 /**
  *	Create a new Uri from string
  *	@param {String} str 
- *	@return {Ndef} the Ndef object
+ *	@return {NDEF} the NDEF object
  */
 Ndef.newUri = function(str) {
 	var n = new Ndef();
@@ -279,6 +281,12 @@ Ndef.newUri = function(str) {
 	return n;
 }
 
+
+/**
+ *	Create a new NDEF Message
+ *	@param {String} type The type of the NDEF Message coded in US-ASCII. 
+ *	@param {ByteString} payload
+ */
 Ndef.newMessage = function(type, payload) {
 	var n = new Ndef();
 	n.typeLength = new ByteString(type.length, HEX);
@@ -296,6 +304,7 @@ Ndef.newMessage = function(type, payload) {
 	
 	return n;
 }
+
 
 /**
  *	Return the Ndef in encoded format
@@ -323,20 +332,10 @@ Ndef.prototype.getEncoded = function() {
 	return buffer.toByteString();
 }
 
-/* Ndef.prototype.toString = function() {
-	var str = "MB:" + this.flags & Ndef.messageBegin + " ,ME:" + this.flags & Ndef.messageEnd + " ,CF:" + this.flags & Ndef.chunkFlag + " ,SR:" + this.flag & Ndef.shortRecord + " ,IL:" + this.flag & Ndef.idLengthFlag + " ,TNF:" + this.flag & Ndef.tnf;
-	str += ",uri=";
-	var payload = new ByteString(this.payload, HEX);
-	var i = payload.byteAt(0);
-	if (i > 0) {
-		str += Ndef.uriIdentifier[i];
-	}
-	str += payload.bytes(1).toString(UTF8);
-	
-	return str;
-} */
 
-
+/**
+ *	@return {String} str A String containing the flag byte and the uri payload.
+ */
 Ndef.prototype.toString = function() {
 	var str = "flag=" + this.flags.toString(HEX);
 	str += ",uri=";
