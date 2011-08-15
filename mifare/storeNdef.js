@@ -89,8 +89,7 @@ Loader.prototype.load = function(data) {
 	// for (var i = 0; i < arr.length; i++) {
 		// print(arr.pop());
 	// }
-	var countSectors = Math.round(arr.length / 3);
-	
+	var countSectors = Math.round(arr.length / 3) + (arr.length % 3);	
 	print("countSectors");
 	print(countSectors);
 	assert(countSectors <= 15);
