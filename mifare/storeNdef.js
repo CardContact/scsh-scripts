@@ -181,7 +181,7 @@ Loader.splitData = function(data) {
 		else if (data.length > 16) {
 			print(data.bytes(0, 16));
 			arr.push(data.bytes(0, 16));
-			data = data.bytes(17);
+			data = data.bytes(16);
 		}
 		else {
 			var tmp = data.bytes(0);
