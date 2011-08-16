@@ -38,9 +38,9 @@ Loader.prototype.initialize = function() {
 
 	card.reset(Card.RESET_COLD);
 
-	var mif = new Mifare(card);
+	this.mif = new Mifare(card);
 
-	print("UID: " + mif.getUID());
+	print("UID: " + this.mif.getUID());
 
 	if (_scsh3.reader.substr(0, 3) != "SCM") {
 		var keyaid = 0x00;			// Use for ACR and Omnikey readers
@@ -50,8 +50,8 @@ Loader.prototype.initialize = function() {
 	}
 
 	var key = new ByteString("FFFFFFFFFFFF", HEX);
-	mif.loadKey(keyaid, key);
-	var s = mif.newSector(0);
+	this.mif.loadKey(keyaid, key);
+	var s = this.mif.newSector(0);
 	s.setKeyId(keyaid);
 	s.readAll(Mifare.KEY_A);
 	print(s.toString());
@@ -88,7 +88,7 @@ Loader.prototype.load = function(data) {
 
 	for (var i = 1; i <= countSectors ; i++) {
 		print("Write in sector " + i);
-		var s = mif.newSector(i);
+		var s = this.mif.newSector(i);
 		s.setKeyId(keyaid);
 		s.readAll(Mifare.KEY_A);
 

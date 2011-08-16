@@ -248,9 +248,6 @@ Vcard.prototype.getEncoded = function() {
 	if (this.hasNickname()) {
 		encoded.append(this.nickname);
 	}
-	if (this.hasPhoto()) {
-		encoded.append(this.photo);
-	}
 	if (this.hasBirthday()) {
 		encoded.append(this.bday);
 	}
