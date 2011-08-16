@@ -17,6 +17,6 @@ var n = Ndef.newMessage("text/x-vCard", enc);
 enc = n.getEncoded();
 
 var loader = new Loader();
-//loader.initialize();
+loader.initialize();
 loader.load(enc);
 
