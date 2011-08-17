@@ -91,6 +91,8 @@ OutlineCardManager.prototype.expandListener = function() {
 		var d = this.factory.newOutlineDataObject(this, 0xC2, "Confirmation Counter", "");
 		view.insert(d.view);
 		
+		var d = this.factory.newOutlineDataObject(this, 0x9F7F, "Card Production Life Cycle (JCOP)", "");
+		view.insert(d.view);
 	}
 
 	catch(e) {
