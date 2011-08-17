@@ -176,7 +176,16 @@ function handleRequest(req, res) {
 				service.ui.handleInquiry(req, res);
 			}
 		} else if (req.method == "POST") {
-			dispatchSOAPRequest(req, res, service);
+			print("Content-type : " + req.contentType);
+			// SOAP 1.2 requires "application/soap+xml"
+			// SOAP 1.1 defines "text/xml
+			if ((req.contentType.substr(0, 8).toLowerCase()  == "text/xml") || 
+			    (req.contentType.substr(0, 20).toLowerCase() == "application/soap+xml")) {
+				dispatchSOAPRequest(req, res, service);
+			} else {
+				GPSystem.trace("SOAPServer - received POST for " + req.pathInfo);
+				service.ui.handleInquiry(req, res);
+			}
 		} else {
 			res.setStatus(HttpResponse.SC_METHOD_NOT_ALLOWED);
 		}
