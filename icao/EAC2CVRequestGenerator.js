@@ -328,7 +328,7 @@ EAC2CVRequestGenerator.prototype.generateCVRequest = function(privateKey) {
  * @return The DER-encoded authenticated CV request
  * @type ASN1
  */
-EAC2CVRequestGenerator.prototype.generateAuthenticatedCVRequest = function(requestKey, authenticationKey, authCHR, taOID) {
+EAC2CVRequestGenerator.prototype.generateAuthenticatedCVRequest = function(requestKey, authenticationKey, authCHR, outertaOID) {
 	var authRequest = new ASN1("Authentication", 0x67);
 
 	var request = this.generateCVRequest(requestKey);
@@ -337,13 +337,13 @@ EAC2CVRequestGenerator.prototype.generateAuthenticatedCVRequest = function(reque
 
 	var signatureInput = request.getBytes().concat(chr.getBytes());
 
-	if (typeof(taOID) == "undefined") {
-		taOID = this.taOID;
+	if (typeof(outertaOID) == "undefined") {
+		outertaOID = this.taOID;
 	}
-	var mech = CVC.getSignatureMech(taOID);
+	var mech = CVC.getSignatureMech(outertaOID);
 	var signature = this.crypto.sign(authenticationKey, mech, signatureInput);
 
-	if (CVC.isECDSA(this.taOID)) {
+	if (CVC.isECDSA(outertaOID)) {
 		var keylen = authenticationKey.getComponent(Key.ECC_P).length;
 		var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature, keylen));
 	} else {

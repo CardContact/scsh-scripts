@@ -481,19 +481,19 @@ EAC2CVCertificateGenerator.prototype.getCertificateBody = function() {
  * @return the CVC certificate
  * @type CVC
  */
-EAC2CVCertificateGenerator.prototype.generateCVCertificate = function(signingKey, taOID) {
+EAC2CVCertificateGenerator.prototype.generateCVCertificate = function(signingKey, outertaOID) {
 	
 	var certificate = new ASN1("CV Certificate", 0x7F21);
 	
 	var body = this.getCertificateBody();
 	
-	if (typeof(taOID) == "undefined") {
-		taOID = this.taOID;
+	if (typeof(outertaOID) == "undefined") {
+		outertaOID = this.taOID;
 	}
-	var mech = CVC.getSignatureMech(taOID);
+	var mech = CVC.getSignatureMech(outertaOID);
 	var signature = this.crypto.sign(signingKey, mech, body.getBytes());
 
-	if (CVC.isECDSA(this.taOID)) {
+	if (CVC.isECDSA(outertaOID)) {
 		var keylen = signingKey.getComponent(Key.ECC_P).length;
 		var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature, keylen));
 	} else {
