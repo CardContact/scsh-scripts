@@ -24,8 +24,6 @@
  * @fileoverview Implementation of Simple CV request generator based on 
  * TR-03110 "Advanced Security Mechanisms for Machine Readable Travel Documents", Version 2.0
  *
- * For now we only support ECC crypto
- *
  */
 
 load("tools/eccutils.js");
@@ -42,7 +40,6 @@ if (typeof(__ScriptingServer) == "undefined") {
  * 
  * @constructor
  * @param {Crypto} Crypto object to use
- *
  */
 function EAC2CVRequestGenerator(crypto) {
 	this.crypto = crypto;
@@ -214,17 +211,22 @@ EAC2CVRequestGenerator.prototype.getCHR = function() {
 EAC2CVRequestGenerator.prototype.getPublicKey = function() {
 
 	var t = new ASN1("Public Key", 0x7F49);
-
 	t.add(new ASN1("Object Identifier", 0x06, this.taOID));
-	t.add(new ASN1("Prime Modulus", 0x81, this.publicKey.getComponent(Key.ECC_P)));
-	t.add(new ASN1("First coefficient a", 0x82, this.publicKey.getComponent(Key.ECC_A)));
-	t.add(new ASN1("Second coefficient b", 0x83, this.publicKey.getComponent(Key.ECC_B)));
-	t.add(new ASN1("Base Point G", 0x84, EAC2CVRequestGenerator.encodeUncompressedECPoint(this.publicKey.getComponent(Key.ECC_GX), this.publicKey.getComponent(Key.ECC_GY))));
-	t.add(new ASN1("Order of the base point", 0x85, this.publicKey.getComponent(Key.ECC_N)));
 
-	t.add(new ASN1("Public Point y", 0x86, EAC2CVRequestGenerator.encodeUncompressedECPoint(this.publicKey.getComponent(Key.ECC_QX), this.publicKey.getComponent(Key.ECC_QY))));
+	if (typeof(this.publicKey.getComponent(Key.ECC_P)) != "undefined") {
+		t.add(new ASN1("Prime Modulus", 0x81, this.publicKey.getComponent(Key.ECC_P)));
+		t.add(new ASN1("First coefficient a", 0x82, this.publicKey.getComponent(Key.ECC_A)));
+		t.add(new ASN1("Second coefficient b", 0x83, this.publicKey.getComponent(Key.ECC_B)));
+		t.add(new ASN1("Base Point G", 0x84, EAC2CVRequestGenerator.encodeUncompressedECPoint(this.publicKey.getComponent(Key.ECC_GX), this.publicKey.getComponent(Key.ECC_GY))));
+		t.add(new ASN1("Order of the base point", 0x85, this.publicKey.getComponent(Key.ECC_N)));
 
-	t.add(new ASN1("Cofactor f", 0x87, EAC2CVRequestGenerator.stripLeadingZeros(this.publicKey.getComponent(Key.ECC_H))));
+		t.add(new ASN1("Public Point y", 0x86, EAC2CVRequestGenerator.encodeUncompressedECPoint(this.publicKey.getComponent(Key.ECC_QX), this.publicKey.getComponent(Key.ECC_QY))));
+
+		t.add(new ASN1("Cofactor f", 0x87, EAC2CVRequestGenerator.stripLeadingZeros(this.publicKey.getComponent(Key.ECC_H))));
+	} else {
+		t.add(new ASN1("Composite Modulus", 0x81, this.publicKey.getComponent(Key.MODULUS)));
+		t.add(new ASN1("Public Exponent", 0x82, this.publicKey.getComponent(Key.EXPONENT)));
+	}
 
 	return t;
 }
@@ -298,12 +300,15 @@ EAC2CVRequestGenerator.prototype.generateCVRequest = function(privateKey) {
 	var body = this.getCertificateBody();
 
 	request.add(body);
-	
-	var keylen = privateKey.getComponent(Key.ECC_P).length;
 
 	var mech = CVC.getSignatureMech(this.taOID);
 	var signature = this.crypto.sign(privateKey, mech, body.getBytes());
-	var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature, keylen));
+	if (CVC.isECDSA(this.taOID)) {
+		var keylen = privateKey.getComponent(Key.ECC_P).length;
+		var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature, keylen));
+	} else {
+		var signatureValue = new ASN1("Signature", 0x5F37, signature);
+	}
 	
 	request.add(signatureValue);
 	
@@ -318,25 +323,33 @@ EAC2CVRequestGenerator.prototype.generateCVRequest = function(privateKey) {
  * @param {Key} requestKey Private key for the request signature
  * @param {Key} authenticationKey Private key for used for signing and authenticating the request
  * @param {PublicKeyReference} authCHR CHR of the authenticating authority 
+ * @param {ByteString} taOID the public key object identifier of the authentication key
  *
  * @return The DER-encoded authenticated CV request
  * @type ASN1
  */
-EAC2CVRequestGenerator.prototype.generateAuthenticatedCVRequest = function(requestKey, authenticationKey, authCHR) {
+EAC2CVRequestGenerator.prototype.generateAuthenticatedCVRequest = function(requestKey, authenticationKey, authCHR, taOID) {
 	var authRequest = new ASN1("Authentication", 0x67);
-	
+
 	var request = this.generateCVRequest(requestKey);
 
 	var chr = new ASN1("Certification Authority Reference", 0x42, authCHR.getBytes());
 
 	var signatureInput = request.getBytes().concat(chr.getBytes());
-	
-	var keylen = authenticationKey.getComponent(Key.ECC_P).length;
 
-	var mech = CVC.getSignatureMech(this.taOID);
+	if (typeof(taOID) == "undefined") {
+		taOID = this.taOID;
+	}
+	var mech = CVC.getSignatureMech(taOID);
 	var signature = this.crypto.sign(authenticationKey, mech, signatureInput);
-	var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature, keylen));
-	
+
+	if (CVC.isECDSA(this.taOID)) {
+		var keylen = authenticationKey.getComponent(Key.ECC_P).length;
+		var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature, keylen));
+	} else {
+		var signatureValue = new ASN1("Signature", 0x5F37, signature);
+	}
+
 	authRequest.add(request);
 	authRequest.add(chr);
 	authRequest.add(signatureValue);

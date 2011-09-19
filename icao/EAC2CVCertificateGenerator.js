@@ -80,7 +80,6 @@ EAC2CVCertificateGenerator.encodeUncompressedECPoint = function(x,y) {
  * @return the x-/y-coordinate of the point
  * @type ByteString
  */
-
 EAC2CVCertificateGenerator.decodeUncompressedECPoint = function(uncompressedPoint) {
 	
 	// Determine the size of the coordinates ignoring the indicator byte '04'
@@ -379,30 +378,35 @@ EAC2CVCertificateGenerator.prototype.stripLeadingZeros = function(value) {
 
 
 /**
- * Internal functions for the generation of a certificate
+ * Get the encoded public key including domain parameters
+ *
  * @private
  */
 EAC2CVCertificateGenerator.prototype.getPublicKey = function() {
 
 	var t = new ASN1("Public Key", 0x7F49);
-	
 	t.add(new ASN1("Object Identifier", 0x06, this.taOID));
 
-	if (this.includeDomainParameters == true) {
+	if (typeof(this.publicKey.getComponent(Key.ECC_P)) != "undefined") {
+		if (this.includeDomainParameters == true) {
 
-		t.add(new ASN1("Prime Modulus", 0x81, this.publicKey.getComponent(Key.ECC_P)));
-		t.add(new ASN1("First coefficient a", 0x82, this.publicKey.getComponent(Key.ECC_A)));
-		t.add(new ASN1("Second coefficient b", 0x83, this.publicKey.getComponent(Key.ECC_B)));
+			t.add(new ASN1("Prime Modulus", 0x81, this.publicKey.getComponent(Key.ECC_P)));
+			t.add(new ASN1("First coefficient a", 0x82, this.publicKey.getComponent(Key.ECC_A)));
+			t.add(new ASN1("Second coefficient b", 0x83, this.publicKey.getComponent(Key.ECC_B)));
 
-		t.add(new ASN1("Base Point G", 0x84, EAC2CVCertificateGenerator.encodeUncompressedECPoint(this.publicKey.getComponent(Key.ECC_GX), this.publicKey.getComponent(Key.ECC_GY))));
+			t.add(new ASN1("Base Point G", 0x84, EAC2CVCertificateGenerator.encodeUncompressedECPoint(this.publicKey.getComponent(Key.ECC_GX), this.publicKey.getComponent(Key.ECC_GY))));
 
-		t.add(new ASN1("Order of the base point", 0x85, this.publicKey.getComponent(Key.ECC_N)));
-	}
+			t.add(new ASN1("Order of the base point", 0x85, this.publicKey.getComponent(Key.ECC_N)));
+		}
 
-	t.add(new ASN1("Public Point y", 0x86, EAC2CVCertificateGenerator.encodeUncompressedECPoint(this.publicKey.getComponent(Key.ECC_QX), this.publicKey.getComponent(Key.ECC_QY))));
+		t.add(new ASN1("Public Point y", 0x86, EAC2CVCertificateGenerator.encodeUncompressedECPoint(this.publicKey.getComponent(Key.ECC_QX), this.publicKey.getComponent(Key.ECC_QY))));
 
-	if (this.includeDomainParameters == true) {
-		t.add(new ASN1("Cofactor f", 0x87, this.stripLeadingZeros(this.publicKey.getComponent(Key.ECC_H))));
+		if (this.includeDomainParameters == true) {
+			t.add(new ASN1("Cofactor f", 0x87, this.stripLeadingZeros(this.publicKey.getComponent(Key.ECC_H))));
+		}
+	} else {
+		t.add(new ASN1("Composite Modulus", 0x81, this.publicKey.getComponent(Key.MODULUS)));
+		t.add(new ASN1("Public Exponent", 0x82, this.publicKey.getComponent(Key.EXPONENT)));
 	}
 
 	return t;
@@ -473,21 +477,28 @@ EAC2CVCertificateGenerator.prototype.getCertificateBody = function() {
  * Generate a certificate based on the parameter set using the setter methods.
  *
  * @param {Key} signingKey the key to be used for signing the certificate
- * @param {Number} mech the mechanims to be used for signing the certificate (Crypto.ECDSA*)
+ * @param {ByteString} taOID the object identifier associated with the signing key
  * @return the CVC certificate
  * @type CVC
  */
-EAC2CVCertificateGenerator.prototype.generateCVCertificate = function(signingKey) {
+EAC2CVCertificateGenerator.prototype.generateCVCertificate = function(signingKey, taOID) {
 	
 	var certificate = new ASN1("CV Certificate", 0x7F21);
 	
 	var body = this.getCertificateBody();
 	
-	var keylen = signingKey.getComponent(Key.ECC_P).length;
-	
-	var mech = CVC.getSignatureMech(this.taOID);
+	if (typeof(taOID) == "undefined") {
+		taOID = this.taOID;
+	}
+	var mech = CVC.getSignatureMech(taOID);
 	var signature = this.crypto.sign(signingKey, mech, body.getBytes());
-	var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature, keylen));
+
+	if (CVC.isECDSA(this.taOID)) {
+		var keylen = signingKey.getComponent(Key.ECC_P).length;
+		var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature, keylen));
+	} else {
+		var signatureValue = new ASN1("Signature", 0x5F37, signature);
+	}
 	
 	certificate.add(body);
 

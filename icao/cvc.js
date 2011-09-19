@@ -205,11 +205,18 @@ CVC.idST = new ByteString("id-ST", OID);
 
 
 /** TA constants */
+CVC.id_TA_ECDSA = new ByteString("id-TA-ECDSA", OID);
 CVC.id_TA_ECDSA_SHA_1 = new ByteString("id-TA-ECDSA-SHA-1", OID);
 CVC.id_TA_ECDSA_SHA_224 = new ByteString("id-TA-ECDSA-SHA-224", OID);
 CVC.id_TA_ECDSA_SHA_256 = new ByteString("id-TA-ECDSA-SHA-256", OID);
 CVC.id_TA_ECDSA_SHA_384 = new ByteString("id-TA-ECDSA-SHA-384", OID);
 CVC.id_TA_ECDSA_SHA_512 = new ByteString("id-TA-ECDSA-SHA-512", OID);
+CVC.id_TA_RSA_v1_5_SHA_1 = new ByteString("id-TA-RSA-v1-5-SHA-1", OID);
+CVC.id_TA_RSA_v1_5_SHA_256 = new ByteString("id-TA-RSA-v1-5-SHA-256", OID);
+// CVC.id_TA_RSA_v1_5_SHA_512 = new ByteString("id-TA-RSA-v1-5-SHA-512", OID);
+CVC.id_TA_RSA_PSS_SHA_1 = new ByteString("id-TA-RSA-PSS-SHA-1", OID);
+CVC.id_TA_RSA_PSS_SHA_256 = new ByteString("id-TA-RSA-PSS-SHA-256", OID);
+// CVC.id_TA_RSA_PSS_SHA_512 = new ByteString("id-TA-RSA-PSS-SHA-512", OID);
 
 
 
@@ -231,7 +238,31 @@ CVC.getSignatureMech = function(oid) {
 		return Crypto.ECDSA_SHA384;
 	if (oid.equals(CVC.id_TA_ECDSA_SHA_512))
 		return Crypto.ECDSA_SHA512;
+	if (oid.equals(CVC.id_TA_RSA_v1_5_SHA_1))
+		return Crypto.RSA_SHA1;
+	if (oid.equals(CVC.id_TA_RSA_v1_5_SHA_256))
+		return Crypto.RSA_SHA256;
+//	if (oid.equals(CVC.id_TA_RSA_v1_5_SHA_512))
+//		return Crypto.RSA_SHA512;
+	if (oid.equals(CVC.id_TA_RSA_PSS_SHA_1))
+		return Crypto.RSA_PSS_SHA1;
+	if (oid.equals(CVC.id_TA_RSA_PSS_SHA_256))
+		return Crypto.RSA_PSS_SHA256;
+//	if (oid.equals(CVC.id_TA_RSA_PSS_SHA_512))
+//		return Crypto.RSA_PSS_SHA512;
 	return -1;
+}
+
+
+
+/**
+ * Return true of the object identifier starts with id-TA-ECDSA
+ *
+ * @type boolean
+ * @return true, if ECDSA based OID
+ */
+CVC.isECDSA = function(oid) {
+	return oid.startsWith(CVC.id_TA_ECDSA) == CVC.id_TA_ECDSA.length;
 }
 
 
@@ -407,13 +438,13 @@ CVC.prototype.getPublicKeyOID = function() {
 
 
 /**
- * Returns the public key contained in the certificate.
+ * Returns the EC public key contained in the certificate.
  *
  * @param {Key} domParam optional domain parameter if they are not contained in certificate
  * @return the public key object
  * @type Key
  */
-CVC.prototype.getPublicKey = function(domParam) {
+CVC.prototype.getECPublicKey = function(domParam) {
 	if (typeof(domParam) != "undefined") {
 		var key = new Key(domParam);
 	} else {
@@ -474,6 +505,55 @@ CVC.prototype.getPublicKey = function(domParam) {
 
 
 /**
+ * Returns the RSA public key contained in the certificate.
+ *
+ * @return the public key object
+ * @type Key
+ */
+CVC.prototype.getRSAPublicKey = function() {
+	var key = new Key();
+	
+	key.setType(Key.PUBLIC);
+	
+	var pdo = this.body.find(CVC.TAG_PUK);
+	if (pdo == null) {
+		throw new GPError("CVC", GPError.OBJECT_NOT_FOUND, 0, "Certificate does not contain a public key");
+	}
+	
+	var d = pdo.find(0x81);		// modulus
+	if (d != null) {
+		key.setComponent(Key.MODULUS, d.value);
+	}
+
+	var d = pdo.find(0x82);		// public exponent
+	if (d != null) {
+		key.setComponent(Key.EXPONENT, d.value);
+	}
+	
+	return key;
+}
+
+
+
+/**
+ * Returns the public key contained in the certificate.
+ *
+ * @param {Key} domParam optional domain parameter if they are not contained in certificate
+ * @return the public key object
+ * @type Key
+ */
+CVC.prototype.getPublicKey = function(domParam) {
+	var pkoid = this.getPublicKeyOID();
+	
+	if (CVC.isECDSA(pkoid)) {
+		return this.getECPublicKey(domParam);
+	}
+	return this.getRSAPublicKey();
+}
+
+
+
+/**
  * Determine if this is an authenticated request
  *
  * @returns true, if authenticated request
@@ -489,20 +569,27 @@ CVC.prototype.isAuthenticatedRequest = function() {
  * Verify certificate signature with public key
  *
  * @param {Key} puk the public key
+ * @param {ByteString} oid the signature algorithm
  * @returns true if the signature is valid
  * @type Boolean
  */
-CVC.prototype.verifyWith = function(crypto, puk) {
+CVC.prototype.verifyWith = function(crypto, puk, oid) {
 	if (this.asn.tag == CVC.TAG_AT) {
 		var signature = this.asn.get(0).get(1);
 	} else {
 		var signature = this.asn.get(1);
 	}
 	
-	var oid = this.getPublicKeyOID();
+	if (typeof(oid) == "undefined") {
+		var oid = this.getPublicKeyOID();
+	}
 	var mech = CVC.getSignatureMech(oid);
 	
-	var signatureValue = ECCUtils.wrapSignature(signature.value);
+	if (CVC.isECDSA(oid)) {
+		var signatureValue = ECCUtils.wrapSignature(signature.value);
+	} else {
+		var signatureValue = signature.value;
+	}
 	return crypto.verify(puk, mech, this.body.getBytes(), signatureValue);
 }
 
@@ -512,10 +599,11 @@ CVC.prototype.verifyWith = function(crypto, puk) {
  * Verify outer signature of an authenticated request with public key
  *
  * @param {Key} puk the public key
+ * @param {ByteString} oid the signature algorithm
  * @returns true if the signature is valid
  * @type Boolean
  */
-CVC.prototype.verifyATWith = function(crypto, puk) {
+CVC.prototype.verifyATWith = function(crypto, puk, oid) {
 	if (!this.isAuthenticatedRequest()) {
 		throw new GPError("CVC", GPError.INVALID_DATA, 0, "Not an authenticated request");
 	}
@@ -523,10 +611,16 @@ CVC.prototype.verifyATWith = function(crypto, puk) {
 	var signature = this.asn.get(2);
 	var signatureInput = this.asn.get(0).getBytes().concat(this.asn.get(1).getBytes());
 	
-	var oid = this.getPublicKeyOID();
+	if (typeof(oid) == "undefined") {
+		var oid = this.getPublicKeyOID();
+	}
 	var mech = CVC.getSignatureMech(oid);
 	
-	var signatureValue = ECCUtils.wrapSignature(signature.value);
+	if (CVC.isECDSA(oid)) {
+		var signatureValue = ECCUtils.wrapSignature(signature.value);
+	} else {
+		var signatureValue = signature.value;
+	}
 	return crypto.verify(puk, mech, signatureInput, signatureValue);
 }
 
