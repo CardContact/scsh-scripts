@@ -277,7 +277,7 @@ CVC.prototype.getCAR = function() {
 	var cardo = this.body.find(CVC.TAG_CAR);
 	
 	if (!cardo) {
-		return null
+		return null;
 	}
 	
 	return new PublicKeyReference(cardo.value);
