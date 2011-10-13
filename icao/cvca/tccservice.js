@@ -52,6 +52,7 @@ function TCCService(certstorepath, path, parentURL) {
 	this.outqueue = [];
 	this.outqueuemap = [];
 	this.version = "1.1";
+	this.rsaKeySize = 1024;
 }
 
 
@@ -68,13 +69,24 @@ TCCService.prototype.setSendCertificateURL = function(url) {
 
 
 /**
+ * Sets the key size for certificate requests using RSA keys
+ *
+ * @param {Number} keysize the RSA key size i bits
+ */
+TCCService.prototype.setRSAKeySize = function(keysize) {
+	this.rsaKeySize = keysize;
+}
+
+
+
+/**
  * Sets the key specification for generating requests
  *
  * @param {Key} keyparam a key object containing key parameters (e.g. EC Curve)
  * @param {ByteString} algorithm the terminal authentication algorithm object identifier
  */
 TCCService.prototype.setKeySpec = function(keyparam, algorithm) {
-	this.cvca.setKeySpec(keyparam, algorithm);
+	this.tcc.setKeySpec(keyparam, algorithm);
 }
 
 
@@ -161,12 +173,19 @@ TCCService.prototype.updateCACertificates = function(async) {
  */
 TCCService.prototype.renewCertificate = function(async, forceinitial) {
 
-	var dp = this.ss.getDefaultDomainParameter(this.path);
 	var algo = this.ss.getDefaultPublicKeyOID(this.path);
-	var car = this.ss.getCurrentCHR(CVCertificateStore.parentPathOf(this.path));
-
-	this.tcc.setKeySpec(dp, algo);
+	if (CVC.isECDSA(algo)) {
+		var keyspec = this.ss.getDefaultDomainParameter(this.path);
+	} else {
+		var keyspec = new Key();
+		keyspec.setType(Key.PUBLIC);
+		keyspec.setSize(this.rsaKeySize);
+	}
 	
+	var car = this.ss.getCurrentCHR(CVCertificateStore.parentPathOf(this.path));
+	
+	this.tcc.setKeySpec(keyspec, algo);
+
 	// Create a new request
 	var req = this.tcc.generateRequest(car, forceinitial);
 	print("Request: " + req);
@@ -397,9 +416,10 @@ TCCService.prototype.GetCertificateChain = function(soapBody) {
 	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/" + this.version);
 	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
-	var chrstr = soapBody.keyNameMRTD;
-	if (typeof(chrstr) == "undefined") {
-		chrstr = soapBody.keyCAR;
+	if (this.version == "1.0") {
+		var chrstr = soapBody.keyNameMRTD;
+	} else {
+		var chrstr = soapBody.keyCAR;
 	}
 	
 	var returnCode = ServiceRequest.OK_CERT_AVAILABLE;
@@ -492,13 +512,17 @@ TCCService.prototype.GetTASignature = function(soapBody) {
 			
 			// ToDo: Check expiration of certificate
 			
-			var mech = CVC.getSignatureMech(cvc.getPublicKeyOID());
+			var oid = cvc.getPublicKeyOID();
+			if (CVC.isECDSA(oid)) {
+				var signature = this.crypto.sign(prk, Crypto.ECDSA, hashbin);
 			
-			var signature = this.crypto.sign(prk, Crypto.ECDSA, hashbin);
+				var keylen = prk.getComponent(Key.ECC_P).length;
 			
-			var keylen = prk.getComponent(Key.ECC_P).length;
-			
-			var signature = ECCUtils.unwrapSignature(signature, keylen);
+				var signature = ECCUtils.unwrapSignature(signature, keylen);
+			} else {
+				var mech = CVC.getSignatureMech(cvc.getPublicKeyOID());
+				var signature = this.crypto.sign(prk, mech, hashbin);
+			}
 		}
 	}
 	

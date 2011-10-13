@@ -115,8 +115,8 @@ CVC.OBJECTNAMES[CVC.TAG_BODY] = "Certificate Body";
 CVC.OBJECTNAMES[CVC.TAG_CPI] = "Certificate Profile Indicator";
 CVC.OBJECTNAMES[CVC.TAG_CAR] = "Certification Authority Reference";
 CVC.OBJECTNAMES[CVC.TAG_PUK] = "Public Key";
-CVC.OBJECTNAMES[CVC.TAG_ECC_P] = "Prime Modulus";
-CVC.OBJECTNAMES[CVC.TAG_ECC_A] = "First coefficient a";
+CVC.OBJECTNAMES[CVC.TAG_ECC_P] = "Prime/Modulus";
+CVC.OBJECTNAMES[CVC.TAG_ECC_A] = "First coefficient a/Exponent";
 CVC.OBJECTNAMES[CVC.TAG_ECC_B] = "Second coefficient b";
 CVC.OBJECTNAMES[CVC.TAG_ECC_G] = "Base Point G";
 CVC.OBJECTNAMES[CVC.TAG_ECC_N] = "Order of the base point";
@@ -584,13 +584,27 @@ CVC.prototype.verifyWith = function(crypto, puk, oid) {
 		var oid = this.getPublicKeyOID();
 	}
 	var mech = CVC.getSignatureMech(oid);
-	
+
 	if (CVC.isECDSA(oid)) {
 		var signatureValue = ECCUtils.wrapSignature(signature.value);
 	} else {
 		var signatureValue = signature.value;
 	}
+	
 	return crypto.verify(puk, mech, this.body.getBytes(), signatureValue);
+}
+
+
+
+/**
+ * Verify certificate signature with public key from card verifiable certificate
+ *
+ * @param {CVC} cvc the card verifiable certificate used to obtain the public key
+ * @returns true if the signature is valid
+ * @type Boolean
+ */
+CVC.prototype.verifyWithCVC = function(crypto, cvc) {
+	return this.verifyWith(crypto, cvc.getPublicKey(), cvc.getPublicKeyOID());
 }
 
 
@@ -622,6 +636,19 @@ CVC.prototype.verifyATWith = function(crypto, puk, oid) {
 		var signatureValue = signature.value;
 	}
 	return crypto.verify(puk, mech, signatureInput, signatureValue);
+}
+
+
+
+/**
+ * Verify outer signature of an authenticated request with public key from card verifiable certificate
+ *
+ * @param {CVC} cvc the card verifiable certificate used to obtain the public key
+ * @returns true if the signature is valid
+ * @type Boolean
+ */
+CVC.prototype.verifyATWithCVC = function(crypto, cvc) {
+	return this.verifyATWith(crypto, cvc.getPublicKey(), cvc.getPublicKeyOID());
 }
 
 

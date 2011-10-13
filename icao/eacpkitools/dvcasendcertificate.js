@@ -24,7 +24,7 @@
  * @fileoverview Script to post a CV-Certificate to a DVCA using a SendCertificates service call
  */
 
-load("../dvcaconnection.js");
+load("../lib/taconnection.js");
 load("../cvcertstore.js");
 
 
@@ -62,7 +62,7 @@ var certbin = CVCertificateStore.loadBinaryFile(certfile);
 
 var cert = new CVC(certbin);
 
-var dc = new DVCAConnection(url);
+var dc = new TAConnection(url, false);
 
 dc.sendCertificates([cert], "Synchronous", "ok_cert_available");
 

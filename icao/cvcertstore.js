@@ -182,6 +182,35 @@ CVCertificateStore.nthElementOf = function(path, n) {
 
 
 /**
+ * Check path for legal encodings
+ */
+CVCertificateStore.checkPath = function(path) {
+	if ((path.indexOf("/..") >= 0) ||
+		(path.indexOf("../") >= 0) ||
+		(path.indexOf("\\..") >= 0) ||
+		(path.indexOf("..\\") >= 0) ||
+		(path.indexOf("\0") >= 0) ||
+		(path.indexOf("~") >= 0)) {
+		throw new GPError("CVCertificateStore", GPError.INVALID_ARGUMENTS, 0, "Path \"" + path + "\" contains illegal characters");
+	}
+}
+
+
+
+/**
+ * Map to absolute path on file system
+ * @param {String} path the relative path
+ * @type String
+ * @return the absolute path on the file system
+ */
+CVCertificateStore.prototype.mapPath = function(path) {
+	CVCertificateStore.checkPath(path);
+	return this.path + path;
+}
+
+
+
+/**
  * Returns the current terminal certificate for a given CVCA reference.
  *
  * @param {PublicKeyReference} cvcaref the public key reference (CHR) of the root CA.
@@ -189,7 +218,7 @@ CVCertificateStore.nthElementOf = function(path, n) {
  * @type CVC
  */
 CVCertificateStore.prototype.getTerminalCertificateFor = function(cvcaref) {
-	var fn = this.path + "/" + cvcaref.getHolder() + "/terminal/current.cvcert";
+	var fn = this.mapPath("/" + cvcaref.getHolder() + "/terminal/current.cvcert");
 	
 	var bin = CVCertificateStore.loadBinaryFile(fn);
 	
@@ -209,7 +238,7 @@ CVCertificateStore.prototype.getTerminalCertificateFor = function(cvcaref) {
  * @type CVC
  */
 CVCertificateStore.prototype.getDVCACertificateFor = function(cvcaref, dvcaref) {
-	var fn = this.path + "/" + cvcaref.getHolder() + "/" + dvcaref.getHolder() + "/" + dvcaref.toString() + ".cvcert";
+	var fn = this.mapPath("/" + cvcaref.getHolder() + "/" + dvcaref.getHolder() + "/" + dvcaref.toString() + ".cvcert");
 	
 	var bin = CVCertificateStore.loadBinaryFile(fn);
 	
@@ -229,7 +258,7 @@ CVCertificateStore.prototype.getDVCACertificateFor = function(cvcaref, dvcaref) 
  * @type CVC
  */
 CVCertificateStore.prototype.getCVCACertificateFor = function(cvcaref) {
-	var fn = this.path + "/" + cvcaref.getHolder() + "/" + cvcaref.toString() + ".cvcert";
+	var fn = this.mapPath("/" + cvcaref.getHolder() + "/" + cvcaref.toString() + ".cvcert");
 	
 	var f = new java.io.File(fn);
 	if (!f.exists()) {
@@ -287,7 +316,7 @@ CVCertificateStore.prototype.getCertificateChainFor = function(cvcaref) {
  * @type Key
  */
 CVCertificateStore.prototype.getTerminalKeyFor = function(cvcaref) {
-	var fn = this.path + "/" + cvcaref.getHolder() + "/terminal/current.pkcs8";
+	var fn = this.mapPath("/" + cvcaref.getHolder() + "/terminal/current.pkcs8");
 	
 	var bin = CVCertificateStore.loadBinaryFile(fn);
 
@@ -311,7 +340,7 @@ CVCertificateStore.prototype.storePrivateKey = function(path, chr, prk) {
 	}
 	
 	var p8 = PKCS8.encodeKeyUsingPKCS8Format(prk);
-	var fn = this.path + path + "/" + chr.toString() + ".pkcs8";
+	var fn = this.mapPath(path + "/" + chr.toString() + ".pkcs8");
 	GPSystem.trace("Saving private key to " + fn);
 	CVCertificateStore.saveBinaryFile(fn, p8);
 }
@@ -327,7 +356,7 @@ CVCertificateStore.prototype.storePrivateKey = function(path, chr, prk) {
  * @type Key
  */
 CVCertificateStore.prototype.getPrivateKey = function(path, chr) {
-	var fn = this.path + path + "/" + chr.toString() + ".pkcs8";
+	var fn = this.mapPath(path + "/" + chr.toString() + ".pkcs8");
 
 	try	{
 		var bin = CVCertificateStore.loadBinaryFile(fn);
@@ -351,7 +380,7 @@ CVCertificateStore.prototype.getPrivateKey = function(path, chr) {
  * @type boolean
  */
 CVCertificateStore.prototype.deletePrivateKey = function(path, chr) {
-	var fn = this.path + path + "/" + chr.toString() + ".pkcs8";
+	var fn = this.mapPath(path + "/" + chr.toString() + ".pkcs8");
 	var f = new java.io.File(fn);
 	return f["delete"]();		// delete is a reserved keyword
 }
@@ -366,7 +395,7 @@ CVCertificateStore.prototype.deletePrivateKey = function(path, chr) {
  */
 CVCertificateStore.prototype.storeRequest = function(path, req) {
 	var chr = req.getCHR();
-	var fn = this.path + path + "/" + chr.toString() + ".cvreq";
+	var fn = this.mapPath(path + "/" + chr.toString() + ".cvreq");
 	GPSystem.trace("Saving request to " + fn);
 	CVCertificateStore.saveBinaryFile(fn, req.getBytes());
 }
@@ -382,7 +411,7 @@ CVCertificateStore.prototype.storeRequest = function(path, req) {
  * @return the request or null
  */
 CVCertificateStore.prototype.getRequest = function(path, chr) {
-	var fn = this.path + path + "/" + chr.toString() + ".cvreq";
+	var fn = this.mapPath(path + "/" + chr.toString() + ".cvreq");
 	var bin = null;
 	
 	try	{
@@ -406,7 +435,7 @@ CVCertificateStore.prototype.getRequest = function(path, chr) {
  * @type boolean
  */
 CVCertificateStore.prototype.deleteRequest = function(path, chr) {
-	var fn = this.path + path + "/" + chr.toString() + ".cvreq";
+	var fn = this.mapPath(path + "/" + chr.toString() + ".cvreq");
 	var f = new java.io.File(fn);
 	return f["delete"]();		// delete is a reserved keyword
 }
@@ -424,9 +453,9 @@ CVCertificateStore.prototype.storeCertificate = function(path, cert, makeCurrent
 	var car = cert.getCAR();
 	var chr = cert.getCHR();
 	if (car.equals(chr)) {
-		var fn = this.path + path + "/" + chr.toString() + ".selfsigned.cvcert";
+		var fn = this.mapPath(path + "/" + chr.toString() + ".selfsigned.cvcert");
 	} else {
-		var fn = this.path + path + "/" + chr.toString() + ".cvcert";
+		var fn = this.mapPath(path + "/" + chr.toString() + ".cvcert");
 	}
 
 	var f = new java.io.File(fn);
@@ -463,9 +492,9 @@ CVCertificateStore.prototype.storeCertificate = function(path, cert, makeCurrent
  */
 CVCertificateStore.prototype.deleteCertificate = function(path, chr, selfsigned) {
 	if (selfsigned) {
-		fn = this.path + path + "/" + chr.toString() + ".selfsigned.cvcert";
+		var fn = this.mapPath(path + "/" + chr.toString() + ".selfsigned.cvcert");
 	} else {
-		var fn = this.path + path + "/" + chr.toString() + ".cvcert";
+		var fn = this.mapPath(path + "/" + chr.toString() + ".cvcert");
 	}
 	var f = new java.io.File(fn);
 	return f["delete"]();		// delete is a reserved keyword
@@ -488,13 +517,13 @@ CVCertificateStore.prototype.deleteCertificate = function(path, chr, selfsigned)
  */
 CVCertificateStore.prototype.getCertificateBinary = function(path, chr, selfsigned) {
 	if (selfsigned) {
-		fn = this.path + path + "/" + chr.toString() + ".selfsigned.cvcert";
+		var fn = this.mapPath(path + "/" + chr.toString() + ".selfsigned.cvcert");
 	} else {
-		var fn = this.path + path + "/" + chr.toString() + ".cvcert";
+		var fn = this.mapPath(path + "/" + chr.toString() + ".cvcert");
 
 		var f = new java.io.File(fn);
 		if (!f.exists()) {
-			fn = this.path + path + "/" + chr.toString() + ".selfsigned.cvcert";
+			var fn = this.mapPath(path + "/" + chr.toString() + ".selfsigned.cvcert");
 		}
 	}
 	
@@ -596,7 +625,7 @@ CVCertificateStore.prototype.getCertificateChain = function(path, tochr, fromcar
 CVCertificateStore.prototype.listCertificates = function(path) {
 	var result = [];
 
-	var fn = this.path + path;
+	var fn = this.mapPath(path);
 	var f = new java.io.File(fn);
 	if (!f.exists()) {
 		return result;
@@ -627,7 +656,7 @@ CVCertificateStore.prototype.listCertificates = function(path) {
 CVCertificateStore.prototype.listHolders = function(path) {
 	var result = [];
 
-	var fn = this.path + path;
+	var fn = this.mapPath(path);
 	var f = new java.io.File(fn);
 	if (!f.exists()) {
 		return result;
@@ -830,7 +859,7 @@ CVCertificateStore.prototype.insertCertificates = function(crypto, certlist, ins
 		var chr = cvc.getCHR().toString();
 		
 		if (chr == cvc.getCAR().toString()) { // Self signed
-			var result = cvc.verifyWith(crypto, cvc.getPublicKey());
+			var result = cvc.verifyWith(crypto, cvc.getPublicKey(), cvc.getPublicKeyOID());
 
 			if (result) {
 				var path = "/" + cvc.getCHR().getHolder();
@@ -855,7 +884,7 @@ CVCertificateStore.prototype.insertCertificates = function(crypto, certlist, ins
 		var cacert = this.getCertificate("/" + car.getHolder(), car);
 		if (cacert != null) {	// Issued by a root CA
 			var dp = this.getDomainParameter("/" + car.getHolder(), car);
-			var result = cvc.verifyWith(crypto, cacert.getPublicKey(dp));
+			var result = cvc.verifyWith(crypto, cacert.getPublicKey(dp), cacert.getPublicKeyOID());
 			if (result) {
 				var chr = cvc.getCHR();
 				var holder = chr.getHolder();
@@ -888,7 +917,7 @@ CVCertificateStore.prototype.insertCertificates = function(crypto, certlist, ins
 			if (cacert != null) {
 				// Determine root certificate to obtain domain parameter
 				var dp = this.getDomainParameter(path, cacertcar);
-				var result = cvc.verifyWith(crypto, cacert.getPublicKey(dp));
+				var result = cvc.verifyWith(crypto, cacert.getPublicKey(dp), cacert.getPublicKeyOID());
 				if (result) {
 					var chr = cvc.getCHR();
 					var holder = chr.getHolder();
@@ -939,19 +968,21 @@ CVCertificateStore.prototype.insertCertificate = function(crypto, cvc, cvcahint)
 	}
 	
 	var dp = this.getDomainParameter(path, car);
-	var result = cvc.verifyWith(crypto, cacert.getPublicKey(dp));
-	if (result) {
-		var chr = cvc.getCHR();
-		var holder = chr.getHolder();
-
-		if (holder == car.getHolder()) {	// Link certificate
-			this.storeCertificate("/" + holder, cvc, true);
-		} else {							// Subordinate certificate
-			this.storeCertificate(path + "/" + holder, cvc, true);
-		}
-	} else {
+	var result = cvc.verifyWith(crypto, cacert.getPublicKey(dp), cacert.getPublicKeyOID());
+	if (!result) {
 		GPSystem.trace("Certificate " + cvc + " failed signature verification with " + cacert);
+		return false;
 	}
+
+	var chr = cvc.getCHR();
+	var holder = chr.getHolder();
+
+	if (holder == car.getHolder()) {	// Link certificate
+		this.storeCertificate("/" + holder, cvc, true);
+	} else {							// Subordinate certificate
+		this.storeCertificate(path + "/" + holder, cvc, true);
+	}
+
 	return true;
 }
 
@@ -964,7 +995,7 @@ CVCertificateStore.prototype.insertCertificate = function(crypto, cvc, cvcahint)
  * <ol>
  *  <li>If allowed, all self-signed certificates are imported</li>
  *  <li>All possible certificate chains are build</li>
- *  <li>Certificate chains are processed starting this the topmost certificate in the hierachie</li>
+ *  <li>Certificate chains are processed starting with the topmost certificate in the hierachie</li>
  * </ol>
  * <p>Certificates at the terminal level can only be imported, if the issuing
  *    DVCA certificate is contained in the list or a hint for the relevant CVCA is
@@ -991,7 +1022,7 @@ CVCertificateStore.prototype.insertCertificates2 = function(crypto, certlist, in
 		var chr = cvc.getCHR().toString();
 		
 		if (chr == cvc.getCAR().toString()) { // Self signed
-			var result = cvc.verifyWith(crypto, cvc.getPublicKey());
+			var result = cvc.verifyWith(crypto, cvc.getPublicKey(), cvc.getPublicKeyOID());
 
 			if (result) {
 				var path = "/" + cvc.getCHR().getHolder();
@@ -1077,7 +1108,7 @@ CVCertificateStore.prototype.insertCertificates2 = function(crypto, certlist, in
  * @type XML
  */
 CVCertificateStore.prototype.loadConfig = function(path) {
-	var fn = this.path + path + "/config.xml";
+	var fn = this.mapPath(path + "/config.xml");
 	var cfgxml = null;
 	
 	try	{
@@ -1105,13 +1136,13 @@ CVCertificateStore.prototype.saveConfig = function(path, cfg) {
 		throw new GPError("CVCertificateStore", GPError.INVALID_ARGUMENTS, 0, "path and cfg argument required");
 	}
 	
-	var fn = this.path + path;
+	var fn = this.mapPath(path);
 	var f = new java.io.File(fn);
 	if (!f.exists()) {
 		f.mkdirs();
 	}
 	
-	var fn = this.path + path + "/config.xml";
+	var fn = this.mapPath(path + "/config.xml");
 	CVCertificateStore.saveXMLFile(fn, cfg);
 }
 

@@ -46,6 +46,28 @@ function CVCAService(path, name) {
 	this.queue = [];
 	this.dVCertificatePolicies = [];
 	this.version = "1.1";
+	this.changeKeySpecification("brainpoolP256r1withSHA256");
+}
+
+
+
+CVCAService.KeySpecification = [
+	{ id: "brainpoolP192r1withSHA1", name: "brainpoolP192r1 with SHA-1", oid: CVC.id_TA_ECDSA_SHA_1  , curve: new ByteString("brainpoolP192r1", OID), keysize: 0 },
+	{ id: "brainpoolP224r1withSHA224", name: "brainpoolP224r1 with SHA-224", oid: CVC.id_TA_ECDSA_SHA_224, curve: new ByteString("brainpoolP224r1", OID), keysize: 0 },
+	{ id: "brainpoolP256r1withSHA256", name: "brainpoolP256r1 with SHA-256", oid: CVC.id_TA_ECDSA_SHA_256, curve: new ByteString("brainpoolP256r1", OID), keysize: 0 },
+	{ id: "brainpoolP384r1withSHA384", name: "brainpoolP384r1 with SHA-384", oid: CVC.id_TA_ECDSA_SHA_384, curve: new ByteString("brainpoolP384r1", OID), keysize: 0 },
+	{ id: "brainpoolP512r1withSHA512", name: "brainpoolP512r1 with SHA-512", oid: CVC.id_TA_ECDSA_SHA_512, curve: new ByteString("brainpoolP512r1", OID), keysize: 0 },
+	{ id: "RSA2048V15withSHA1", name: "RSA 2048 PKCS#1 V1.5 with SHA-1", oid: CVC.id_TA_RSA_v1_5_SHA_1  , curve: null, keysize: 2048 },
+	{ id: "RSA2048V15withSHA256", name: "RSA 2048 PKCS#1 V1.5 with SHA-256", oid: CVC.id_TA_RSA_v1_5_SHA_256, curve: null, keysize: 2048 },
+//	{ id: "RSA2048V15withSHA512", name: "RSA 2048 PKCS#1 V1.5 with SHA-512", oid: CVC.id_TA_RSA_v1_5_SHA_512, curve: null, keysize: 2048 },
+	{ id: "RSA2048PSSwithSHA1", name: "RSA 2048 PSS with SHA-1", oid: CVC.id_TA_RSA_PSS_SHA_1   , curve: null, keysize: 2048 },
+	{ id: "RSA2048PSSwithSHA256", name: "RSA 2048 PSS with SHA-1", oid: CVC.id_TA_RSA_PSS_SHA_256 , curve: null, keysize: 2048 },
+//	{ id: "RSA2048PSSwithSHA512", name: "RSA 2048 PSS with SHA-1", oid: CVC.id_TA_RSA_PSS_SHA_512 , curve: null, keysize: 2048 },
+];
+
+CVCAService.KeySpecificationMap = [];
+for (var i = 0; i < CVCAService.KeySpecification.length; i++) {
+	CVCAService.KeySpecificationMap[CVCAService.KeySpecification[i].id] = CVCAService.KeySpecification[i];
 }
 
 
@@ -58,6 +80,27 @@ function CVCAService(path, name) {
  */
 CVCAService.prototype.setKeySpec = function(keyparam, algorithm) {
 	this.cvca.setKeySpec(keyparam, algorithm);
+}
+
+
+
+/**
+ * Change the key specification for generating requests
+ *
+ * @param {String} newSpec id from CVCAService.KeySpecification
+ */
+CVCAService.prototype.changeKeySpecification = function(newSpec) {
+	this.currentKeySpec = newSpec;
+	var s = CVCAService.KeySpecificationMap[newSpec];
+	
+	var key = new Key();
+	if (CVC.isECDSA(s.oid)) {
+		key.setComponent(Key.ECC_CURVE_OID, s.curve);
+	} else {
+		key.setSize(s.keysize);
+	}
+
+	this.cvca.setKeySpec(key, s.oid);
 }
 
 
@@ -101,6 +144,18 @@ CVCAService.prototype.setDVCertificatePolicy = function(policy, chrregex) {
 
 
 /**
+ * Obtain a service port for TR-03129 service calls
+ * 
+ * @type Object
+ * @return the service port that can be registered with the SOAP Server
+ */
+CVCAService.prototype.getTR3129ServicePort = function() {
+	return new TR3129ServicePort(this);
+}
+
+
+
+/**
  * Returns the policy to apply for a given CHR
  *
  * @param {PublicKeyReference} chr the certificate holder reference
@@ -139,6 +194,7 @@ CVCAService.prototype.generateLinkCertificate = function(withDP) {
 		print(cert.getASN1());
 
 		// Import certificate into store, making it the most current certificate
+		
 		this.cvca.importCertificate(cert);
 	}
 	
@@ -208,24 +264,27 @@ CVCAService.prototype.checkRequestSemantics = function(req) {
 		return ServiceRequest.FAILURE_SYNTAX;
 	}
 	
-	// Check that request key domain parameter match current domain parameter
-	var dp = this.ss.getDomainParameter(this.path, chr);
+	if (CVC.isECDSA(oid)) {
+		// Check that request key domain parameter match current domain parameter
+		var dp = this.ss.getDomainParameter(this.path, chr);
 	
-	if (!puk.getComponent(Key.ECC_P).equals(dp.getComponent(Key.ECC_P)) ||
-		!puk.getComponent(Key.ECC_A).equals(dp.getComponent(Key.ECC_A)) ||
-		!puk.getComponent(Key.ECC_B).equals(dp.getComponent(Key.ECC_B)) ||
-		!puk.getComponent(Key.ECC_GX).equals(dp.getComponent(Key.ECC_GX)) ||
-		!puk.getComponent(Key.ECC_GY).equals(dp.getComponent(Key.ECC_GY)) ||
-		!puk.getComponent(Key.ECC_N).equals(dp.getComponent(Key.ECC_N)) ||
-		!puk.getComponent(Key.ECC_H).equals(dp.getComponent(Key.ECC_H))) {
-		GPSystem.trace("Domain parameter in request do not match current domain parameter");
-		return ServiceRequest.FAILURE_DOMAIN_PARAMETER;
+		if (!puk.getComponent(Key.ECC_P).equals(dp.getComponent(Key.ECC_P)) ||
+			!puk.getComponent(Key.ECC_A).equals(dp.getComponent(Key.ECC_A)) ||
+			!puk.getComponent(Key.ECC_B).equals(dp.getComponent(Key.ECC_B)) ||
+			!puk.getComponent(Key.ECC_GX).equals(dp.getComponent(Key.ECC_GX)) ||
+			!puk.getComponent(Key.ECC_GY).equals(dp.getComponent(Key.ECC_GY)) ||
+			!puk.getComponent(Key.ECC_N).equals(dp.getComponent(Key.ECC_N)) ||
+			!puk.getComponent(Key.ECC_H).equals(dp.getComponent(Key.ECC_H))) {
+			GPSystem.trace("Domain parameter in request do not match current domain parameter");
+			return ServiceRequest.FAILURE_DOMAIN_PARAMETER;
+		}
 	}
 	
 	if (req.isAuthenticatedRequest()) {
 		var puk = this.cvca.getAuthenticPublicKey(req.getOuterCAR());
 		if (puk) {
-			if (!req.verifyATWith(this.crypto, puk)) {
+			var oid = this.cvca.getIssuedCertificate(req.getOuterCAR()).getPublicKeyOID();
+			if (!req.verifyATWith(this.crypto, puk, oid)) {
 				GPSystem.trace("Error verifying outer signature");
 				return ServiceRequest.FAILURE_OUTER_SIGNATURE;
 			}
@@ -576,4 +635,21 @@ CVCAService.prototype.RequestCertificate = function(soapBody) {
 	}
 
 	return response;
+}
+
+
+
+/**
+ * The TR-03129 Service port class
+ */
+function TR3129ServicePort(service) {
+	this.service = service;
+}
+
+TR3129ServicePort.prototype.GetCACertificates = function(soapBody) {
+	return this.service.GetCACertificates(soapBody);
+}
+
+TR3129ServicePort.prototype.RequestCertificate = function(soapBody) {
+	return this.service.RequestCertificate(soapBody);
 }

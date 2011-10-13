@@ -40,6 +40,7 @@ function TCCConnection(url) {
 	this.soapcon = new SOAPConnection();
 	this.verbose = true;
 	this.lastError = null;
+	this.version = "1.1";
 }
 
 
@@ -77,13 +78,20 @@ TCCConnection.prototype.getCertificateChain = function(keyNameMRTD) {
 	
 	this.lastError = null;
 
-	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/1.0");
-	var ns1 = new Namespace("uri:eacBT/1.0");
-	
-	var request =
-		<ns:GetCertificateChain xmlns:ns={ns} xmlns:ns1={ns1}>
-			<keyNameMRTD>{keyNameMRTD.getBytes().toString(BASE64)}</keyNameMRTD>
-		</ns:GetCertificateChain>
+	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/" + this.version);
+	var ns1 = new Namespace("uri:eacBT/" + this.version);
+
+	if (this.version == "1.0") {
+		var request =
+			<ns:GetCertificateChain xmlns:ns={ns} xmlns:ns1={ns1}>
+				<keyNameMRTD>{keyNameMRTD.getBytes().toString(BASE64)}</keyNameMRTD>
+			</ns:GetCertificateChain>
+	} else {
+		var request =
+			<ns:GetCertificateChain xmlns:ns={ns} xmlns:ns1={ns1}>
+				<keyCAR>{keyNameMRTD.getBytes().toString(BASE64)}</keyCAR>
+			</ns:GetCertificateChain>
+	}
 	
 	if (this.verbose) {
 		GPSystem.trace(request.toXMLString());
@@ -138,8 +146,8 @@ TCCConnection.prototype.getTASignature = function(keyCHR, digest) {
 	
 	this.lastError = null;
 
-	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/1.0");
-	var ns1 = new Namespace("uri:eacBT/1.0");
+	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/" + this.version);
+	var ns1 = new Namespace("uri:eacBT/" + this.version);
 	
 	var request =
 		<ns:GetTASignature xmlns:ns={ns} xmlns:ns1={ns1}>
@@ -230,7 +238,6 @@ TCCConnection.test = function() {
 
 	print("Message: " + message);
 	print("Hash: " + digest);
-	print("Signature: " + signature);
 
 	print("Signature verification: " + crypto.verify(puk, mech, message, signature));
 }

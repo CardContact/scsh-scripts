@@ -138,8 +138,15 @@ CVCCA.prototype.generateRequest = function(car, forceinitial, signinitial) {
 
 	// Obtain key parameter
 
-	var prk = new Key(this.keyspec);
-	prk.setType(Key.PRIVATE);
+	if (typeof(this.keyspec.getComponent(Key.ECC_P)) != "undefined") {
+		var prk = new Key(this.keyspec);
+		prk.setType(Key.PRIVATE);
+		var keyalg = Crypto.EC;
+	} else {
+		var prk = new Key();
+		prk.setType(Key.PRIVATE);
+		var keyalg = Crypto.RSA;
+	}
 	var puk = new Key(this.keyspec);
 	puk.setType(Key.PUBLIC);
 
@@ -148,7 +155,7 @@ CVCCA.prototype.generateRequest = function(car, forceinitial, signinitial) {
 	var nextchr = this.certstore.getNextCHR(this.path);
 	
 	// Generate key pair
-	this.crypto.generateKeyPair(Crypto.EC, puk, prk);
+	this.crypto.generateKeyPair(keyalg, puk, prk);
 	
 	// Save private key
 	this.certstore.storePrivateKey(this.path, nextchr, prk);
@@ -174,7 +181,8 @@ CVCCA.prototype.generateRequest = function(car, forceinitial, signinitial) {
 	
 	if ((currentchr != null) && !forceinitial) {
 		var previousprk = this.certstore.getPrivateKey(this.path, currentchr);
-		var req = reqGenerator.generateAuthenticatedCVRequest(prk, previousprk, currentchr);
+		var previouscvc = this.certstore.getCertificate(this.path, currentchr);
+		var req = reqGenerator.generateAuthenticatedCVRequest(prk, previousprk, currentchr, previouscvc.getPublicKeyOID());
 	} else {
 		// Generate the request
 		if (signinitial) {
@@ -242,6 +250,7 @@ CVCCA.prototype.generateSignedInitialRequest = function(car) {
 CVCCA.prototype.generateCertificate = function(req, policy) {
 	var car = this.certstore.getCurrentCHR(this.path);
 	var maxExpDate = null;
+	var signingTAAlgorithmIdentifier = req.getPublicKeyOID();
 	
 	if (car == null) {				// No CA certificate found
 		if (this.isRootCA()) {
@@ -250,8 +259,9 @@ CVCCA.prototype.generateCertificate = function(req, policy) {
 			throw new GPError("CVCCA", GPError.INVALID_DATA, 0, "No current certificate found");
 		}
 	} else {
+		var cacvc = this.certstore.getCertificate(this.path, car);
+		var signingTAAlgorithmIdentifier = cacvc.getPublicKeyOID();
 		if (policy.shellModelForExpirationDate) {
-			var cacvc = this.certstore.getCertificate(this.path, car);
 			maxExpDate = cacvc.getCXD();
 		}
 	}
@@ -275,11 +285,11 @@ CVCCA.prototype.generateCertificate = function(req, policy) {
 	generator.setChatAuthorizationLevel(policy.chatRights);
 	generator.setPublicKey(req.getPublicKey());
 	generator.setProfileIdentifier(0x00);
-	generator.setTAAlgorithmIdentifier(this.taAlgorithmIdentifier);
+	generator.setTAAlgorithmIdentifier(req.getPublicKeyOID());
 	generator.setIncludeDomainParameters(policy.includeDomainParameter);
 	generator.setExtensions(policy.extensions);
 	var prk = this.certstore.getPrivateKey(this.path, car);
-	var cvc = generator.generateCVCertificate(prk, Crypto.ECDSA_SHA256);
+	var cvc = generator.generateCVCertificate(prk, signingTAAlgorithmIdentifier);
 	
 	return cvc;
 }
@@ -310,7 +320,16 @@ CVCCA.prototype.importCertificate = function(cert) {
 		throw new GPError("CVCCA", GPError.INVALID_DATA, 0, "Invalid certificate, not matching private key");
 	}
 	var c = this.certstore.getCertificate(this.path, cert.getCHR());
-	this.certstore.storeCertificate(this.path, cert, (c == null));
+	if (c != null) {
+		print("### Certificate " + c + " already stored");
+	}
+	if (this.isRootCA() && !this.isOperational()) {
+		this.certstore.storeCertificate(this.path, cert, (c == null));
+	} else {
+		if (!this.certstore.insertCertificate(this.crypto, cert, this.path)) {
+			throw new GPError("CVCCA", GPError.CRYPTO_FAILED, 0, "Could not validate certificate");
+		}
+	}
 }
 
 
@@ -321,6 +340,7 @@ CVCCA.prototype.importCertificate = function(cert) {
  * @param {CVC[]} certs the list of certificates
  */
 CVCCA.prototype.importCertificates = function(certs) {
+/*
 	var mycerts = [];
 	var othercerts = [];
 
@@ -334,24 +354,28 @@ CVCCA.prototype.importCertificates = function(certs) {
 			othercerts.push(cvc);
 		}
 	}
-	
+*/
 	// Insert all other certificates into certificate store
-	var list = this.certstore.insertCertificates2(this.crypto, othercerts, true, this.path);
+//	var list = this.certstore.insertCertificates2(this.crypto, othercerts, true, this.path);
+	var list = this.certstore.insertCertificates2(this.crypto, certs, true, this.path);
 	
 	// Process my own certificates. Should be one at maximum, matching a request
-	for (var i = 0; i < mycerts.length; i++) {
-		var cert = mycerts[i];
+//	for (var i = 0; i < mycerts.length; i++) {
+	for (var i = 0; i < certs.length; i++) {
+//		var cert = mycerts[i];
+		var cert = certs[i];
 		var chr = cert.getCHR();
 		
-		var havecert = this.certstore.getCertificate(this.path, chr);
-		if (havecert != null) {
-			GPSystem.trace("We already have " + cert.toString() + " - ignored...");
-		} else {
+		if (this.holderId == chr.getHolder()) {
+//		var havecert = this.certstore.getCertificate(this.path, chr);
+//		if (havecert != null) {
+//			GPSystem.trace("We already have " + cert.toString() + " - ignored...");
+//		} else {
 			var prk = this.certstore.getPrivateKey(this.path, chr);
 			if (prk == null) {
 				GPSystem.trace("We do not have a key for " + cert.toString() + " - ignored...");
 			} else {
-				this.certstore.storeCertificate(this.path, cert, true);
+//				this.certstore.storeCertificate(this.path, cert, true);
 
 				if (this.removePreviousKey) {
 					var req = this.certstore.getRequest(this.path, chr);

@@ -161,20 +161,37 @@ CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 			<div id="activechain"/>
 			<div id="pendingrequests"/>
 			<h2>Possible actions:</h2>
+			<form action="" method="get">
+				Public Key Specification
+				<input name="op" type="hidden" value="change"/>
+				<select name="keyspec" size="1">
+				</select>
+				<button type="submit">Change</button>
+			</form>
 			<ul>
 			</ul>
 			<p><a href={url[0] + "/holderlist?path=" + this.service.path }>Browse Document Verifier...</a></p>
 		</div>
 	
+	var l = page.form.select;
+	for (var i = 0; i < CVCAService.KeySpecification.length; i++) {
+		var o = CVCAService.KeySpecification[i];
+		if (this.service.currentKeySpec == o.id) {
+			l.option += <option value={o.id} selected="selected">{o.name}</option>
+		} else {
+			l.option += <option value={o.id}>{o.name}</option>
+		}
+	}
+	
 	var l = page.ul;
 	
 	// ToDo: Refactor to getter
 	if (this.service.cvca.isOperational()) {
-		l.li += <li><a href="?link">Generate link certificate without domain parameter</a></li>
-		l.li += <li><a href="?linkdp">Generate link certificate with domain parameter</a></li>
-		l.li += <li><a href="?linkdp10">Generate 10 link certificates with domain parameter</a></li>
+		l.li += <li><a href="?op=link">Generate link certificate without domain parameter</a></li>
+		l.li += <li><a href="?op=linkdp">Generate link certificate with domain parameter</a></li>
+		l.li += <li><a href="?op=linkdp10">Generate 10 link certificates with domain parameter</a></li>
 	} else {
-		l.li += <li><a href="?linkdp">Generate root certificate</a></li>
+		l.li += <li><a href="?op=linkdp">Generate root certificate</a></li>
 	}
 	
 	// ToDo: Refactor to getter
@@ -297,24 +314,33 @@ CVCAUI.prototype.handleInquiry = function(req, res) {
 		}
 	} else {
 		// Handle operations
-		var operation = req.queryString;
+		if (req.queryString) {
+			// Handle operations
+			var operation = CertStoreBrowser.parseQueryString(req.queryString);
 
-		switch(operation) {
-		case "link":
-			this.service.generateLinkCertificate(false);
-			this.serveRefreshPage(req, res, url);
-			break;
-		case "linkdp":
-			this.service.generateLinkCertificate(true);
-			this.serveRefreshPage(req, res, url);
-			break;
-		case "linkdp10":
-			for (var i = 0; i < 10; i++) {
+			switch(operation.op) {
+			case "change":
+				this.service.changeKeySpecification(operation.keyspec);
+				this.serveStatusPage(req, res, url);
+				break;
+			case "link":
+				this.service.generateLinkCertificate(false);
+				this.serveRefreshPage(req, res, url);
+				break;
+			case "linkdp":
 				this.service.generateLinkCertificate(true);
+				this.serveRefreshPage(req, res, url);
+				break;
+			case "linkdp10":
+				for (var i = 0; i < 10; i++) {
+					this.service.generateLinkCertificate(true);
+				}
+				this.serveRefreshPage(req, res, url);
+				break;
+			default:
+				this.serveStatusPage(req, res, url);
 			}
-			this.serveRefreshPage(req, res, url);
-			break;
-		default:
+		} else {
 			this.serveStatusPage(req, res, url);
 		}
 	}

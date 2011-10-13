@@ -155,7 +155,7 @@ TAConnection.prototype.requestCertificate = function(certreq) {
 		var ns = new Namespace("uri:EAC-PKI-DV-Protocol/" + this.version);
 	}
 
-	var ns1 = new Namespace("uri:eacBT/1.0");
+	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
 	var request =
 		<ns:RequestCertificate xmlns:ns={ns} xmlns:ns1={ns1}>
@@ -216,15 +216,27 @@ TAConnection.prototype.sendCertificates = function(certificates, messageID, stat
 		var ns = new Namespace("uri:EAC-PKI-DV-Protocol/" + this.version);
 	}
 
-	var ns1 = new Namespace("uri:eacBT/1.0");
+	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
-	var request =
-		<ns:SendCertificates xmlns:ns={ns} xmlns:ns1={ns1}>
-			<messageID>{messageID}</messageID>
-			<statusInfo>{statusInfo}</statusInfo>
-			<certificateSeq>
-			</certificateSeq>
-		</ns:SendCertificates>;
+	if (this.version == "1.0") {
+		var request =
+			<ns:SendCertificates xmlns:ns={ns} xmlns:ns1={ns1}>
+				<messageID>{messageID}</messageID>
+				<statusInfo>{statusInfo}</statusInfo>
+				<certificateSeq>
+				</certificateSeq>
+			</ns:SendCertificates>;
+	} else {
+		var request =
+			<ns:SendCertificates xmlns:ns={ns} xmlns:ns1={ns1}>
+				<messageID>
+					<ns1:messageID>{messageID}</ns1:messageID>
+				</messageID>
+				<statusInfo>{statusInfo}</statusInfo>
+				<certificateSeq>
+				</certificateSeq>
+			</ns:SendCertificates>;
+	}
 
 	var list = request.certificateSeq;
 

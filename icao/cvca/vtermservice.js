@@ -59,6 +59,7 @@ function VTermService(certstorepath, path, parentURL) {
 	
 	this.lock = new java.util.concurrent.locks.ReentrantLock(true);
 	this.version = "1.1";
+	this.rsaKeySize = 1024;
 }
 
 
@@ -75,13 +76,12 @@ VTermService.prototype.setSendCertificateURL = function(url) {
 
 
 /**
- * Sets the key specification for generating requests
+ * Sets the key size for certificate requests using RSA keys
  *
- * @param {Key} keyparam a key object containing key parameters (e.g. EC Curve)
- * @param {ByteString} algorithm the terminal authentication algorithm object identifier
+ * @param {Number} keysize the RSA key size i bits
  */
-VTermService.prototype.setKeySpec = function(keyparam, algorithm) {
-	this.cvca.setKeySpec(keyparam, algorithm);
+VTermService.prototype.setRSAKeySize = function(keysize) {
+	this.rsaKeySize = keysize;
 }
 
 
@@ -225,14 +225,21 @@ VTermService.prototype.updateCACertificates = function(async) {
  */
 VTermService.prototype.renewCertificate = function(async, forceinitial, holderID) {
 
-	var dp = this.ss.getDefaultDomainParameter(this.path);
 	var algo = this.ss.getDefaultPublicKeyOID(this.path);
+	if (CVC.isECDSA(algo)) {
+		var keyspec = this.ss.getDefaultDomainParameter(this.path);
+	} else {
+		var keyspec = new Key();
+		keyspec.setType(Key.PUBLIC);
+		keyspec.setSize(this.rsaKeySize);
+	}
+
 	var car = this.ss.getCurrentCHR(this.path);
 
 	var tcc = new CVCCA(this.crypto, this.ss, null, null, this.path + "/" + holderID);
 
 	tcc.setRemovePreviousKey(true);
-	tcc.setKeySpec(dp, algo);
+	tcc.setKeySpec(keyspec, algo);
 	
 	// Create a new request
 	var req = tcc.generateRequest(car, forceinitial);

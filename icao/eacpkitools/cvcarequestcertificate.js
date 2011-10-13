@@ -24,7 +24,7 @@
  * @fileoverview Request certificate from CVCA
  */
 
-load("../cvcaconnection.js");
+load("../lib/taconnection.js");
 load("../cvcertstore.js");
 
 
@@ -63,7 +63,7 @@ var reqbin = CVCertificateStore.loadBinaryFile(reqfile);
 
 var req = new CVC(reqbin);
 
-var cc = new CVCAConnection(url);
+var cc = new TAConnection(url, true);
 cc.verbose = true;
 
 var certlist = cc.getCACertificates();

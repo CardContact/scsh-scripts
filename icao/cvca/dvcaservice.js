@@ -51,6 +51,7 @@ function DVCAService(path, name, parent, parentURL) {
 	this.outqueuemap = [];
 	this.terminalCertificatePolicies = [];
 	this.version = "1.1";
+	this.rsaKeySize = 1536;
 }
 
 
@@ -62,6 +63,17 @@ function DVCAService(path, name, parent, parentURL) {
  */
 DVCAService.prototype.setSendCertificateURL = function(url) {
 	this.myURL = url;
+}
+
+
+
+/**
+ * Sets the key size for certificate requests using RSA keys
+ *
+ * @param {Number} keysize the RSA key size i bits
+ */
+DVCAService.prototype.setRSAKeySize = function(keysize) {
+	this.rsaKeySize = keysize;
 }
 
 
@@ -180,24 +192,27 @@ DVCAService.prototype.checkRequestSemantics = function(req) {
 		return ServiceRequest.FAILURE_SYNTAX;
 	}
 	
-	// Check that request key domain parameter match current domain parameter
-	var dp = this.ss.getDomainParameter(this.path, chr);
+	if (CVC.isECDSA(oid)) {
+		// Check that request key domain parameter match current domain parameter
+		var dp = this.ss.getDomainParameter(this.path, chr);
 	
-	if (!puk.getComponent(Key.ECC_P).equals(dp.getComponent(Key.ECC_P)) ||
-		!puk.getComponent(Key.ECC_A).equals(dp.getComponent(Key.ECC_A)) ||
-		!puk.getComponent(Key.ECC_B).equals(dp.getComponent(Key.ECC_B)) ||
-		!puk.getComponent(Key.ECC_GX).equals(dp.getComponent(Key.ECC_GX)) ||
-		!puk.getComponent(Key.ECC_GY).equals(dp.getComponent(Key.ECC_GY)) ||
-		!puk.getComponent(Key.ECC_N).equals(dp.getComponent(Key.ECC_N)) ||
-		!puk.getComponent(Key.ECC_H).equals(dp.getComponent(Key.ECC_H))) {
-		GPSystem.trace("Domain parameter in request do not match current domain parameter");
-		return ServiceRequest.FAILURE_DOMAIN_PARAMETER;
+		if (!puk.getComponent(Key.ECC_P).equals(dp.getComponent(Key.ECC_P)) ||
+			!puk.getComponent(Key.ECC_A).equals(dp.getComponent(Key.ECC_A)) ||
+			!puk.getComponent(Key.ECC_B).equals(dp.getComponent(Key.ECC_B)) ||
+			!puk.getComponent(Key.ECC_GX).equals(dp.getComponent(Key.ECC_GX)) ||
+			!puk.getComponent(Key.ECC_GY).equals(dp.getComponent(Key.ECC_GY)) ||
+			!puk.getComponent(Key.ECC_N).equals(dp.getComponent(Key.ECC_N)) ||
+			!puk.getComponent(Key.ECC_H).equals(dp.getComponent(Key.ECC_H))) {
+			GPSystem.trace("Domain parameter in request do not match current domain parameter");
+			return ServiceRequest.FAILURE_DOMAIN_PARAMETER;
+		}
 	}
 	
 	if (req.isAuthenticatedRequest()) {
 		var puk = this.dvca.getAuthenticPublicKey(req.getOuterCAR());
 		if (puk) {
-			if (!req.verifyATWith(this.crypto, puk)) {
+			var oid = this.dvca.getIssuedCertificate(req.getOuterCAR()).getPublicKeyOID();
+			if (!req.verifyATWith(this.crypto, puk, oid)) {
 				GPSystem.trace("Error verifying outer signature");
 				return ServiceRequest.FAILURE_OUTER_SIGNATURE;
 			}
@@ -504,11 +519,18 @@ DVCAService.prototype.updateCACertificates = function(async) {
  */
 DVCAService.prototype.renewCertificate = function(async, forceinitial) {
 
-	var dp = this.ss.getDefaultDomainParameter(this.path);
 	var algo = this.ss.getDefaultPublicKeyOID(this.path);
+	if (CVC.isECDSA(algo)) {
+		var keyspec = this.ss.getDefaultDomainParameter(this.path);
+	} else {
+		var keyspec = new Key();
+		keyspec.setType(Key.PUBLIC);
+		keyspec.setSize(this.rsaKeySize);
+	}
+	
 	var car = this.ss.getCurrentCHR(CVCertificateStore.parentPathOf(this.path));
 	
-	this.dvca.setKeySpec(dp, algo);
+	this.dvca.setKeySpec(keyspec, algo);
 	
 	// Create a new request
 	var req = this.dvca.generateRequest(car, forceinitial);
