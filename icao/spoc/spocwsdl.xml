@@ -179,8 +179,8 @@
 			<wsdl:output message="SPOC:RequestCertificateResponse"></wsdl:output>			
 		</wsdl:operation>
 		<wsdl:operation name="SendCertificates">
-			<wsdl:input message="SPOC:SendCertificateRequest"></wsdl:input>
-			<wsdl:output message="SPOC:SendCertificateResponse"></wsdl:output>
+			<wsdl:input message="SPOC:SendCertificatesRequest"></wsdl:input>
+			<wsdl:output message="SPOC:SendCertificatesResponse"></wsdl:output>
 		</wsdl:operation>
 		<wsdl:operation name="GetCACertificates">
 			<wsdl:input message="SPOC:GetCACertificatesRequest"></wsdl:input>

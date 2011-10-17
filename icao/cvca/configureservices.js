@@ -35,7 +35,7 @@ var datadir = "c:/data/eacpki";
 
 
 
-var bookmarkservicelist = ["CVCA", "DVCA", "TCC", "VT"];
+var bookmarkservicelist = ["CVCA", "DVCA", "TCC", "VT", "CVCA-FU" ];
 
 function createBookmarks(ui, myself)  {
 	for (var i = 0; i < bookmarkservicelist.length; i++) {
@@ -103,6 +103,8 @@ var dVPolicy = { certificateValidityDays: 4,
 // Policy for UTDVCA
 cvca.setDVCertificatePolicy(dVPolicy, /^UTDVCA.*$/);
 
+var spoc = { country: "FU", name: "Other country", holderIDs: ["FUCVCA"], url: "http://localhost:8080/se/spoc-fu", async: false };
+cvca.addSPOC(spoc);
 
 
 // Create GUI
@@ -110,7 +112,25 @@ var cvcaui = new CVCAUI(cvca);
 createBookmarks(cvcaui, "CVCA");
 
 SOAPServer.registerService("cvca", cvca.getTR3129ServicePort(), cvcaui);
+SOAPServer.registerService("spoc", cvca.getSPOCServicePort(), cvcaui);
 
+
+
+// Create a CVCA for a foreign country
+var cvca = new CVCAService(datadir +  "/cvca-fu", "FUCVCA");
+cvca.setRootCertificatePolicy(rootPolicy);
+cvca.setLinkCertificatePolicy(linkPolicy);
+cvca.setDVCertificatePolicy(dVPolicy);
+
+var spoc = { country: "UT", name: "Utopia",  holderIDs: ["UTCVCA"], url: "http://localhost:8080/se/spoc", async: true };
+cvca.addSPOC(spoc);
+
+// Create GUI
+var cvcaui = new CVCAUI(cvca);
+createBookmarks(cvcaui, "CVCA-FU");
+
+SOAPServer.registerService("cvca-fu", cvca.getTR3129ServicePort(), cvcaui);
+SOAPServer.registerService("spoc-fu", cvca.getSPOCServicePort(), cvcaui);
 
 
 // --- DVCA section ---

@@ -159,6 +159,7 @@ CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 		<div>
 			<h1>CVCA Service {status}</h1>
 			<div id="activechain"/>
+			<div id="pendingoutboundrequests"/>
 			<div id="pendingrequests"/>
 			<h2>Possible actions:</h2>
 			<form action="" method="get">
@@ -194,6 +195,8 @@ CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 		l.li += <li><a href="?op=linkdp">Generate root certificate</a></li>
 	}
 	
+	l.li += <li><a href="?op=getcacertificates">Get CA certificates of registered SPOCs</a></li>
+
 	// ToDo: Refactor to getter
 	var certlist = this.service.cvca.getCertificateList();
 	
@@ -226,7 +229,6 @@ CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 				<td>{CommonUI.dateString(cvc.getCXD())}</td>
 			</tr>
 		}
-	
 
 		// Certificate list
 		var div = page.div.(@id == "activechain");
@@ -234,6 +236,50 @@ CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 		div.appendChild(t);
 	}
 	
+	var queue = this.service.listOutboundRequests();
+	
+	if (queue.length > 0) {
+		var t = <table class="content"/>;
+
+		t.tr += <tr><th width="20%">MessageID</th><th>Request</th><th>Status</th><th>Final Status</th></tr>;
+
+		for (var i = 0; i < queue.length; i++) {
+			var sr = queue[i];
+
+			var tr = <tr/>;
+			var msgid = sr.getMessageID();
+			if (!msgid) {
+				msgid = "";
+			}
+			tr.td += <td>{msgid}</td>
+			
+			if (sr.isCertificateRequest()) {
+				var refurl = url[0] + "/outrequest?" + "index=" + i;
+				tr.td += <td><a href={refurl}>{sr.getCertificateRequest().toString()}</a></td>;
+			} else {
+				tr.td += <td>GetCertificates</td>;
+			}
+			var status = sr.getStatusInfo();
+			if (!status) {
+				status = "Undefined";
+			}
+			var finalStatus = sr.getFinalStatusInfo();
+			if (!finalStatus) {
+				finalStatus = "Not yet received";
+			}
+			
+			tr.td += <td>{status.substr(0, 24)}</td>
+			tr.td += <td>{finalStatus.substr(0, 24)}</td>
+			t.tr += tr;
+		}
+
+		// Pending requests list
+		var div = page.div.(@id == "pendingoutboundrequests");
+		div.h2 = "Outbound requests:";
+		
+		div.appendChild(t);
+	}
+
 	var queue = this.service.listRequests();
 
 	if (queue.length > 0) {
@@ -335,6 +381,10 @@ CVCAUI.prototype.handleInquiry = function(req, res) {
 				for (var i = 0; i < 10; i++) {
 					this.service.generateLinkCertificate(true);
 				}
+				this.serveRefreshPage(req, res, url);
+				break;
+			case "getcacertificates":
+				this.service.getCACertificatesFromSPOCs();
 				this.serveRefreshPage(req, res, url);
 				break;
 			default:

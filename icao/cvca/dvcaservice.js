@@ -853,7 +853,7 @@ DVCAService.prototype.SendCertificates = function(soapBody) {
 		sr.setStatusInfo(statusInfo);
 		var returnCode = ServiceRequest.OK_RECEIVED_CORRECTLY;
 
-		if (returnCode.substr(0, 3) == "ok_") {
+		if (statusInfo.substr(0, 3) == "ok_") {
 			var certlist = [];
 			GPSystem.trace("Received certificates from CVCA:");
 			for each (var c in soapBody.certificateSeq.ns1::certificate) {

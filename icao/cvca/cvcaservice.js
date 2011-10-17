@@ -44,9 +44,13 @@ function CVCAService(path, name) {
 	this.cvca = new CVCCA(this.crypto, this.ss, name, name);
 	this.path = this.cvca.path;
 	this.queue = [];
+	this.outqueue = [];
+	this.outqueuemap = [];
 	this.dVCertificatePolicies = [];
 	this.version = "1.1";
 	this.changeKeySpecification("brainpoolP256r1withSHA256");
+	this.spoclist = [];
+	this.spocmap = [];
 }
 
 
@@ -151,6 +155,45 @@ CVCAService.prototype.setDVCertificatePolicy = function(policy, chrregex) {
  */
 CVCAService.prototype.getTR3129ServicePort = function() {
 	return new TR3129ServicePort(this);
+}
+
+
+
+/**
+ * Obtain a service port for SPOC service calls
+ * 
+ * @type Object
+ * @return the service port that can be registered with the SOAP Server
+ */
+CVCAService.prototype.getSPOCServicePort = function() {
+	return new SPOCServicePort(this);
+}
+
+
+
+/**
+ * Add a SPOC to the list of SPOCs
+ *
+ * @param {String} country the 2 letter ISO 3166-1 ALPHA-2 country code
+ * @param {String} name a verbose name of the SPOC
+ * @param {String} url the URL of the SPOC
+ */
+CVCAService.prototype.addSPOC = function(spoc) {
+	this.spoclist.push(spoc);
+	this.spocmap[spoc.country] = spoc;
+}
+
+
+
+/**
+ * Return SPOC configuration for given country
+ *
+ * @param {String} country the 2 letter ISO 3166-1 ALPHA-2 country code
+ * @type Object
+ * @return the SPOC configuration
+ */
+CVCAService.prototype.getSPOC = function(country) {
+	return this.spocmap[country];
 }
 
 
@@ -382,6 +425,33 @@ CVCAService.prototype.determineCertificateList = function(req) {
 
 
 /**
+ * Compile a list of relevant CA certificates for GetCACertificates()
+ *
+ * @param {Boolean} ouronly true if this list only contains our own certificates but no certificate of other CVCAs
+ * @type CVC[]
+ * @return the list of CVC certificates
+ */
+CVCAService.prototype.compileCertificateList = function(ouronly) {
+	var certlist = this.cvca.getCertificateList();
+	if (!ouronly) {
+		for each (var spoc in this.spoclist) {
+			for each (var holderId in spoc.holderIDs) {
+				var path = "/" + holderId;
+				print("HolderID: " + holderId);
+				var chr = this.ss.getCurrentCHR(path);
+				print("Current chr: " + chr);
+				if (chr != null) {
+					certlist = certlist.concat(this.ss.getCertificateChain(path, chr));
+				}
+			}
+		}
+	}
+	return certlist;
+}
+
+
+
+/**
  * Enumerate all pending service requests
  *
  * @returns the pending service requests
@@ -432,7 +502,8 @@ CVCAService.prototype.processRequest = function(index) {
 		}
 	} else {								// GetCertificates
 		if (sr.getStatusInfo().substr(0, 3) == "ok_") {
-			certlist = this.cvca.getCertificateList();
+			// Only return our own certificate to the other SPOC
+			certlist = this.compileCertificateList(sr.getType() == "SPOC");
 		}
 	}
 	
@@ -453,61 +524,163 @@ CVCAService.prototype.deleteRequest = function(index) {
 
 
 /**
+ * Enumerate all pending service requests to superior systems
+ *
+ * @returns the pending service requests
+ * @type ServiceRequest[]
+ */
+CVCAService.prototype.listOutboundRequests = function() {
+	return this.outqueue;
+}
+
+
+
+/**
+ * Gets the indexed request
+ *
+ * @param {Number} index the index into the work queue identifying the request
+ * @returns the indexed request
+ * @type ServiceRequest
+ */
+CVCAService.prototype.getOutboundRequest = function(index) {
+	return this.outqueue[index];
+}
+
+
+
+/**
+ * Adds an outbound request to the internal queue, removing the oldest entry if more than
+ * 10 entries are contained
+ *
+ * @param {ServiceRequest} sr the service request
+ */
+CVCAService.prototype.addOutboundRequest = function(sr) {
+	if (this.outqueue.length >= 10) {
+		var oldsr = this.outqueue.shift();
+		var msgid = oldsr.getMessageID();
+		if (msgid) {
+			delete(this.outqueuemap[msgid]);
+		}
+	}
+	this.outqueue.push(sr);
+	var msgid = sr.getMessageID();
+	if (msgid) {
+		this.outqueuemap[msgid] = sr;
+	}
+}
+
+
+
+/**
  * Send certificates using a webservice call
  *
  * @param {ServiceRequest} serviceRequest the underlying request
  * @param {CVC[]} certificates the list of certificates to send
  */
 CVCAService.prototype.sendCertificates = function(serviceRequest, certificates) {
-
-	var soapConnection = new SOAPConnection(SOAPConnection.SOAP11);
-
-	var ns = new Namespace("uri:EAC-PKI-DV-Protocol/" + this.version);
-	var ns1 = new Namespace("uri:eacBT/" + this.version);
-
-	if (this.version == "1.0") {
-		var request =
-			<ns:SendCertificates xmlns:ns={ns} xmlns:ns1={ns1}>
-				<messageID>{serviceRequest.getMessageID()}</messageID>
-				<statusInfo>{serviceRequest.getStatusInfo()}</statusInfo>
-				<certificateSeq>
-				</certificateSeq>
-			</ns:SendCertificates>;
+	if (serviceRequest.getType() == "SPOC") {
+		var con = new SPOCConnection(serviceRequest.getResponseURL());
+		var callerID = this.name.substr(0, 2);
+		var result = con.sendCertificates(certificates, callerID, serviceRequest.getMessageID(), serviceRequest.getStatusInfo());
+		serviceRequest.setFinalStatusInfo(result);
 	} else {
-		var request =
-			<ns:SendCertificates xmlns:ns={ns} xmlns:ns1={ns1}>
-				<messageID>
-					<ns1:messageID>{serviceRequest.getMessageID()}</ns1:messageID>
-				</messageID>
-				<statusInfo>{serviceRequest.getStatusInfo()}</statusInfo>
-				<certificateSeq>
-				</certificateSeq>
-			</ns:SendCertificates>;
-	}
-	
-	var list = request.certificateSeq;
+		var soapConnection = new SOAPConnection(SOAPConnection.SOAP11);
 
-	for (var i = 0; i < certificates.length; i++) {
-		var cvc = certificates[i];
-		list.certificate += <ns1:certificate xmlns:ns1={ns1}>{cvc.getBytes().toString(BASE64)}</ns1:certificate>
-	}
+		var ns = new Namespace("uri:EAC-PKI-DV-Protocol/" + this.version);
+		var ns1 = new Namespace("uri:eacBT/" + this.version);
 
-	GPSystem.trace(request);
+		if (this.version == "1.0") {
+			var request =
+				<ns:SendCertificates xmlns:ns={ns} xmlns:ns1={ns1}>
+					<messageID>{serviceRequest.getMessageID()}</messageID>
+					<statusInfo>{serviceRequest.getStatusInfo()}</statusInfo>
+					<certificateSeq>
+					</certificateSeq>
+				</ns:SendCertificates>;
+		} else {
+			var request =
+				<ns:SendCertificates xmlns:ns={ns} xmlns:ns1={ns1}>
+					<messageID>
+						<ns1:messageID>{serviceRequest.getMessageID()}</ns1:messageID>
+					</messageID>
+					<statusInfo>{serviceRequest.getStatusInfo()}</statusInfo>
+					<certificateSeq>
+					</certificateSeq>
+				</ns:SendCertificates>;
+		}
 	
-	try	{
-		var response = soapConnection.call(serviceRequest.getResponseURL(), request);
+		var list = request.certificateSeq;
+
+		for (var i = 0; i < certificates.length; i++) {
+			var cvc = certificates[i];
+			list.certificate += <ns1:certificate xmlns:ns1={ns1}>{cvc.getBytes().toString(BASE64)}</ns1:certificate>
+		}
+
+		GPSystem.trace(request);
+	
+		try	{
+			var response = soapConnection.call(serviceRequest.getResponseURL(), request);
+		}
+		catch(e) {
+			GPSystem.trace("SOAP call to " + serviceRequest.getResponseURL() + " failed : " + e);
+			throw new GPError("CVCAService", GPError.DEVICE_ERROR, 0, "SendCertificates failed with : " + e);
+		}
+	
+		var result = response.Result.ns1::returnCode.toString();
+	
+		serviceRequest.setFinalStatusInfo(result);
 	}
-	catch(e) {
-		GPSystem.trace("SOAP call to " + serviceRequest.getResponseURL() + " failed : " + e);
-		throw new GPError("CVCAService", GPError.DEVICE_ERROR, 0, "SendCertificates failed with : " + e);
-	}
-	
-	var result = response.Result.ns1::returnCode.toString();
-	
-	serviceRequest.setFinalStatusInfo(result);
 }
 
 
+
+CVCAService.prototype.getCACertificatesFromSPOCs = function() {
+	for (var i = 0; i < this.spoclist.length; i++) {
+		this.getCACertificatesFromSPOC(this.spoclist[i].country);
+	}
+}
+
+
+
+CVCAService.prototype.getCACertificatesFromSPOC = function(country) {
+	var spoc = this.spocmap[country];
+	
+	msgid = this.crypto.generateRandom(2).toString(HEX);
+
+	var sr = new ServiceRequest(msgid, spoc.url);
+	this.addOutboundRequest(sr);
+	
+	var con = new SPOCConnection(spoc.url);
+	var callerID = this.name.substr(0, 2);
+	var list = con.getCACertificates(callerID, msgid);
+	con.close();
+	
+	var certlist = [];
+	
+	if (!list) {
+		sr.setStatusInfo(con.getLastError());
+	} else {
+		sr.setStatusInfo(ServiceRequest.OK_CERT_AVAILABLE);
+		for (var i = 0; i < list.length; i++) {
+			var cvc = new CVC(list[i]);
+			certlist.push(cvc);
+			GPSystem.trace(cvc);
+		}
+	}
+
+	var list = this.cvca.importCertificates(certlist);
+
+	if (list.length > 0) {
+		print("Warning: Could not import the following certificates");
+		for (var i = 0; i < list.length; i++) {
+			print(list[i]);
+		}
+	}
+}
+
+
+
+// --- WebServices
 
 /**
  * Webservice that returns the list of certificates for this CA
@@ -532,11 +705,12 @@ CVCAService.prototype.GetCACertificates = function(soapBody) {
 							soapBody.messageID.ns1::messageID,
 							soapBody.responseURL.ns1::string);
 
+		asyncreq.setType("DVCA");
 		this.queue.push(asyncreq);
 		var response = ServiceRequest.OK_SYNTAX;
 	} else {
 		// Add certificate list to response
-		certlist = this.cvca.getCertificateList();
+		certlist = this.compileCertificateList(false);
 	}
 	
 	var response =
@@ -652,4 +826,129 @@ TR3129ServicePort.prototype.GetCACertificates = function(soapBody) {
 
 TR3129ServicePort.prototype.RequestCertificate = function(soapBody) {
 	return this.service.RequestCertificate(soapBody);
+}
+
+
+/**
+ * The SPOC Service port class
+ */
+function SPOCServicePort(service) {
+	this.service = service;
+}
+
+SPOCServicePort.prototype.GeneralMessage = function(soapBody) {
+	print(soapBody.toXMLString());
+	throw new Error("Not implemented");
+}
+
+
+
+SPOCServicePort.prototype.GetCACertificatesRequest = function(soapBody) {
+
+	var ns = new Namespace("http://namespaces.unmz.cz/csn369791");
+
+	var callerID = soapBody.ns::callerID.toString();
+	var messageID = soapBody.ns::messageID.toString();
+
+	var certlist = [];
+
+	var spoc = this.service.getSPOC(callerID);
+	if (!spoc) {
+		var result = ServiceRequest.FAILURE_REQUEST_NOT_ACCEPTED;
+	} else {
+		var result = ServiceRequest.OK_CERT_AVAILABLE;
+	
+		if (spoc.async) {
+			var asyncreq = new ServiceRequest(
+							messageID,
+							spoc.url);
+			asyncreq.setType("SPOC");
+			
+			this.service.queue.push(asyncreq);
+			var result = ServiceRequest.OK_RECEPTION_ACK;
+		} else {
+			// Add certificate list to response
+			certlist = this.service.compileCertificateList(true);
+		}
+	}
+	
+	if (certlist.length > 0) {
+		var response =
+			<csn:GetCACertificatesResponse xmlns:csn={ns}>
+				<!--Optional:-->
+				<csn:certificateSequence>
+				</csn:certificateSequence>
+				<csn:result>{result}</csn:result>
+			</csn:GetCACertificatesResponse>
+	
+		var list = response.ns::certificateSequence;
+
+		for (var i = 0; i < certlist.length; i++) {
+			var cvc = certlist[i];
+			list.ns::certificate += <cns:certificate xmlns:cns={ns}>{cvc.getBytes().toString(BASE64)}</cns:certificate>
+		}
+	} else {
+		var response =
+			<csn:GetCACertificatesResponse xmlns:csn={ns}>
+				<csn:result>{result}</csn:result>
+			</csn:GetCACertificatesResponse>
+	}
+
+	return response;
+}
+
+
+
+SPOCServicePort.prototype.RequestCertificate = function(soapBody) {
+	print(soapBody.toXMLString());
+	throw new Error("Not implemented");
+}
+
+SPOCServicePort.prototype.SendCertificatesRequest = function(soapBody) {
+
+	var ns = new Namespace("http://namespaces.unmz.cz/csn369791");
+
+	var callerID = soapBody.ns::callerID.toString();
+	var statusInfo = soapBody.ns::statusInfo.toString();
+
+	if (statusInfo == ServiceRequest.NEW_CERT_AVAILABLE_NOTIFICATION) {
+		var sr = new ServiceRequest();
+	} else {
+		var msgid = soapBody.ns::messageID.toString();
+		var sr = this.service.outqueuemap[msgid];
+	}
+	
+	if (sr) {
+		sr.setStatusInfo(statusInfo);
+		var returnCode = ServiceRequest.OK_RECEIVED_CORRECTLY;
+
+		if (statusInfo.substr(0, 3) == "ok_") {
+			var certlist = [];
+			GPSystem.trace("Received certificates from CVCA:");
+			for each (var c in soapBody.ns::certificateSequence.ns::certificate) {
+				try	{
+					var cvc = new CVC(new ByteString(c, BASE64));
+				}
+				catch(e) {
+					GPSystem.trace("Error decoding certificate: " + e);
+					var returnCode = ServiceRequest.FAILURE_SYNTAX;
+					break;
+				}
+				certlist.push(cvc);
+				GPSystem.trace(cvc);
+			}
+
+			this.service.cvca.importCertificates(certlist);
+		}
+		sr.setFinalStatusInfo(returnCode);
+	} else {
+		returnCode = ServiceRequest.FAILURE_MESSAGEID_UNKNOWN;
+	}
+	
+	var response =
+		<csn:SendCertificatesResponse xmlns:csn={ns}>
+			<csn:result>{returnCode}</csn:result>
+		</csn:SendCertificatesResponse>
+
+	return response;
 }

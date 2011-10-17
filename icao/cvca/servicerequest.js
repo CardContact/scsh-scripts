@@ -52,6 +52,7 @@ ServiceRequest.OK_SYNTAX									= "ok_syntax";
 ServiceRequest.OK_RECEIVED_CORRECTLY						= "ok_received_correctly";
 ServiceRequest.OK_RECEPTION_ACK								= "ok_reception_ack";
 ServiceRequest.OK_SIGNATURE_AVAILABLE						= "ok_signature_available";
+ServiceRequest.NEW_CERT_AVAILABLE_NOTIFICATION				= "new_cert_available_notification";
 ServiceRequest.FAILURE_SYNTAX								= "failure_syntax";
 ServiceRequest.FAILURE_INNER_SIGNATURE						= "failure_inner_signature";
 ServiceRequest.FAILURE_OUTER_SIGNATURE						= "failure_outer_signature";
@@ -143,13 +144,34 @@ ServiceRequest.prototype.getStatusInfo = function() {
 /**
  * Sets the status information for this request
  *
- * @returns the last status information which may be undefined
- * @type String
+ * @param {String} statusInfo the last status information
  */
 ServiceRequest.prototype.setStatusInfo = function(statusInfo) {
 	this.statusInfo = statusInfo;
 }
 
+
+
+/**
+ * Sets the service request type
+ *
+ * @param {String} type the request type
+ */
+ServiceRequest.prototype.setType = function(type) {
+	this.type = type;
+}
+
+
+
+/**
+ * Gets the service request type
+ *
+ * @returns the service request type
+ * @type String
+ */
+ServiceRequest.prototype.getType = function() {
+	return this.type;
+}
 
 
 /**
