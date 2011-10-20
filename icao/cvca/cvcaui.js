@@ -64,8 +64,8 @@ CVCAUI.prototype.handleGetCertificateRequestDetails = function(req, res, url) {
 			this.serveRefreshPage(req, res, url);
 		} else {
 			sr.setStatusInfo(op.action);
-			this.service.processRequest(index);
-			this.serveRefreshPage(req, res, url);
+			var status = this.service.processRequest(index);
+			this.serveRefreshPage(req, res, url, status);
 		}
 	} else {
 		var page = 
@@ -113,8 +113,8 @@ CVCAUI.prototype.handleRequestCertificateRequestDetails = function(req, res, url
 			this.serveRefreshPage(req, res, url);
 		} else {
 			sr.setStatusInfo(op.action);
-			this.service.processRequest(index);
-			this.serveRefreshPage(req, res, url);
+			var status = this.service.processRequest(index);
+			this.serveRefreshPage(req, res, url, status);
 		}
 	} else {
 		var page = 
@@ -296,6 +296,11 @@ CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 			} else {
 				var refurl = url[0] + "/getcert?index=" + i;
 				var reqstr = "GetCertificates";
+				if (sr.getType() == "SPOC") {
+					reqstr += " (SPOC)";
+				} else {
+					reqstr += " (DVCA)";
+				}
 			}
 			var status = sr.getStatusInfo();
 			if (!status) {
@@ -384,8 +389,8 @@ CVCAUI.prototype.handleInquiry = function(req, res) {
 				this.serveRefreshPage(req, res, url);
 				break;
 			case "getcacertificates":
-				this.service.getCACertificatesFromSPOCs();
-				this.serveRefreshPage(req, res, url);
+				var status = this.service.getCACertificatesFromSPOCs();
+				this.serveRefreshPage(req, res, url, status);
 				break;
 			default:
 				this.serveStatusPage(req, res, url);

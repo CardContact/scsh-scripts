@@ -105,10 +105,10 @@ VTermUI.prototype.serveStatusPage = function(req, res, url) {
 			<ul>
 				<li><a href="?op=update">Update CVCA/DVCA certificates synchronously</a></li>
 				<li><a href={"?op=updateasync&holderID=" + this.holderID}>Update CVCA/DVCA certificates asynchronously</a></li>
-				<li><a href={"?op=renew&holderID=" + this.holderID}>Renew certificate synchronously</a></li>
-<!--				<li><a href={"?op=renewasync&holderID=" + this.holderID}>Renew certificate asynchronously</a></li> -->
 				<li><a href={"?op=initial&holderID=" + this.holderID}>Request initial certificate synchronously</a></li>
 <!--				<li><a href={"?op=initialasync&holderID=" + this.holderID}>Request initial certificate asynchronously</a></li> -->
+				<li><a href={"?op=renew&holderID=" + this.holderID}>Renew certificate synchronously</a></li>
+<!--				<li><a href={"?op=renewasync&holderID=" + this.holderID}>Renew certificate asynchronously</a></li> -->
 			</ul>
 		</div>
 

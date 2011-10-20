@@ -93,12 +93,12 @@ TCCUI.prototype.serveStatusPage = function(req, res, url) {
 			<div id="pendingoutboundrequests"/>
 			<h2>Possible actions:</h2>
 			<ul>
-				<li><a href="?update">Update CVCA/DVCA certificates synchronously</a></li>
-				<li><a href="?updateasync">Update CVCA/DVCA certificates asynchronously</a></li>
-				<li><a href="?renew">Renew certificate synchronously</a></li>
-				<li><a href="?renewasync">Renew certificate asynchronously</a></li>
-				<li><a href="?initial">Request initial certificate synchronously</a></li>
-				<li><a href="?initialasync">Request initial certificate asynchronously</a></li>
+				<li><a href="?op=update">Update CVCA/DVCA certificates synchronously</a></li>
+				<li><a href="?op=updateasync">Update CVCA/DVCA certificates asynchronously</a></li>
+				<li><a href="?op=initial">Request initial certificate synchronously</a></li>
+				<li><a href="?op=initialasync">Request initial certificate asynchronously</a></li>
+				<li><a href="?op=renew">Renew certificate synchronously</a></li>
+				<li><a href="?OP=renewasync">Renew certificate asynchronously</a></li>
 			</ul>
 		</div>
 
@@ -235,34 +235,39 @@ TCCUI.prototype.handleInquiry = function(req, res) {
 		}
 	} else {
 		// Handle operations
-		var operation = req.queryString;
+		if (req.queryString) {
+			// Handle operations
+			var operation = CertStoreBrowser.parseQueryString(req.queryString);
 
-		switch(operation) {
-		case "update":
-			this.service.updateCACertificates(false);
-			this.serveRefreshPage(req, res, url);
-			break;
-		case "updateasync":
-			this.service.updateCACertificates(true);
-			this.serveRefreshPage(req, res, url);
-			break;
-		case "renew":
-			this.service.renewCertificate(false, false);
-			this.serveRefreshPage(req, res, url);
-			break;
-		case "renewasync":
-			this.service.renewCertificate(true, false);
-			this.serveRefreshPage(req, res, url);
-			break;
-		case "initial":
-			this.service.renewCertificate(false, true);
-			this.serveRefreshPage(req, res, url);
-			break;
-		case "initialasync":
-			this.service.renewCertificate(true, true);
-			this.serveRefreshPage(req, res, url);
-			break;
-		default:
+			switch(operation.op) {
+			case "update":
+				var status = this.service.updateCACertificates(false);
+				this.serveRefreshPage(req, res, url, status);
+				break;
+			case "updateasync":
+				var status = this.service.updateCACertificates(true);
+				this.serveRefreshPage(req, res, url, status);
+				break;
+			case "renew":
+				var status = this.service.renewCertificate(false, false);
+				this.serveRefreshPage(req, res, url, status);
+				break;
+			case "renewasync":
+				var status = this.service.renewCertificate(true, false);
+				this.serveRefreshPage(req, res, url, status);
+				break;
+			case "initial":
+				var status = this.service.renewCertificate(false, true);
+				this.serveRefreshPage(req, res, url, status);
+				break;
+			case "initialasync":
+				var status = this.service.renewCertificate(true, true);
+				this.serveRefreshPage(req, res, url, status);
+				break;
+			default:
+				this.serveRefreshPage(req, res, url, "Invalid operation " + operation.op);
+			}
+		} else {
 			this.serveStatusPage(req, res, url);
 		}
 	}

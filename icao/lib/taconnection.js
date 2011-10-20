@@ -39,7 +39,7 @@ function TAConnection(url, isCVCA) {
 	this.url = url;
 	this.soapcon = new SOAPConnection(SOAPConnection.SOAP11);
 	this.verbose = true;
-	this.lastError = null;
+	this.lastReturnCode = null;
 	this.version = "1.1";
 	this.isCVCA = isCVCA;
 }
@@ -58,13 +58,25 @@ TAConnection.prototype.setVersion = function(version) {
 
 
 /**
- * Get the last error return code
+ * Get the last error return code (Deprecated: Use getLastReturnCode() instead)
  *
  * @returns the last error return code received or null if none defined
  * @type String
  */
 TAConnection.prototype.getLastError = function() {
-	return this.lastError;
+	return this.lastReturnCode;
+}
+
+
+
+/**
+ * Get the last return code
+ *
+ * @returns the last return code received or null if none defined
+ * @type String
+ */
+TAConnection.prototype.getLastReturnCode = function() {
+	return this.lastReturnCode;
 }
 
 
@@ -86,7 +98,7 @@ TAConnection.prototype.close = function() {
  */
 TAConnection.prototype.getCACertificates = function() {
 
-	this.lastError = null;
+	this.lastReturnCode = null;
 
 	if (this.isCVCA) {
 		var ns = new Namespace("uri:EAC-PKI-CVCA-Protocol/" + this.version);
@@ -129,7 +141,7 @@ TAConnection.prototype.getCACertificates = function() {
 			GPSystem.trace(cvc);
 		}
 	} else {
-		this.lastError = response.Result.ns1::returnCode.toString();
+		this.lastReturnCode = response.Result.ns1::returnCode.toString();
 		return null;
 	}
 
@@ -145,7 +157,9 @@ TAConnection.prototype.getCACertificates = function() {
  * @returns the new certificates
  * @type CVC[]
  */
-TAConnection.prototype.requestCertificate = function(certreq) {
+TAConnection.prototype.requestCertificate = function(certreq, messageID, responseURL) {
+
+	this.lastReturnCode = null;
 
 	var soapConnection = new SOAPConnection();
 
@@ -192,7 +206,81 @@ TAConnection.prototype.requestCertificate = function(certreq) {
 			GPSystem.trace(cvc);
 		}
 	} else {
-		this.lastError = response.Result.ns1::returnCode.toString();
+		this.lastReturnCode = response.Result.ns1::returnCode.toString();
+		return null;
+	}
+
+	return certlist;
+}
+
+
+
+/**
+ * Request a certificate from the parent CA using a web service
+ *
+ * @param {CVC} certreq the certificate request
+ * @param {String} foreignCAR the CAR of the foreign CVCA
+ * @param {String} messageID the messageID for asynchronous requests (optional)
+ * @param {String} responseURL the URL to which the asynchronous response is send (optional)
+ * @returns the new certificates
+ * @type CVC[]
+ */
+TAConnection.prototype.requestForeignCertificate = function(certreq, foreignCAR, messageID, responseURL) {
+
+	this.lastReturnCode = null;
+
+	var soapConnection = new SOAPConnection();
+
+	if (this.isCVCA) {
+		var ns = new Namespace("uri:EAC-PKI-CVCA-Protocol/" + this.version);
+	} else {
+		var ns = new Namespace("uri:EAC-PKI-DV-Protocol/" + this.version);
+	}
+
+	var ns1 = new Namespace("uri:eacBT/" + this.version);
+
+	var request =
+		<ns:RequestForeignCertificate xmlns:ns={ns} xmlns:ns1={ns1}>
+			<callbackIndicator>callback_not_possible</callbackIndicator>
+			<messageID/>
+			<responseURL/>
+			<foreignCAR>{foreignCAR}</foreignCAR>
+			<certReq>{certreq.getBytes().toString(BASE64)}</certReq>
+		</ns:RequestForeignCertificate>
+
+	if (typeof(messageID) != "undefined") {
+		request.callbackIndicator = "callback_possible";
+		request.messageID.ns1::messageID = messageID;
+		request.responseURL.ns1::string = responseURL;
+	}
+	
+	if (this.verbose) {
+		GPSystem.trace(request.toXMLString());
+	}
+
+	try	{
+		var response = this.soapcon.call(this.url, request);
+		if (this.verbose) {
+			GPSystem.trace(response.toXMLString());
+		}
+	}
+	catch(e) {
+		GPSystem.trace("SOAP call to " + this.url + " failed : " + e);
+		throw new GPError("TAConnection", GPError.DEVICE_ERROR, 0, "RequestForeignCertificate failed with : " + e);
+	}
+	
+	var certlist = [];
+
+	this.lastReturnCode = response.Result.ns1::returnCode.toString();
+	print("RC=" + this.lastReturnCode);
+	if (this.lastReturnCode.substr(0, 3) == "ok_") {
+		GPSystem.trace("Received certificates from DVCA:");
+		for each (var c in response.Result.ns1::certificateSeq.ns1::certificate) {
+			var cvc = new CVC(new ByteString(c, BASE64));
+			certlist.push(cvc);
+			GPSystem.trace(cvc);
+		}
+	} else {
 		return null;
 	}
 
@@ -261,7 +349,7 @@ TAConnection.prototype.sendCertificates = function(certificates, messageID, stat
 	}
 
 	if (response.Result.ns1::returnCode.substr(0, 3) != "ok_") {
-		this.lastError = response.Result.ns1::returnCode.toString();
+		this.lastReturnCode = response.Result.ns1::returnCode.toString();
 	}
 }
 

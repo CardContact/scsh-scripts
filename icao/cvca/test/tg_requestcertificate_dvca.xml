@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="doctg.xsl" ?>
+<testgroup 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="http://www.openscdp.org/schema/testframework-1.0.xsd"
+	id="tg_requestcertificate_dvca" arrayElement="testcase,function" arrayIndex="id,Name">
+	<name>Testing RequestCertificate on DVCA</name>
+	<description>
+		<p></p>
+	</description>
+	<reference>
+		<p>No reference defined.</p>
+	</reference>
+
+<!-- Initializing the test group environment -->
+<!-- Enable this if you want your own constructor
+	<constructor Param="name, parameter">
+		<Script><![CDATA[
+	
+	// Call constructor of super class TestGroup and define name of test group
+	TestGroup.call(this, name, parameter);
+	
+		]]></Script>
+	</constructor>
+-->
+
+	
+<!-- Setup method called before each test case is executed -->
+	<setup>
+		<Script><![CDATA[
+
+		resetDataDir();
+		this.t = new HTTPTester(this.parameter.url);
+
+		]]></Script>
+	</setup>
+
+
+	
+<!-- Teardown method called after each test case is executed -->
+	<teardown>
+		<Script><![CDATA[
+		
+//	this.log("TestGroup.teardown() called.");
+
+		]]></Script>
+	</teardown>
+
+
+
+<!-- Each test case must be declared with an id that starts with a 3 digit number -->
+	<testcase id="001FullChain">
+		<name>Supply a certificate for all entities along the chain</name>
+		<description>
+			<p></p>
+		</description>
+		<requirement>
+			<p></p>
+		</requirement>
+		<reference>
+			<p></p>
+		</reference>
+		<Script><![CDATA[
+
+	this.log(" Switch to brainpoolP256r1withSHA256");
+	this.t.call("cvca?op=change&keyspec=brainpoolP256r1withSHA256");
+
+	this.log(" Generate root certificate");
+	this.t.call("cvca?op=linkdp", "Operation completed");
+
+	print(" DVCA synchronous GetCACertificates");
+	this.t.call("dvca?op=update", "ok_cert_available");
+
+	this.log(" DVCA synchronous request for domestic initial certificate");
+	this.t.call("dvca?op=initial&cvca=UTCVCA", "failure_synchronous_processing_not_possible");
+
+	this.log(" DVCA asynchronous request for domestic initial certificate");
+	this.t.call("dvca?op=initialasync&cvca=UTCVCA", "ok_syntax");
+	this.t.call("cvca/getcert?index=-1&action=ok_cert_available", "ok_received_correctly");
+
+	print(" TCC synchronous GetCACertificates");
+	this.t.call("tcc?op=update", "ok_cert_available");
+
+	this.log(" TCC synchronous request for domestic initial certificate");
+	this.t.call("tcc?op=initial", "failure_synchronous_processing_not_possible");
+
+	this.log(" TCC asynchronous request for domestic initial certificate");
+	this.t.call("tcc?op=initialasync", "ok_syntax");
+	this.t.call("dvca/getcert?index=-1&action=ok_cert_available", "ok_received_correctly");
+
+	print(" VT synchronous GetCACertificates");
+	this.t.call("vt?op=update", "ok_cert_available");
+
+	this.log(" VT synchronous request for domestic initial certificate");
+	this.t.call("vt?op=initial&holderID=UTVT1234567", "ok_cert_available");
+
+	this.log(" VT synchronous request for domestic renewed certificate");
+	this.t.call("vt?op=renew&holderID=UTVT1234567", "ok_cert_available");
+
+		]]></Script>
+	</testcase>
+
+</testgroup>

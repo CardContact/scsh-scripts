@@ -10,9 +10,11 @@ curl -H "X-Content-Name: EAC2CVCertificateGenerator.js" -T ../EAC2CVCertificateG
 curl -H "X-Content-Name: EAC2CVRequestGenerator.js" -T ../EAC2CVRequestGenerator.js %URL%/admin
 curl -H "X-Content-Name: cvcca.js" -T cvcca.js %URL%/admin
 curl -H "X-Content-Name: spocconnection.js" -T ../lib/spocconnection.js %URL%/admin
+curl -H "X-Content-Name: taconnection.js" -T ../lib/taconnection.js %URL%/admin
 curl -H "X-Content-Name: servicerequest.js" -T servicerequest.js %URL%/admin
 curl -H "X-Content-Name: certstorebrowser.js" -T certstorebrowser.js %URL%/admin
 curl -H "X-Content-Name: commonui.js" -T commonui.js %URL%/admin
+curl -H "X-Content-Name: baseservice.js" -T baseservice.js %URL%/admin
 curl -H "X-Content-Name: cvcaservice.js" -T cvcaservice.js %URL%/admin
 curl -H "X-Content-Name: cvcaui.js" -T cvcaui.js %URL%/admin
 curl -H "X-Content-Name: dvcaservice.js" -T dvcaservice.js %URL%/admin

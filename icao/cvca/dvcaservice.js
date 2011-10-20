@@ -35,6 +35,8 @@
  * @param {String} parentURL the URL of the parent CA's webservice
  */ 
 function DVCAService(path, name, parent, parentURL) {
+	BaseService.call(this);
+
 	this.name = name;
 	this.type = "DVCA";
 	
@@ -52,9 +54,17 @@ function DVCAService(path, name, parent, parentURL) {
 	this.terminalCertificatePolicies = [];
 	this.version = "1.1";
 	this.rsaKeySize = 1536;
+	this.cvcas = [ parent ];
+	this.cvccamap = [];
+	this.cvccamap[parent] = this.dvca;
 }
 
+DVCAService.prototype = new BaseService();
+DVCAService.constructor = DVCAService;
 
+
+
+// Configuration
 
 /**
  * Sets the URL which is used to receive SendCertificate messages
@@ -74,18 +84,6 @@ DVCAService.prototype.setSendCertificateURL = function(url) {
  */
 DVCAService.prototype.setRSAKeySize = function(keysize) {
 	this.rsaKeySize = keysize;
-}
-
-
-
-/**
- * Gets the URL of the associated CVCA
- *
- * @type String
- * @return the URL or null or undefined
- */
-DVCAService.prototype.getCVCAURL = function() {
-	return this.parentURL;
 }
 
 
@@ -114,6 +112,61 @@ DVCAService.prototype.setTerminalCertificatePolicy = function(policy, chrregex) 
 	} else {
 		this.terminalCertificatePolicy = policy;
 	}
+}
+
+
+
+/**
+ * Adds the holderID of an supported foreign CVCA
+ *
+ * @param {String} holderID the holderID of the supported foreign CVCA
+ */
+DVCAService.prototype.addForeignCVCA = function(holderID) {
+	this.cvcas.push(holderID);
+	this.cvccamap[holderID] = new CVCCA(this.crypto, this.ss, this.name, holderID);
+}
+
+
+
+// Processing logic
+
+/**
+ * Gets the URL of the associated CVCA
+ *
+ * @type String
+ * @return the URL or null or undefined
+ */
+DVCAService.prototype.getCVCAURL = function() {
+	return this.parentURL;
+}
+
+
+
+/**
+ * Returns a list of CVCAs supported by this DVCA
+ *
+ * @type String[]
+ * @return the list of CVCA holderIDs
+ */
+DVCAService.prototype.getCVCAList = function() {
+	return this.cvcas;
+}
+
+
+
+/**
+ * Returns the path for a given CVCA
+ *
+ * @param {String} cvcaHolderId the holder ID of the requested CVCA
+ * @type String
+ * @return the path or null if no such CVCA known
+ */
+DVCAService.prototype.getPathFor = function(cvcaHolderId) {
+	var cvcca = this.cvccamap[cvcaHolderId];
+	if (typeof(cvcca) == "undefined") {
+		return null;
+	}
+	return cvcca.path;
 }
 
 
@@ -352,15 +405,85 @@ DVCAService.prototype.listInboundRequests = function() {
 /**
  * Gets the indexed request
  *
- * @param {Number} index the index into the work queue identifying the request
+ * @param {Number} index the index into the work queue identifying the request or -1 for the last request
  * @returns the indexed request
  * @type ServiceRequest
  */
 DVCAService.prototype.getInboundRequest = function(index) {
+	if (index == -1) {
+		index = this.inqueue.length - 1;
+	}
 	return this.inqueue[index];
 }
 
 
+
+/**
+ * Delete a request from the work queue
+ *
+ * @param {Number} index the index into the work queue
+ */
+DVCAService.prototype.deleteInboundRequest = function(index) {
+	this.inqueue.splice(index, 1);
+}
+
+
+
+/**
+ * Return the current certificate list for the DVCA instance related to the requested CVCA
+ *
+ * @param {String} cvcaHolderId holder ID of the CVCA in question
+ * @type CVC[]
+ * @return the list of CV certificates from the self-signed root to the DV
+ */
+DVCAService.prototype.getCertificateList = function(cvcaHolderId) {
+	var cvcca = this.cvccamap[cvcaHolderId];
+	return cvcca.getCertificateList();
+}
+
+
+
+/**
+ * Determine the list of certificates to send to the client as part of the certificate request response
+ *
+ * @param {CVC} req the request
+ * @returns the certificate list
+ * @type CVC[]
+ */
+DVCAService.prototype.determineCertificateList = function(req) {
+	var car = req.getCAR();
+	var chr = this.ss.getCurrentCHR(this.path);
+	
+	if ((car != null) && car.equals(chr)) {
+		return [];
+	}
+	
+	return this.dvca.getCertificateList();
+}
+
+
+
+/**
+ * Import certificates
+ *
+ * @param {CVC[]} certlist the list of certificates
+ *
+ */
+DVCAService.prototype.importCertificates = function(certlist) {
+
+	var list = this.dvca.importCertificates(certlist);
+
+	if (list.length > 0) {
+		print("Warning: Could not import the following certificates");
+		for (var i = 0; i < list.length; i++) {
+			print(list[i]);
+		}
+	}
+}
+
+
+
+// UI Interface operations
 
 /**
  * Process request and send certificates
@@ -368,7 +491,7 @@ DVCAService.prototype.getInboundRequest = function(index) {
  * @param {Number} index the index into the work queue identifying the request
  */
 DVCAService.prototype.processInboundRequest = function(index) {
-	var sr = this.inqueue[index];
+	var sr = this.getInboundRequest(index);
 
 	var certlist = [];
 	
@@ -393,40 +516,113 @@ DVCAService.prototype.processInboundRequest = function(index) {
 	}
 
 	this.sendCertificates(sr, certlist);
-}
-
-
-
-/**
- * Delete a request from the work queue
- *
- * @param {Number} index the index into the work queue
- */
-DVCAService.prototype.deleteInboundRequest = function(index) {
-	this.inqueue.splice(index, 1);
-}
-
-
-
-/**
- * Determine the list of certificates to send to the client as part of the certificate request response
- *
- * @param {CVC} req the request
- * @returns the certificate list
- * @type CVC[]
- */
-DVCAService.prototype.determineCertificateList = function(req) {
-	var car = req.getCAR();
-	var chr = this.ss.getCurrentCHR(this.path);
 	
-	if ((car != null) && car.equals(chr)) {
-		return [];
+	return sr.getFinalStatusInfo();
+}
+
+
+
+/**
+ * Update certificate list from parent CA
+ *
+ * @type String
+ * @return The return code received from the other side
+ */
+DVCAService.prototype.updateCACertificates = function(async) {
+
+	var msgid = null;
+	
+	if (async) {
+		msgid = this.crypto.generateRandom(2).toString(HEX);
+	}
+
+	var sr = new ServiceRequest(msgid, this.myURL);
+	this.addOutboundRequest(sr);
+	
+	var certlist = this.getCACertificatesFromCVCA(sr);
+	var list = this.dvca.importCertificates(certlist);
+
+	if (list.length > 0) {
+		print("Warning: Could not import the following certificates");
+		for (var i = 0; i < list.length; i++) {
+			print(list[i]);
+		}
+	}
+	return sr.getStatusInfo();
+}
+
+
+
+/**
+ * Renew certificate through parent or foreign CA (GUI call)
+ *
+ * @param {boolean} async true to process call asynchronously
+ * @param {boolean} forceinitial force request to be an initial request
+ * @param {String} cvca the holderID of the CVCA the request shall be directed at
+ * @type String
+ * @return The return code received from the other side
+ */
+DVCAService.prototype.renewCertificate = function(async, forceinitial, cvca) {
+
+	var path = this.getPathFor(cvca);
+	assert(path != null);
+	
+	var algo = this.ss.getDefaultPublicKeyOID(path);
+	if (CVC.isECDSA(algo)) {
+		var keyspec = this.ss.getDefaultDomainParameter(path);
+	} else {
+		var keyspec = new Key();
+		keyspec.setType(Key.PUBLIC);
+		keyspec.setSize(this.rsaKeySize);
 	}
 	
-	return this.dvca.getCertificateList();
+	var car = this.ss.getCurrentCHR(CVCertificateStore.parentPathOf(path));
+
+	this.dvca.setKeySpec(keyspec, algo);
+	
+	// Create a new request
+	var req = this.dvca.generateRequest(car, forceinitial);
+	print("Request: " + req);
+	print(req.getASN1());
+
+	var msgid = null;
+
+	if (async) {
+		msgid = this.crypto.generateRandom(2).toString(HEX);
+	}
+
+	var sr = new ServiceRequest(msgid, this.myURL, req);
+	this.addOutboundRequest(sr);
+
+	if (this.parentURL) {
+		if (this.cvcas[0] == cvca) {
+			var certlist = this.requestCertificateFromCVCA(sr);
+		} else {
+			var certlist = this.requestCertificateFromForeignCVCA(sr, car);
+		}
+
+		if (certlist && (certlist.length > 0)) {
+			sr.setFinalStatusInfo("" + certlist.length + " certificates received");
+	
+			var list = this.dvca.importCertificates(certlist);
+
+			if (list.length > 0) {
+				print("Warning: Could not import the following certificates");
+				for (var i = 0; i < list.length; i++) {
+					print(list[i]);
+				}
+			}
+		}
+	} else {
+		sr.setStatusInfo("Local request");
+	}
+	
+	return sr.getStatusInfo();
 }
 
 
+
+// Outbound webservices
 
 /**
  * Send certificates using a webservice call
@@ -481,111 +677,6 @@ DVCAService.prototype.sendCertificates = function(serviceRequest, certificates) 
 	var result = response.Result.ns1::returnCode.toString();
 	
 	serviceRequest.setFinalStatusInfo(result);
-}
-
-
-
-/**
- * Update certificate list from parent CA
- *
- */
-DVCAService.prototype.updateCACertificates = function(async) {
-
-	var msgid = null;
-	
-	if (async) {
-		msgid = this.crypto.generateRandom(2).toString(HEX);
-	}
-
-	var sr = new ServiceRequest(msgid, this.myURL);
-	this.addOutboundRequest(sr);
-	
-	var certlist = this.getCACertificatesFromCVCA(sr);
-	var list = this.dvca.importCertificates(certlist);
-
-	if (list.length > 0) {
-		print("Warning: Could not import the following certificates");
-		for (var i = 0; i < list.length; i++) {
-			print(list[i]);
-		}
-	}
-}
-
-
-
-/**
- * Renew certificate through parent CA
- *
- */
-DVCAService.prototype.renewCertificate = function(async, forceinitial) {
-
-	var algo = this.ss.getDefaultPublicKeyOID(this.path);
-	if (CVC.isECDSA(algo)) {
-		var keyspec = this.ss.getDefaultDomainParameter(this.path);
-	} else {
-		var keyspec = new Key();
-		keyspec.setType(Key.PUBLIC);
-		keyspec.setSize(this.rsaKeySize);
-	}
-	
-	var car = this.ss.getCurrentCHR(CVCertificateStore.parentPathOf(this.path));
-	
-	this.dvca.setKeySpec(keyspec, algo);
-	
-	// Create a new request
-	var req = this.dvca.generateRequest(car, forceinitial);
-	print("Request: " + req);
-	print(req.getASN1());
-
-	var msgid = null;
-	
-	if (async) {
-		msgid = this.crypto.generateRandom(2).toString(HEX);
-	}
-
-	var sr = new ServiceRequest(msgid, this.myURL, req);
-	this.addOutboundRequest(sr);
-
-	if (this.parentURL) {
-		var certlist = this.requestCertificateFromCVCA(sr);
-
-		if (certlist.length > 0) {
-			sr.setFinalStatusInfo("" + certlist.length + " certificates received");
-		}
-	
-		var list = this.dvca.importCertificates(certlist);
-
-		if (list.length > 0) {
-			print("Warning: Could not import the following certificates");
-			for (var i = 0; i < list.length; i++) {
-				print(list[i]);
-			}
-		}
-	} else {
-		sr.setStatusInfo("Local request");
-	}
-	
-	return sr.getStatusInfo();
-}
-
-
-
-/**
- * Import certificates
- *
- * @param {CVC[]} certlist the list of certificates
- *
- */
-DVCAService.prototype.importCertificates = function(certlist) {
-
-	var list = this.dvca.importCertificates(certlist);
-
-	if (list.length > 0) {
-		print("Warning: Could not import the following certificates");
-		for (var i = 0; i < list.length; i++) {
-			print(list[i]);
-		}
-	}
 }
 
 
@@ -667,7 +758,7 @@ DVCAService.prototype.requestCertificateFromCVCA = function(sr) {
 		request.messageID.ns1::messageID = sr.getMessageID();
 		request.responseURL.ns1::string = sr.getResponseURL();
 	}
-		
+
 	try	{
 		var response = soapConnection.call(this.parentURL, request);
 	}
@@ -692,6 +783,33 @@ DVCAService.prototype.requestCertificateFromCVCA = function(sr) {
 }
 
 
+
+/**
+ * Request a certificate from a foreign CA using a web service
+ *
+ * @param {ServiceRequest} serviceRequest the underlying request
+ * @returns the new certificates
+ * @type CVC[]
+ */
+DVCAService.prototype.requestCertificateFromForeignCVCA = function(sr, foreignCAR) {
+	var con = new TAConnection(this.parentURL, true);
+	
+	if (sr.getMessageID()) {
+		var certlist = con.requestForeignCertificate(sr.getCertificateRequest(), foreignCAR, sr.getMessageID(), sr.getResponseURL());
+	} else {
+		var certlist = con.requestForeignCertificate(sr.getCertificateRequest(), foreignCAR);
+	}
+
+	con.close();
+
+	sr.setStatusInfo(con.getLastReturnCode());
+	print(con.getLastReturnCode());
+	return certlist;
+}
+
+
+
+// Inbound Webservices
 
 /**
  * Webservice that returns the list of certificates for this and superior CAs

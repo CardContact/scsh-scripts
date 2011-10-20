@@ -167,6 +167,9 @@ var terminalPolicyVT = { certificateValidityDays: 6,
 
 dvca.setTerminalCertificatePolicy(terminalPolicyVT, /UTVT/);
 
+dvca.addForeignCVCA("FUCVCA");
+
+
 // Create GUI
 var dvcaui = new DVCAUI(dvca);
 createBookmarks(dvcaui, "DVCA");

@@ -35,6 +35,7 @@
  */
 function DVCAUI(service) {
 	CommonUI.call(this, service);
+	this.currentCVCA = service.getCVCAList()[0];
 }
 
 DVCAUI.prototype = new CommonUI();
@@ -109,8 +110,8 @@ DVCAUI.prototype.handleGetCertificateRequestDetails = function(req, res, url) {
 			this.serveRefreshPage(req, res, url);
 		} else {
 			sr.setStatusInfo(op.action);
-			this.service.processInboundRequest(index);
-			this.serveRefreshPage(req, res, url);
+			var status = this.service.processInboundRequest(index);
+			this.serveRefreshPage(req, res, url, status);
 		}
 	} else {
 		var page = 
@@ -158,8 +159,8 @@ DVCAUI.prototype.handleRequestCertificateInboundRequestDetails = function(req, r
 			this.serveRefreshPage(req, res, url);
 		} else {
 			sr.setStatusInfo(op.action);
-			this.service.processInboundRequest(index);
-			this.serveRefreshPage(req, res, url);
+			var status = this.service.processInboundRequest(index);
+			this.serveRefreshPage(req, res, url, status);
 		}
 	} else {
 		var page = 
@@ -203,23 +204,40 @@ DVCAUI.prototype.serveStatusPage = function(req, res, url) {
 	var page =
 		<div>
 			<h1>DVCA Service {status}</h1>
+			<form action="" method="get">
+				Select CVCA
+				<input name="op" type="hidden" value="changecvca"/>
+				<select name="cvca" size="1">
+				</select>
+				<button type="submit">Change</button>
+			</form>
 			<div id="activechain"/>
 			<div id="pendingoutboundrequests"/>
 			<div id="pendinginboundrequests"/>
 			<h2>Possible actions:</h2>
 			<ul>
-				<li><a href="?update">Update CVCA certificates synchronously</a></li>
-				<li><a href="?updateasync">Update CVCA certificates asynchronously</a></li>
-				<li><a href="?renew">Renew certificate synchronously</a></li>
-				<li><a href="?renewasync">Renew certificate asynchronously</a></li>
-				<li><a href="?initial">Request initial certificate synchronously</a></li>
-				<li><a href="?initialasync">Request initial certificate asynchronously</a></li>
+				<li><a href="?op=update">Update CVCA certificates synchronously</a></li>
+				<li><a href="?op=updateasync">Update CVCA certificates asynchronously</a></li>
+				<li><a href={"?op=initial&cvca=" + this.currentCVCA}>Request initial certificate synchronously</a></li>
+				<li><a href={"?op=initialasync&cvca=" + this.currentCVCA}>Request initial certificate asynchronously</a></li>
+				<li><a href={"?op=renew&cvca=" + this.currentCVCA}>Renew certificate synchronously</a></li>
+				<li><a href={"?op=renewasync&cvca=" + this.currentCVCA}>Renew certificate asynchronously</a></li>
 			</ul>
-			<p><a href={url[0] + "/holderlist?path=" + this.service.path }>Browse Terminals...</a></p>
+			<p><a href={url[0] + "/holderlist?path=" + this.service.getPathFor(this.currentCVCA) }>Browse Terminals...</a></p>
 		</div>
 	
-	// ToDo: Refactor to getter
-	var certlist = this.service.dvca.getCertificateList();
+	var l = page.form.select;
+	var cvcalist = this.service.getCVCAList();
+	
+	for each (var holderId in cvcalist) {
+		if (this.currentCVCA == holderId) {
+			l.option += <option selected="selected">{holderId}</option>
+		} else {
+			l.option += <option>{holderId}</option>
+		}
+	}
+
+	var certlist = this.service.getCertificateList(this.currentCVCA);
 	
 	if (certlist.length > 0) {
 		var t = <table class="content"/>;
@@ -238,16 +256,20 @@ DVCAUI.prototype.serveStatusPage = function(req, res, url) {
 		for (; i < certlist.length; i++) {
 			var cvc = certlist[i];
 			var chr = cvc.getCHR();
-			if (chr.getHolder().equals(this.service.name)) {
-				var path = this.service.path;
+			var car = cvc.getCAR();
+
+			if (chr.getHolder().equals(car.getHolder())) {		// CVCA certificate
+				var path = "/" + chr.getHolder();
 			} else {
-				var path = "/" + this.service.parent;
+				var path = "/" + car.getHolder() + "/" + chr.getHolder();
 			}
-			var selfsigned = cvc.getCHR().equals(cvc.getCAR());
+
+			var selfsigned = chr.equals(car);
 			var refurl = url[0] + "/cvc?" + 
 							"path=" + path + "&" +
-							"chr=" + cvc.getCHR().toString() + "&" +
+							"chr=" + chr.toString() + "&" +
 							"selfsigned=" + selfsigned;
+
 			t.tr += <tr>
 				<td><a href={refurl}>{cvc.getCHR().toString()}</a></td>
 				<td>{cvc.getCAR().toString()}</td>
@@ -390,34 +412,43 @@ DVCAUI.prototype.handleInquiry = function(req, res) {
 		}
 	} else {
 		// Handle operations
-		var operation = req.queryString;
+		if (req.queryString) {
+			// Handle operations
+			var operation = CertStoreBrowser.parseQueryString(req.queryString);
 
-		switch(operation) {
-		case "update":
-			var status = this.service.updateCACertificates(false);
-			this.serveRefreshPage(req, res, url, status);
-			break;
-		case "updateasync":
-			var status = this.service.updateCACertificates(true);
-			this.serveRefreshPage(req, res, url, status);
-			break;
-		case "renew":
-			var status = this.service.renewCertificate(false, false);
-			this.serveRefreshPage(req, res, url, status);
-			break;
-		case "renewasync":
-			var status = this.service.renewCertificate(true, false);
-			this.serveRefreshPage(req, res, url, status);
-			break;
-		case "initial":
-			var status = this.service.renewCertificate(false, true);
-			this.serveRefreshPage(req, res, url, status);
-			break;
-		case "initialasync":
-			var status = this.service.renewCertificate(true, true);
-			this.serveRefreshPage(req, res, url, status);
-			break;
-		default:
+			switch(operation.op) {
+			case "changecvca":
+				this.currentCVCA = operation.cvca;
+				this.serveStatusPage(req, res, url);
+				break;
+			case "update":
+				var status = this.service.updateCACertificates(false);
+				this.serveRefreshPage(req, res, url, status);
+				break;
+			case "updateasync":
+				var status = this.service.updateCACertificates(true);
+				this.serveRefreshPage(req, res, url, status);
+				break;
+			case "renew":
+				var status = this.service.renewCertificate(false, false, operation.cvca);
+				this.serveRefreshPage(req, res, url, status);
+				break;
+			case "renewasync":
+				var status = this.service.renewCertificate(true, false, operation.cvca);
+				this.serveRefreshPage(req, res, url, status);
+				break;
+			case "initial":
+				var status = this.service.renewCertificate(false, true, operation.cvca);
+				this.serveRefreshPage(req, res, url, status);
+				break;
+			case "initialasync":
+				var status = this.service.renewCertificate(true, true, operation.cvca);
+				this.serveRefreshPage(req, res, url, status);
+				break;
+			default:
+				this.serveStatusPage(req, res, url);
+			}
+		} else {
 			this.serveStatusPage(req, res, url);
 		}
 	}

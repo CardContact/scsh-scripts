@@ -21,7 +21,7 @@
  *  along with OpenSCDP; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  * 
- * @fileoverview A simple CVCA web service implementing TR-03129
+ * @fileoverview A CVCA web service implementing TR-03129 and CSN_369791
  */
 
 
@@ -35,6 +35,8 @@
  * @param {name} name the holder name for this CA
  */
 function CVCAService(path, name) {
+	BaseService.call(this);
+
 	this.name = name;
 	this.type = "CVCA";
 
@@ -53,20 +55,22 @@ function CVCAService(path, name) {
 	this.spocmap = [];
 }
 
+CVCAService.prototype = new BaseService();
+CVCAService.constructor = CVCAService;
 
 
 CVCAService.KeySpecification = [
-	{ id: "brainpoolP192r1withSHA1", name: "brainpoolP192r1 with SHA-1", oid: CVC.id_TA_ECDSA_SHA_1  , curve: new ByteString("brainpoolP192r1", OID), keysize: 0 },
+	{ id: "brainpoolP192r1withSHA1", name: "brainpoolP192r1 with SHA-1", oid: CVC.id_TA_ECDSA_SHA_1, curve: new ByteString("brainpoolP192r1", OID), keysize: 0 },
 	{ id: "brainpoolP224r1withSHA224", name: "brainpoolP224r1 with SHA-224", oid: CVC.id_TA_ECDSA_SHA_224, curve: new ByteString("brainpoolP224r1", OID), keysize: 0 },
 	{ id: "brainpoolP256r1withSHA256", name: "brainpoolP256r1 with SHA-256", oid: CVC.id_TA_ECDSA_SHA_256, curve: new ByteString("brainpoolP256r1", OID), keysize: 0 },
 	{ id: "brainpoolP384r1withSHA384", name: "brainpoolP384r1 with SHA-384", oid: CVC.id_TA_ECDSA_SHA_384, curve: new ByteString("brainpoolP384r1", OID), keysize: 0 },
 	{ id: "brainpoolP512r1withSHA512", name: "brainpoolP512r1 with SHA-512", oid: CVC.id_TA_ECDSA_SHA_512, curve: new ByteString("brainpoolP512r1", OID), keysize: 0 },
-	{ id: "RSA2048V15withSHA1", name: "RSA 2048 PKCS#1 V1.5 with SHA-1", oid: CVC.id_TA_RSA_v1_5_SHA_1  , curve: null, keysize: 2048 },
+	{ id: "RSA2048V15withSHA1", name: "RSA 2048 PKCS#1 V1.5 with SHA-1", oid: CVC.id_TA_RSA_v1_5_SHA_1, curve: null, keysize: 2048 },
 	{ id: "RSA2048V15withSHA256", name: "RSA 2048 PKCS#1 V1.5 with SHA-256", oid: CVC.id_TA_RSA_v1_5_SHA_256, curve: null, keysize: 2048 },
 //	{ id: "RSA2048V15withSHA512", name: "RSA 2048 PKCS#1 V1.5 with SHA-512", oid: CVC.id_TA_RSA_v1_5_SHA_512, curve: null, keysize: 2048 },
-	{ id: "RSA2048PSSwithSHA1", name: "RSA 2048 PSS with SHA-1", oid: CVC.id_TA_RSA_PSS_SHA_1   , curve: null, keysize: 2048 },
-	{ id: "RSA2048PSSwithSHA256", name: "RSA 2048 PSS with SHA-1", oid: CVC.id_TA_RSA_PSS_SHA_256 , curve: null, keysize: 2048 },
-//	{ id: "RSA2048PSSwithSHA512", name: "RSA 2048 PSS with SHA-1", oid: CVC.id_TA_RSA_PSS_SHA_512 , curve: null, keysize: 2048 },
+	{ id: "RSA2048PSSwithSHA1", name: "RSA 2048 PSS with SHA-1", oid: CVC.id_TA_RSA_PSS_SHA_1, curve: null, keysize: 2048 },
+	{ id: "RSA2048PSSwithSHA256", name: "RSA 2048 PSS with SHA-256", oid: CVC.id_TA_RSA_PSS_SHA_256, curve: null, keysize: 2048 }
+//	{ id: "RSA2048PSSwithSHA512", name: "RSA 2048 PSS with SHA-512", oid: CVC.id_TA_RSA_PSS_SHA_512, curve: null, keysize: 2048 },
 ];
 
 CVCAService.KeySpecificationMap = [];
@@ -84,27 +88,6 @@ for (var i = 0; i < CVCAService.KeySpecification.length; i++) {
  */
 CVCAService.prototype.setKeySpec = function(keyparam, algorithm) {
 	this.cvca.setKeySpec(keyparam, algorithm);
-}
-
-
-
-/**
- * Change the key specification for generating requests
- *
- * @param {String} newSpec id from CVCAService.KeySpecification
- */
-CVCAService.prototype.changeKeySpecification = function(newSpec) {
-	this.currentKeySpec = newSpec;
-	var s = CVCAService.KeySpecificationMap[newSpec];
-	
-	var key = new Key();
-	if (CVC.isECDSA(s.oid)) {
-		key.setComponent(Key.ECC_CURVE_OID, s.curve);
-	} else {
-		key.setSize(s.keysize);
-	}
-
-	this.cvca.setKeySpec(key, s.oid);
 }
 
 
@@ -171,12 +154,22 @@ CVCAService.prototype.getSPOCServicePort = function() {
 
 
 
+
 /**
  * Add a SPOC to the list of SPOCs
  *
- * @param {String} country the 2 letter ISO 3166-1 ALPHA-2 country code
- * @param {String} name a verbose name of the SPOC
- * @param {String} url the URL of the SPOC
+ * <p>The SPOC configuration object has the following properties:</p>
+ * <ul>
+ * <li>country - the two letter country code</li>
+ * <li>name - human readable name</li>
+ * <li>holderIDs - array of holder IDs for CVCAs accessible behind the SPOC</li>
+ * <li>url - the URL at which the SPOC is available</li>
+ * <li>async - true to serve this SPOC asynchronously</li>
+ * </ul>
+ * <p>Example:</p>
+ * <pre>var spoc = { country: "FU", name: "Other country", holderIDs: ["FUCVCA"], url: "http://localhost:8080/se/spoc-fu", async: false };</pre>
+ *
+ * @param {Object} spoc the spoc configuration object
  */
 CVCAService.prototype.addSPOC = function(spoc) {
 	this.spoclist.push(spoc);
@@ -218,41 +211,6 @@ CVCAService.prototype.getDVCertificatePolicyForCHR = function(chr) {
 
 
 /**
- * Issue an initial root certificate or a new link certificate
- * 
- * @param {boolean} withDP true to include domain parameter in certificate
- */
-CVCAService.prototype.generateLinkCertificate = function(withDP) {
-	// Create a new request
-	var req = this.cvca.generateRequest(null, false);
-	print("Link/Root certificate request: " + req);
-	print(req.getASN1());
-	
-	if (this.cvca.isOperational()) {
-		this.linkCertificatePolicy.includeDomainParameter = withDP;
-
-		// Create link certificate based on request
-		var cert = this.cvca.generateCertificate(req, this.linkCertificatePolicy);
-		print("Link certificate: " + cert);
-		print(cert.getASN1());
-
-		// Import certificate into store, making it the most current certificate
-		
-		this.cvca.importCertificate(cert);
-	}
-	
-	// Create root certificate based on request
-	var cert = this.cvca.generateCertificate(req, this.rootCertificatePolicy);
-	print("Root certificate: " + cert);
-	print(cert.getASN1());
-
-	// Import certificate into store, making it the most current certificate
-	this.cvca.importCertificate(cert);
-}
-
-
-
-/**
  * Check certificate request syntax
  *
  * @param {ByteString} req the request in binary format
@@ -281,7 +239,13 @@ CVCAService.prototype.checkRequestSyntax = function(reqbin) {
  * @returns one of the ServiceRequest status results (ok_cert_available if successful).
  * @type String
  */
-CVCAService.prototype.checkRequestSemantics = function(req) {
+CVCAService.prototype.checkRequestSemantics = function(req, requestedCAR) {
+	if (typeof(requestedCAR) == "undefined") {
+		var path = this.path;
+	} else {
+		var pkr = new PublicKeyReference(requestedCAR);
+		var path = "/" + pkr.getHolder();
+	}
 	// Check inner signature
 	try	{
 		var puk = req.getPublicKey();
@@ -295,10 +259,14 @@ CVCAService.prototype.checkRequestSemantics = function(req) {
 		GPSystem.trace("Error verifying inner signature");
 		return ServiceRequest.FAILURE_INNER_SIGNATURE;
 	}
-	
+
 	// Check that request key algorithm matches the algorithm for the current certificate
-	var chr = this.ss.getCurrentCHR(this.path);
-	var cvc = this.ss.getCertificate(this.path, chr);
+
+	var chr = this.ss.getCurrentCHR(path);
+	if (!chr) {
+		return ServiceRequest.FAILURE_FOREIGNCAR_UNKNOWN;
+	}
+	var cvc = this.ss.getCertificate(path, chr);
 	var oid = cvc.getPublicKeyOID();
 	var reqoid = req.getPublicKeyOID();
 	
@@ -309,7 +277,7 @@ CVCAService.prototype.checkRequestSemantics = function(req) {
 	
 	if (CVC.isECDSA(oid)) {
 		// Check that request key domain parameter match current domain parameter
-		var dp = this.ss.getDomainParameter(this.path, chr);
+		var dp = this.ss.getDomainParameter(path, chr);
 	
 		if (!puk.getComponent(Key.ECC_P).equals(dp.getComponent(Key.ECC_P)) ||
 			!puk.getComponent(Key.ECC_A).equals(dp.getComponent(Key.ECC_A)) ||
@@ -322,7 +290,7 @@ CVCAService.prototype.checkRequestSemantics = function(req) {
 			return ServiceRequest.FAILURE_DOMAIN_PARAMETER;
 		}
 	}
-	
+
 	if (req.isAuthenticatedRequest()) {
 		var puk = this.cvca.getAuthenticPublicKey(req.getOuterCAR());
 		if (puk) {
@@ -336,7 +304,7 @@ CVCAService.prototype.checkRequestSemantics = function(req) {
 			return ServiceRequest.FAILURE_OUTER_SIGNATURE;
 		}
 	}
-	
+
 	return ServiceRequest.OK_CERT_AVAILABLE;
 }
 
@@ -452,103 +420,6 @@ CVCAService.prototype.compileCertificateList = function(ouronly) {
 
 
 /**
- * Enumerate all pending service requests
- *
- * @returns the pending service requests
- * @type ServiceRequest[]
- */
-CVCAService.prototype.listRequests = function() {
-	return this.queue;
-}
-
-
-
-/**
- * Gets the indexed request
- *
- * @param {Number} index the index into the work queue identifying the request
- * @returns the indexed request
- * @type ServiceRequest
- */
-CVCAService.prototype.getRequest = function(index) {
-	return this.queue[index];
-}
-
-
-
-/**
- * Process request and send certificates
- *
- * @param {Number} index the index into the work queue identifying the request
- */
-CVCAService.prototype.processRequest = function(index) {
-	var sr = this.queue[index];
-
-	var certlist = [];
-	
-	if (sr.isCertificateRequest()) {		// RequestCertificate
-		if (sr.getStatusInfo() == ServiceRequest.OK_CERT_AVAILABLE) {
-			var req = sr.getCertificateRequest();
-			var response = this.checkRequestSemantics(req);	// Check request a second time
-
-			if (response == ServiceRequest.OK_CERT_AVAILABLE) {		// Still valid
-				certlist = this.determineCertificateList(req);
-				var cert = this.issueCertificate(req);
-				certlist.push(cert);
-			} else {
-				GPSystem.trace("Request " + req + " failed secondary check");
-				sr.setStatusInfo(response);
-			}
-		}
-	} else {								// GetCertificates
-		if (sr.getStatusInfo().substr(0, 3) == "ok_") {
-			// Only return our own certificate to the other SPOC
-			certlist = this.compileCertificateList(sr.getType() == "SPOC");
-		}
-	}
-	
-	this.sendCertificates(sr, certlist);
-}
-
-
-
-/**
- * Delete a request from the work queue
- *
- * @param {Number} index the index into the work queue
- */
-CVCAService.prototype.deleteRequest = function(index) {
-	this.queue.splice(index, 1);
-}
-
-
-
-/**
- * Enumerate all pending service requests to superior systems
- *
- * @returns the pending service requests
- * @type ServiceRequest[]
- */
-CVCAService.prototype.listOutboundRequests = function() {
-	return this.outqueue;
-}
-
-
-
-/**
- * Gets the indexed request
- *
- * @param {Number} index the index into the work queue identifying the request
- * @returns the indexed request
- * @type ServiceRequest
- */
-CVCAService.prototype.getOutboundRequest = function(index) {
-	return this.outqueue[index];
-}
-
-
-
-/**
  * Adds an outbound request to the internal queue, removing the oldest entry if more than
  * 10 entries are contained
  *
@@ -634,14 +505,13 @@ CVCAService.prototype.sendCertificates = function(serviceRequest, certificates) 
 
 
 
-CVCAService.prototype.getCACertificatesFromSPOCs = function() {
-	for (var i = 0; i < this.spoclist.length; i++) {
-		this.getCACertificatesFromSPOC(this.spoclist[i].country);
-	}
-}
-
-
-
+/**
+ * Request CA certificate from SPOC identified by the country code
+ *
+ * @param {String} country the two letter country code
+ * @type String
+ * @return the returnCode from the remote system
+ */
 CVCAService.prototype.getCACertificatesFromSPOC = function(country) {
 	var spoc = this.spocmap[country];
 	
@@ -676,11 +546,238 @@ CVCAService.prototype.getCACertificatesFromSPOC = function(country) {
 			print(list[i]);
 		}
 	}
+	return sr.getStatusInfo();
 }
 
 
 
-// --- WebServices
+/**
+ * Process a request to forward a certificate request to a foreign CVCA
+ *
+ * @param {CVC} request the certificate request
+ * @param {String} foreignCAR the CHR of the CVCA that is supposed to sign the request
+ * @param {String} callback either "callback_possible" or "callback_not_possible"
+ * @param {String} messageID the message ID associated with an asynchronous request
+ * @param {String} responseURL the URL to send the response to
+ * @type Object
+ * @return an object with the properties certlist and returnCode
+ */
+CVCAService.prototype.processRequestForeignCertificate = function(request, foreignCAR, callback, messageID, responseURL) {
+	var result = { certlist: [], returnCode: ServiceRequest.FAILURE_INTERNAL_ERROR };
+	
+	if (callback == "callback_not_possible") {
+		GPSystem.trace("Foreign certificate requests can only be processed asynchronously");
+		result.returnCode = ServiceRequest.FAILURE_SYNCHRONOUS_PROCESSING_NOT_POSSIBLE;
+		return result;
+	}
+
+	var req = this.checkRequestSyntax(request);
+
+	if (req == null) {
+		result.returnCode = ServiceRequest.FAILURE_SYNCHRONOUS_PROCESSING_NOT_POSSIBLE;
+		return result;
+	}
+
+	GPSystem.trace("CVCAService - Received certificate request: ");
+	GPSystem.trace(req);
+
+	result.returnCode = this.checkRequestSemantics(req, foreignCAR);
+
+	if (result.returnCode == ServiceRequest.OK_CERT_AVAILABLE) {
+		var asyncreq = new ServiceRequest(
+								messageID.toString(),
+								responseURL.toString(),
+								req);
+
+		asyncreq.setType("Forward");
+		asyncreq.setStatusInfo(result.returnCode);
+		this.queue.push(asyncreq);
+		// if initial request approve forwarding
+		// if renewal request forward directly
+		result.returnCode = ServiceRequest.OK_SYNTAX;
+	}
+
+	return result;
+}
+
+
+
+// ---- GUI handling ----------------------------------------------------------
+
+/**
+ * Enumerate all pending service requests
+ *
+ * @returns the pending service requests
+ * @type ServiceRequest[]
+ */
+CVCAService.prototype.listRequests = function() {
+	return this.queue;
+}
+
+
+
+/**
+ * Gets the indexed request
+ *
+ * @param {Number} index the index into the work queue identifying the request or -1 to return the last entry
+ * @returns the indexed request
+ * @type ServiceRequest
+ */
+CVCAService.prototype.getRequest = function(index) {
+	if (index == -1) {
+		index = this.queue.length - 1;
+	}
+	return this.queue[index];
+}
+
+
+
+/**
+ * Process request and send certificates
+ *
+ * @param {Number} index the index into the work queue identifying the request or -1 to return the last entry
+ * @type String
+ * @return the returnCode from the remote system
+*/
+CVCAService.prototype.processRequest = function(index) {
+	var sr = this.getRequest(index);
+
+	var certlist = [];
+	
+	if (sr.isCertificateRequest()) {		// RequestCertificate
+		if (sr.getStatusInfo() == ServiceRequest.OK_CERT_AVAILABLE) {
+			var req = sr.getCertificateRequest();
+			var response = this.checkRequestSemantics(req);	// Check request a second time
+
+			if (response == ServiceRequest.OK_CERT_AVAILABLE) {		// Still valid
+				certlist = this.determineCertificateList(req);
+				var cert = this.issueCertificate(req);
+				certlist.push(cert);
+			} else {
+				GPSystem.trace("Request " + req + " failed secondary check");
+				sr.setStatusInfo(response);
+			}
+		}
+	} else {								// GetCertificates
+		if (sr.getStatusInfo().substr(0, 3) == "ok_") {
+			// Only return our own certificate to the other SPOC
+			certlist = this.compileCertificateList(sr.getType() == "SPOC");
+		}
+	}
+	
+	this.sendCertificates(sr, certlist);
+	return sr.getFinalStatusInfo();
+}
+
+
+
+/**
+ * Delete a request from the work queue
+ *
+ * @param {Number} index the index into the work queue
+ */
+CVCAService.prototype.deleteRequest = function(index) {
+	this.queue.splice(index, 1);
+}
+
+
+
+/**
+ * Enumerate all pending service requests to superior systems
+ *
+ * @returns the pending service requests
+ * @type ServiceRequest[]
+ */
+CVCAService.prototype.listOutboundRequests = function() {
+	return this.outqueue;
+}
+
+
+
+/**
+ * Gets the indexed request
+ *
+ * @param {Number} index the index into the work queue identifying the request
+ * @returns the indexed request
+ * @type ServiceRequest
+ */
+CVCAService.prototype.getOutboundRequest = function(index) {
+	return this.outqueue[index];
+}
+
+
+
+/**
+ * Change the key specification for generating requests
+ *
+ * @param {String} newSpec id from CVCAService.KeySpecification
+ */
+CVCAService.prototype.changeKeySpecification = function(newSpec) {
+	this.currentKeySpec = newSpec;
+	var s = CVCAService.KeySpecificationMap[newSpec];
+	
+	var key = new Key();
+	if (CVC.isECDSA(s.oid)) {
+		key.setComponent(Key.ECC_CURVE_OID, s.curve);
+	} else {
+		key.setSize(s.keysize);
+	}
+
+	this.cvca.setKeySpec(key, s.oid);
+}
+
+
+
+/**
+ * Issue an initial root certificate or a new link certificate
+ * 
+ * @param {boolean} withDP true to include domain parameter in certificate
+ */
+CVCAService.prototype.generateLinkCertificate = function(withDP) {
+	// Create a new request
+	var req = this.cvca.generateRequest(null, false);
+	print("Link/Root certificate request: " + req);
+	print(req.getASN1());
+	
+	if (this.cvca.isOperational()) {
+		this.linkCertificatePolicy.includeDomainParameter = withDP;
+
+		// Create link certificate based on request
+		var cert = this.cvca.generateCertificate(req, this.linkCertificatePolicy);
+		print("Link certificate: " + cert);
+		print(cert.getASN1());
+
+		// Import certificate into store, making it the most current certificate
+		
+		this.cvca.importCertificate(cert);
+	}
+	
+	// Create root certificate based on request
+	var cert = this.cvca.generateCertificate(req, this.rootCertificatePolicy);
+	print("Root certificate: " + cert);
+	print(cert.getASN1());
+
+	// Import certificate into store, making it the most current certificate
+	this.cvca.importCertificate(cert);
+}
+
+
+
+/**
+ * Request updated CA certificates from all registered SPOCs
+ * @type String
+ * @return the returnCode from the remote system
+ */
+CVCAService.prototype.getCACertificatesFromSPOCs = function() {
+	for (var i = 0; i < this.spoclist.length; i++) {
+		var result = this.getCACertificatesFromSPOC(this.spoclist[i].country);
+	}
+	return result;
+}
+
+
+
+// ---- WebService handling ---------------------------------------------------
 
 /**
  * Webservice that returns the list of certificates for this CA
@@ -813,29 +910,130 @@ CVCAService.prototype.RequestCertificate = function(soapBody) {
 
 
 
+// ---- TR-03129 Service ------------------------------------------------------
+
 /**
  * The TR-03129 Service port class
+ * 
+ * <p>See BSI-TR-03129 at www.bsi.bund.de for the specification of the CVCA/SPOC web service</p>
  */
 function TR3129ServicePort(service) {
 	this.service = service;
+	this.version = "1.1";
 }
 
+
+
+/**
+ * Implements GetCACertificates from TR-03129, chapter 4.2.3
+ *
+ * <p>Either respond synchronously with all known certificate chains or schedule an asychronous response</p>
+ *
+ * @param {XML} soapBody the SOAP request body
+ * @type XML
+ * @return the SOAP response body
+ */
 TR3129ServicePort.prototype.GetCACertificates = function(soapBody) {
+	// ToDo: Move code from service
 	return this.service.GetCACertificates(soapBody);
 }
 
+
+
+/**
+ * Implements RequestCertificates from TR-03129, chapter 4.2.1
+ *
+ * <p>Check request and either respond with new certificate or schedule an asychronous response</p>
+ *
+ * @param {XML} soapBody the SOAP request body
+ * @type XML
+ * @return the SOAP response body
+ */
 TR3129ServicePort.prototype.RequestCertificate = function(soapBody) {
+	// ToDo: Move code from service
 	return this.service.RequestCertificate(soapBody);
 }
 
 
+
+
 /**
- * The SPOC Service port class
+ * Implements RequestForeignCertificates from TR-03129, chapter 4.2.2
+ *
+ * <p>Check request and forward to foreign SPOC/CVCA</p>
+ *
+ * @param {XML} soapBody the SOAP request body
+ * @type XML
+ * @return the SOAP response body
+ */
+TR3129ServicePort.prototype.RequestForeignCertificate = function(soapBody) {
+	var ns = new Namespace("uri:EAC-PKI-CVCA-Protocol/" + this.version);
+	var ns1 = new Namespace("uri:eacBT/" + this.version);
+
+	var certlist = [];
+
+	var reqbin = new ByteString(soapBody.certReq, BASE64);
+	var callback = soapBody.callbackIndicator.toString();
+	var foreignCAR = soapBody.foreignCAR.toString();
+	var messageID = soapBody.messageID.ns1::messageID;
+	var responseURL = soapBody.responseURL.ns1::string;
+	
+	var result = this.service.processRequestForeignCertificate(reqbin, foreignCAR, callback, messageID, responseURL);
+
+	if (result.certlist.length > 0) {
+		var response =
+			<ns:RequestCertificateResponse xmlns:ns={ns} xmlns:ns1={ns1}>
+				<Result>
+					<ns1:returnCode>{result.returnCode}</ns1:returnCode>
+					<!--Optional:-->
+					<ns1:certificateSeq>
+						<!--Zero or more repetitions:-->
+					</ns1:certificateSeq>
+				</Result>
+			</ns:RequestCertificateResponse>
+		var list = response.Result.ns1::certificateSeq;
+
+		for each (var cvc in result.certlist) {
+			list.certificate += <ns1:certificate xmlns:ns1={ns1}>{cvc.getBytes().toString(BASE64)}</ns1:certificate>
+		}
+	} else {
+		var response =
+			<ns:RequestCertificateResponse xmlns:ns={ns} xmlns:ns1={ns1}>
+				<Result>
+					<ns1:returnCode>{result.returnCode}</ns1:returnCode>
+				</Result>
+			</ns:RequestCertificateResponse>
+	}
+	
+	return response;
+}
+
+
+
+// ---- SPOC Service ----------------------------------------------------------
+
+/**
+ * The SPOC service port class
+ *
+ * <p>See CSN_369791 for the specification of the SPOC web service</p>
+ * <p>http://www.normservis.cz/download/view/csn/36/85000/85000_nahled.htm</p>
+ * @param {CVCAService} the underlying CVCA service
  */
 function SPOCServicePort(service) {
 	this.service = service;
 }
 
+
+
+/**
+ * Implements GeneralMessage from CSN_369791 (SPOC)
+ *
+ * <p>TBD</p>
+ *
+ * @param {XML} soapBody the SOAP request body
+ * @type XML
+ * @return the SOAP response body
+ */
 SPOCServicePort.prototype.GeneralMessage = function(soapBody) {
 	print(soapBody.toXMLString());
 	throw new Error("Not implemented");
@@ -843,6 +1041,15 @@ SPOCServicePort.prototype.GeneralMessage = function(soapBody) {
 
 
 
+/**
+ * Implements GetCACertificates from CSN_369791 (SPOC)
+ *
+ * <p>Check caller and either respond synchronously with our certificate chain or schedule an asychronous response</p>
+ *
+ * @param {XML} soapBody the SOAP request body
+ * @type XML
+ * @return the SOAP response body
+ */
 SPOCServicePort.prototype.GetCACertificatesRequest = function(soapBody) {
 
 	var ns = new Namespace("http://namespaces.unmz.cz/csn369791");
@@ -899,11 +1106,27 @@ SPOCServicePort.prototype.GetCACertificatesRequest = function(soapBody) {
 
 
 
+/**
+ * Implements RequestCertificate from CSN_369791 (SPOC)
+ *
+ * @param {XML} soapBody the SOAP request body
+ * @type XML
+ * @return the SOAP response body
+ */
 SPOCServicePort.prototype.RequestCertificate = function(soapBody) {
 	print(soapBody.toXMLString());
 	throw new Error("Not implemented");
 }
 
+
+
+/**
+ * Implements SendCertificates from CSN_369791 (SPOC)
+ *
+ * @param {XML} soapBody the SOAP request body
+ * @type XML
+ * @return the SOAP response body
+ */
 SPOCServicePort.prototype.SendCertificatesRequest = function(soapBody) {
 
 	var ns = new Namespace("http://namespaces.unmz.cz/csn369791");

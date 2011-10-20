@@ -24,7 +24,6 @@
  * @fileoverview A simple terminal control center (TCC) web service implementing TR-03129 web services
  */
 
-load("tools/eccutils.js");
 
 
 /**
@@ -35,6 +34,8 @@ load("tools/eccutils.js");
  * @param {String} parentURL the URL of the parent CA's webservice
  */ 
 function TCCService(certstorepath, path, parentURL) {
+	BaseService.call(this);
+
 	var pe = path.substr(1).split("/");
 	assert(pe.length == 3);
 
@@ -54,6 +55,9 @@ function TCCService(certstorepath, path, parentURL) {
 	this.version = "1.1";
 	this.rsaKeySize = 1024;
 }
+
+TCCService.prototype = new BaseService();
+TCCService.constructor = TCCService;
 
 
 
@@ -142,6 +146,8 @@ TCCService.prototype.addOutboundRequest = function(sr) {
 /**
  * Update certificate list from parent CA
  *
+ * @type String
+ * @return The return code received from the other side
  */
 TCCService.prototype.updateCACertificates = function(async) {
 
@@ -163,6 +169,7 @@ TCCService.prototype.updateCACertificates = function(async) {
 			print(list[i]);
 		}
 	}
+	return sr.getStatusInfo();
 }
 
 
@@ -170,6 +177,8 @@ TCCService.prototype.updateCACertificates = function(async) {
 /**
  * Renew certificate through parent CA
  *
+ * @type String
+ * @return The return code received from the other side
  */
 TCCService.prototype.renewCertificate = function(async, forceinitial) {
 
@@ -214,6 +223,8 @@ TCCService.prototype.renewCertificate = function(async, forceinitial) {
 			print(list[i]);
 		}
 	}
+	
+	return sr.getStatusInfo();
 }
 
 

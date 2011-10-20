@@ -708,7 +708,7 @@ CVCertificateStore.prototype.getDomainParameter = function(path, chr) {
 		var cvc = this.getCertificate(path, chr);
 		
 		if (cvc == null) {
-			throw new GPError("CVCertificateStore", GPError.INVALID_ARGUMENTS, 0, "Could not locate certificate " + chr);
+			throw new GPError("CVCertificateStore", GPError.INVALID_ARGUMENTS, 0, "Could not locate certificate " + chr + " in " + path);
 		}
 		
 		var p = cvc.getPublicKey();
