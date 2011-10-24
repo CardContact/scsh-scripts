@@ -80,6 +80,9 @@ var af = new ApplicationFactory(crypto);
 // Add ec-card application profiles
 af.addApplicationProfile("ap_mf.xml");
 af.addApplicationProfile("ap_hca.xml");
+af.addApplicationProfile("ap_nfd.xml");
+af.addApplicationProfile("ap_perserkl.xml");
+af.addApplicationProfile("ap_zuzahlung.xml");
 af.addApplicationProfile("ap_esign.xml");
 af.addApplicationProfile("ap_ciaesign.xml");
 af.addApplicationProfile("ap_qes.xml");

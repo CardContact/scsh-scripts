@@ -3,8 +3,8 @@
      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xmlns:gp="http://namespaces.globalplatform.org/systems-profiles/1.1.0"
     xmlns:scdp="http://www.openscdp.org/namespaces/gp/systems-profiles/1.0.0"
-    UniqueID="2B0601040181C31F10030201" ProfileVersion="1.0.0">
-    <gp:Description>Health Care Application Application Profile (DF.HCA)</gp:Description>
+    UniqueID="2B0601040181C31F10030801" ProfileVersion="1.0.0">
+    <gp:Description>Personal Statements (DF.PersönlicheErklärungen)</gp:Description>
     <gp:Revisions arrayElement="Revision" arrayIndex="#">
         <gp:Revision Version="1.0.0" Date="2006-02-20" Time="12:00:00" By="www.CardContact.de" Digest=""></gp:Revision>
     </gp:Revisions>
@@ -19,17 +19,9 @@
     </gp:ApplicationInfo>
     <scdp:DataStructure>
         <scdp:FileStructure arrayElement="EF" arrayIndex="#">
-            <scdp:EF fid="D004" type="T" format="asn1" name="EF.DM" />
-            <scdp:EF fid="D005" type="T" format="asn1" name="EF.Einwilligung" />
-            <scdp:EF fid="D003" type="T" format="xml.lz1" name="EF.GVD" />
-            <scdp:EF fid="D006" type="C" format="asn1" name="EF.Logging" />
-            <scdp:EF fid="D001" type="T" format="xml.lz1" name="EF.PD" />
-            <scdp:EF fid="D00C" type="T" format="" name="EF.StatusVD" />
-            <scdp:EF fid="D00F" type="LF" format="" name="EF.TTN" />
-            <scdp:EF fid="D002" type="T" format="xml.vd1" name="EF.VD" />
-            <scdp:EF fid="D009" type="LF" format="asn1" name="EF.Verweis" />
-            <scdp:EF fid="D01A" type="LV" format="asn1" name="EF.Verweise_Gesundheitsdatendienste" />
-            <scdp:EF fid="D01C" type="T" format="asn1" name="EF.Prüfungsnachweis" />
+            <scdp:EF fid="D019" type="T" format="asn1" name="EF.Zuzahlungscontainer" />
+            <scdp:EF fid="D017" type="T" format="asn1" name="EF.StatusZuzahlung" />
+            <scdp:EF fid="D016" type="T" format="asn1" name="EF.Zuzahlungstickets" />
         </scdp:FileStructure>    
     </scdp:DataStructure>   
 </gp:ApplicationProfile>

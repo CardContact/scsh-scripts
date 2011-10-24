@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <CardProfile xmlns="http://namespaces.globalplatform.org/systems-profiles/1.1.0"
      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://namespaces.globalplatform.org/systems-profiles/1.1.0 http://namespaces.globalplatform.org/systems-profiles/1.1.0/GP.systems.profiles.1.1.0.CardProfile.xsd"
@@ -19,11 +19,14 @@
     <ConflictRules arrayElement="" arrayIndex=""></ConflictRules>
     <LoadFileInstances arrayElement="" arrayIndex=""></LoadFileInstances>
     <ApplicationInstances arrayElement="ApplicationInstance" arrayIndex="AID">
-        <ApplicationInstance Label="MF"                         AID="D2760001448000"                                                                  ProfileID="2B0601040181C31F10030101" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
-        <ApplicationInstance Label="DF.HCA"                AID="D27600000102"                                              ProfileID="2B0601040181C31F10030201" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
-        <ApplicationInstance Label="DF.ESIGN"            AID="A000000167455349474E"                            ProfileID="2B0601040181C31F10030301" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
-        <ApplicationInstance Label="DF.CIA.ESIGN"    AID="E828BD080FA000000167455349474E"    ProfileID="2B0601040181C31F10030401" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
-        <ApplicationInstance Label="DF.QES"                AID="D27600006601"                                              ProfileID="2B0601040181C31F10030501" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
+        <ApplicationInstance Label="MF"           AID="D2760001448000"                  ProfileID="2B0601040181C31F10030101" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
+        <ApplicationInstance Label="DF.HCA"       AID="D27600000102"                    ProfileID="2B0601040181C31F10030201" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
+        <ApplicationInstance Label="DF.Notfalldatensatz"       AID="D27600014407"                    ProfileID="2B0601040181C31F10030601" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
+        <ApplicationInstance Label="DF.PersönlicheErklärungen"  AID="D27600014408"                    ProfileID="2B0601040181C31F10030701" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
+        <ApplicationInstance Label="DF.Zuzahlungen_§28_Abs4_SGB-V"  AID="D27600014406"                    ProfileID="2B0601040181C31F10030801" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
+        <ApplicationInstance Label="DF.ESIGN"     AID="A000000167455349474E"            ProfileID="2B0601040181C31F10030301" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
+        <ApplicationInstance Label="DF.CIA.ESIGN" AID="E828BD080FA000000167455349474E"  ProfileID="2B0601040181C31F10030401" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
+        <ApplicationInstance Label="DF.QES"       AID="D27600006601"                    ProfileID="2B0601040181C31F10030501" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
     </ApplicationInstances>
     <CardInfo>
         <ResourcesAvailable Unit="byte" RAM="2048" EEPROM="10000" Flash="0"/>
