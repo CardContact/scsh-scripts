@@ -129,7 +129,8 @@ try     {
 	egk.actionListener = OutlineCardActionListener;
 	
 	var rootPuk = [ new Key("kp_cvc_root_test.xml"),
-				    new Key("kp_cvc_root_testlabor.xml")];
+				    new Key("kp_cvc_root_testlabor.xml"),
+					new Key("kp_cvc_root_test_2.xml")];
 	
 	Card2CardAuthentication(card_HIC, card_HPC, rootPuk);
 

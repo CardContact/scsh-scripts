@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<gp:KeyProfile xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://namespaces.globalplatform.org/systems-profiles/1.1.0 http://namespaces.globalplatform.org/systems-profiles/1.1.0/GP.systems.profiles.1.1.0.KeyProfile.xsd"
+    xmlns:gp="http://namespaces.globalplatform.org/systems-profiles/1.1.0"
+    UniqueID="2B0601040181C31F10031001" ProfileVersion="1.1.0" ErrataVersion="0">
+    <gp:Description>eGK CVC Root Key G1 (Official Test)</gp:Description>
+    <gp:Revisions arrayElement="Revision" arrayIndex="#">
+        <gp:Revision Version="1.0.0" Date="2008-07-01" Time="00:00:00" By="www.openscdp.org"
+            Digest="00000000"/>
+    </gp:Revisions>
+    <gp:KeyInfo Name="RSAPublic" Type="PUBLIC" SubType="RSA" Size="1024" Mode="TEST"/>
+    <gp:Attribute Sensitive="false" Importable="true" Exportable="true"/>
+    <gp:Usage Encrypt="true" Decrypt="true" DecryptEncrypt="true" Sign="true" Verify="true"
+        Wrap="true" Unwrap="true" UnwrapWrap="true" Derive="true"/>
+    <gp:Value Format="MOD_EXP" arrayElement="Component" arrayIndex="#">
+        <gp:Component Name="MODULUS" Encoding="HEX" Value="00BE4B3E4A4AF1436DBB45FB4DDF0B2355D1B0BDEA317470B06077C48E4B22CF17877A08714EABAC2B1A2C0EDD10B15A8C2022DD23D7FBB050D63EC7D144034A641FA25CBE78FF81C78F6C41A9F45967F4B229BF6FCE6A8A498E34D1E9DEFF30574489AD246B5EA3844E2F7A2881471ED7C5E6F3E8261E9858D337FC65F510E46F7D446106DDCCA5FB0CE9577E36F37155CC2395ECF4A2545CB622CECA979697F6DE828C76F4406D49BF8BA60E495B8068A3DF82074454AEB0C90FFFA9B1DDCB5C5CBC5ACE36F6ACAC29BA81671F6727225EA9AE2AD46D170D24765A5B9AE2F046161B3D7197204DB5969EAEBB052E3842C90F51CCFF76C515951A5550116BFD0B"></gp:Component>
+        <gp:Component Name="EXPONENT" Encoding="HEX" Value="010001"></gp:Component>
+    </gp:Value>
+</gp:KeyProfile>
