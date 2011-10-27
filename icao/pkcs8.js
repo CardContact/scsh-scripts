@@ -84,17 +84,44 @@ PKCS8.decodeUncompressedECPoint = function(uncompressedPoint) {
 
 
 /**
+ * Integer to octet string conversion
+ *
+ * @param {ByteString} value the encoded integer value
+ * @param {Number} the number of digits
+ * @type ByteString
+ * @return the truncated or padded result
+ */
+PKCS8.I2O = function(value, length) {
+	if (value.length > length) {
+		value = value.right(length);
+	}
+	while (value.length < length) {
+		value = PKCS8.PAD.left((length - value.length - 1 & 15) + 1).concat(value);
+	}
+	return value;
+}
+PKCS8.PAD = new ByteString("00000000000000000000000000000000", HEX);
+
+
+
+/**
  * Strips leading zeros of a ByteString
  *
  * @param {ByteString} value the ByteString value
  * @return the stripped ByteString object, may be an empty ByteString
  * @type ByteString
  */
-PKCS8.stripLeadingZeros = function(value) {
-	var i = 0;
-	for (; (i < value.length) && (value.byteAt(i) == 0); i++);
+PKCS8.stripLeadingZeros = function(value, size) {
+	if (typeof(size) == "undefined") {
+		var limit = value.length;
+	} else {
+		limit = value.length - size;
+	}
 	
-	return value.right(value.length - i);
+	var i = 0;
+	for (; (i < limit) && (value.byteAt(i) == 0); i++);
+	
+	return value.bytes(i);
 }
 
 
@@ -113,7 +140,7 @@ PKCS8.convertUnsignedInteger = function(value) {
 	assert(value.length > 0);
 	
 	var i = 0;
-	for (var i = 0; (i < value.length - 1) && (value.byteAt(i) == 0); i++);
+	for (; (i < value.length - 1) && (value.byteAt(i) == 0); i++);
 	
 	if (value.byteAt(i) >= 0x80) {
 		value = (new ByteString("00", HEX)).concat(value.bytes(i));
@@ -382,11 +409,13 @@ PKCS8.decodeRSAKeyFromPKCS8Format = function(algparam, privateKey) {
 	
 	assert(privateKey.get(0).value.toUnsigned() == 0);
 	
-	key.setComponent(Key.CRT_P,   PKCS8.stripLeadingZeros(privateKey.get(4).value));
-	key.setComponent(Key.CRT_Q,   PKCS8.stripLeadingZeros(privateKey.get(5).value));
-	key.setComponent(Key.CRT_DP1, PKCS8.stripLeadingZeros(privateKey.get(6).value));
-	key.setComponent(Key.CRT_DQ1, PKCS8.stripLeadingZeros(privateKey.get(7).value));
-	key.setComponent(Key.CRT_PQ,  PKCS8.stripLeadingZeros(privateKey.get(8).value));
+	var p = PKCS8.stripLeadingZeros(privateKey.get(4).value);
+	var l = p.length;
+	key.setComponent(Key.CRT_P,   p);
+	key.setComponent(Key.CRT_Q,   PKCS8.I2O(privateKey.get(5).value, l));
+	key.setComponent(Key.CRT_DP1, PKCS8.I2O(privateKey.get(6).value, l));
+	key.setComponent(Key.CRT_DQ1, PKCS8.I2O(privateKey.get(7).value, l));
+	key.setComponent(Key.CRT_PQ,  PKCS8.I2O(privateKey.get(8).value, l));
 
 	return key;	
 }
