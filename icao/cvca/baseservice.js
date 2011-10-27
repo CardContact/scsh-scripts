@@ -32,4 +32,206 @@ load("tools/eccutils.js");
  *
  */ 
 function BaseService() {
+	this.crypto = new Crypto();
+
+	this.inqueue = new ServiceQueue(30);
+	this.outqueue = new ServiceQueue(10);
+}
+
+
+
+/**
+ * Enumerate all pending service requests to superior systems
+ *
+ * @returns the pending service requests
+ * @type ServiceRequest[]
+ */
+BaseService.prototype.listOutboundRequests = function() {
+	return this.outqueue.getList();
+}
+
+
+
+/**
+ * Gets the indexed request
+ *
+ * @param {Number} index the index into the work queue identifying the request
+ * @returns the indexed request
+ * @type ServiceRequest
+ */
+BaseService.prototype.getOutboundRequest = function(index) {
+	return this.outqueue.getEntryByIndex(index);
+}
+
+
+
+/**
+ * Gets the request identified by it message id
+ *
+ * @param {String} msgid the message id for the request
+ * @returns the request
+ * @type ServiceRequest
+ */
+BaseService.prototype.getOutboundRequestByMessageId = function(msgid) {
+	return this.outqueue.getEntryByMessageID(msgid);
+}
+
+
+
+/**
+ * Adds an outbound request to the internal queue, removing the oldest entry if more than
+ * 10 entries are contained
+ *
+ * @param {ServiceRequest} sr the service request
+ */
+BaseService.prototype.addOutboundRequest = function(sr) {
+	this.outqueue.addEntry(sr);
+}
+
+
+
+/**
+ * Adds an inbound request to the internal queue
+ *
+ * @param {ServiceRequest} sr the service request
+ */
+BaseService.prototype.addInboundRequest = function(sr) {
+	this.inqueue.addEntry(sr);
+}
+
+
+
+/**
+ * Enumerate all pending service requests from subordinate systems
+ *
+ * @returns the pending service requests
+ * @type ServiceRequest[]
+ */
+BaseService.prototype.listInboundRequests = function() {
+	return this.inqueue.getList();
+}
+
+
+
+/**
+ * Gets the indexed request
+ *
+ * @param {Number} index the index into the work queue identifying the request or -1 for the last request
+ * @returns the indexed request
+ * @type ServiceRequest
+ */
+BaseService.prototype.getInboundRequest = function(index) {
+	return this.inqueue.getEntryByIndex(index);
+}
+
+
+
+/**
+ * Delete a request from the work queue
+ *
+ * @param {Number} index the index into the work queue
+ */
+BaseService.prototype.deleteInboundRequest = function(index) {
+	this.inqueue.deleteEntry(index);
+}
+
+
+
+/**
+ * Generate a new message ID
+ *
+ * @type String
+ * @return a new message ID
+ */
+BaseService.prototype.newMessageID = function() {
+	return this.crypto.generateRandom(2).toString(HEX);
+}
+
+
+
+/**
+ * A queue for service requests
+ *
+ * @param {Number} capacity the maximum number of entries in the queue
+ */
+function ServiceQueue(capacity) {
+	this.capacity = capacity;
+	this.queue = [];
+	this.map = [];
+}
+
+
+
+/**
+ * Enumerate all service requests
+ *
+ * @returns the service request list
+ * @type ServiceRequest[]
+ */
+ServiceQueue.prototype.getList = function() {
+	return this.queue;
+}
+
+
+
+/**
+ * Delete a request from the work queue
+ *
+ * @param {Number} index the index into the work queue
+ */
+ServiceQueue.prototype.deleteEntry = function(index) {
+	var oldsr = this.getEntryByIndex(index);
+	var msgid = oldsr.getMessageID();
+	if (msgid) {
+		delete(this.map[msgid]);
+	}
+
+	this.queue.splice(index, 1);
+}
+
+
+
+/**
+ * Adds a request to the queue, removing the oldest entry if the capacity is exhausted
+ *
+ * @param {ServiceRequest} sr the service request
+ */
+ServiceQueue.prototype.addEntry = function(sr) {
+	if (this.queue.length >= this.capacity) {
+		this.deleteEntry(0);
+	}
+	this.queue.push(sr);
+	var msgid = sr.getMessageID();
+	if (msgid) {
+		this.map[msgid] = sr;
+	}
+}
+
+
+
+/**
+ * Gets the indexed request
+ *
+ * @param {Number} index the index into the work queue identifying the request or -1 for the last request
+ * @returns the indexed request
+ * @type ServiceRequest
+ */
+ServiceQueue.prototype.getEntryByIndex = function(index) {
+	if (index == -1) {
+		index = this.queue.length - 1;
+	}
+	return this.queue[index];
+}
+
+
+
+/**
+ * Gets the request identified by its message id
+ *
+ * @param {String} msgid the message id for the request
+ * @returns the request
+ * @type ServiceRequest
+ */
+ServiceQueue.prototype.getEntryByMessageID = function(msgid) {
+	return this.map[msgid];
 }

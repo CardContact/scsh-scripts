@@ -86,6 +86,8 @@ HTTPTester.prototype.call = function(relativeurl, expectedResult) {
 var testRunner = new TestRunner("EAC PKI Test Suite");
 
 testRunner.addTestGroupFromXML("tg_getcacertificates.xml", param);
+testRunner.addTestGroupFromXML("tg_getcacertificatesfromspoc.xml", param);
 testRunner.addTestGroupFromXML("tg_requestcertificate_dvca.xml", param);
+testRunner.addTestGroupFromXML("tg_requestforeigncertificate_dvca.xml", param);
 
 print("Test-Suite loaded...");

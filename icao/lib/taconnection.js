@@ -93,10 +93,12 @@ TAConnection.prototype.close = function() {
 /**
  * Obtain a list of certificates from the DVCA
  *
+ * @param {String} messageID the messageID for asynchronous requests (optional)
+ * @param {String} responseURL the URL to which the asynchronous response is send (optional)
  * @returns a lists of card verifiable certificates from the DVCA or null in case of error
  * @type CVC[]
  */
-TAConnection.prototype.getCACertificates = function() {
+TAConnection.prototype.getCACertificates = function(messageID, responseURL) {
 
 	this.lastReturnCode = null;
 
@@ -117,6 +119,12 @@ TAConnection.prototype.getCACertificates = function() {
 			</responseURL>
 		</ns:GetCACertificates>;
 
+	if (typeof(messageID) != "undefined") {
+		request.callbackIndicator = "callback_possible";
+		request.messageID.ns1::messageID = messageID;
+		request.responseURL.ns1::string = responseURL;
+	}
+
 	if (this.verbose) {
 		GPSystem.trace(request.toXMLString());
 	}
@@ -134,14 +142,15 @@ TAConnection.prototype.getCACertificates = function() {
 	
 	var certlist = [];
 
-	if (response.Result.ns1::returnCode.toString() == "ok_cert_available") {
+	this.lastReturnCode = response.Result.ns1::returnCode.toString();
+
+	if (this.lastReturnCode == "ok_cert_available") {
 		for each (var c in response.Result.ns1::certificateSeq.ns1::certificate) {
 			var cvc = new ByteString(c, BASE64);
 			certlist.push(cvc);
 			GPSystem.trace(cvc);
 		}
 	} else {
-		this.lastReturnCode = response.Result.ns1::returnCode.toString();
 		return null;
 	}
 
@@ -154,6 +163,8 @@ TAConnection.prototype.getCACertificates = function() {
  * Request a certificate from the parent CA using a web service
  *
  * @param {CVC} certreq the certificate request
+ * @param {String} messageID the messageID for asynchronous requests (optional)
+ * @param {String} responseURL the URL to which the asynchronous response is send (optional)
  * @returns the new certificates
  * @type CVC[]
  */
@@ -181,6 +192,12 @@ TAConnection.prototype.requestCertificate = function(certreq, messageID, respons
 			<certReq>{certreq.getBytes().toString(BASE64)}</certReq>
 		</ns:RequestCertificate>
 
+	if (typeof(messageID) != "undefined") {
+		request.callbackIndicator = "callback_possible";
+		request.messageID.ns1::messageID = messageID;
+		request.responseURL.ns1::string = responseURL;
+	}
+
 	if (this.verbose) {
 		GPSystem.trace(request.toXMLString());
 	}
@@ -198,7 +215,9 @@ TAConnection.prototype.requestCertificate = function(certreq, messageID, respons
 	
 	var certlist = [];
 
-	if (response.Result.ns1::returnCode.substr(0, 3) == "ok_") {
+	this.lastReturnCode = response.Result.ns1::returnCode.toString();
+	
+	if (this.lastReturnCode.substr(0, 3) == "ok_") {
 		GPSystem.trace("Received certificates from DVCA:");
 		for each (var c in response.Result.ns1::certificateSeq.ns1::certificate) {
 			var cvc = new CVC(new ByteString(c, BASE64));
@@ -206,7 +225,6 @@ TAConnection.prototype.requestCertificate = function(certreq, messageID, respons
 			GPSystem.trace(cvc);
 		}
 	} else {
-		this.lastReturnCode = response.Result.ns1::returnCode.toString();
 		return null;
 	}
 
@@ -272,7 +290,7 @@ TAConnection.prototype.requestForeignCertificate = function(certreq, foreignCAR,
 	var certlist = [];
 
 	this.lastReturnCode = response.Result.ns1::returnCode.toString();
-	print("RC=" + this.lastReturnCode);
+
 	if (this.lastReturnCode.substr(0, 3) == "ok_") {
 		GPSystem.trace("Received certificates from DVCA:");
 		for each (var c in response.Result.ns1::certificateSeq.ns1::certificate) {
@@ -292,7 +310,12 @@ TAConnection.prototype.requestForeignCertificate = function(certreq, foreignCAR,
 /**
  * Send a certificate to the DVCA
  *
+ * @param {String} foreignCAR the CAR of the foreign CVCA
+ * @param {String} messageID the messageID for asynchronous requests (optional)
+ * @param {String} responseURL the URL to which the asynchronous response is send (optional)
  * @param {CVC[]} cert the list of certificates to post
+ * @type String
+ * @return the returnCode
  */
 TAConnection.prototype.sendCertificates = function(certificates, messageID, statusInfo) {
 
@@ -348,9 +371,8 @@ TAConnection.prototype.sendCertificates = function(certificates, messageID, stat
 		throw new GPError("TAConnection", GPError.DEVICE_ERROR, 0, "SendCertificates failed with : " + e);
 	}
 
-	if (response.Result.ns1::returnCode.substr(0, 3) != "ok_") {
-		this.lastReturnCode = response.Result.ns1::returnCode.toString();
-	}
+	this.lastReturnCode = response.Result.ns1::returnCode.toString();
+	return this.lastReturnCode;
 }
 
 

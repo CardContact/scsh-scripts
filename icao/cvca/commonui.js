@@ -70,41 +70,6 @@ CommonUI.prototype.generateTemplate = function(url) {
 		prefix += "../";
 	}
 	
-/*
-	var pagetemplate = 
-		<html>
-			<head>
-				<title>{this.service.type + " " + this.service.name}</title>
-				<link rel="stylesheet" type="text/css" href={prefix + "../css/style.css"}/>
-			</head>
-			<body>
-				<table border="0" cellpadding="0" cellspacing="0" width="750" align="center">
-					<tr>
-						<td height="80" colspan="5" class="pb">
-							<div align="left">
-								<a href="http://www.cardcontact.de"><img src={prefix + "../images/banner.jpg"} width="750" height="80" border="0"/></a>
-							</div>
-						</td>
-					</tr>
-					<tr height="20"/>
-					<tr>
-						<td width="100" valign="top" align="left">
-							<p><b>{this.service.type}</b></p>
-							<a href={prefix + url[0]}>Home</a><br/>
-							<br/>
-							<a href={prefix + url[0] + "/holderlist?path="}>Certificates</a><br/>
-							<br/>
-							<div id="bookmarks"/>
-						</td>
-						<td width="650" align="left">
-							<div id="content"/>
-							<p class="copyright">(c) Copyright 2003 - 2010 <a href="http://www.cardcontact.de">CardContact</a> Software &amp; System Consulting, Minden, Germany</p>
-						</td>
-					</tr>
-				</table>
-			</body>
-		</html>
-*/
 	var pagetemplate = 
 		<html>
 			<head>
@@ -234,6 +199,234 @@ CommonUI.prototype.handleCertificateDetails = function(req, res, url) {
 
 
 /**
+ * Serves a details page for pending GetCertifcate requests.
+ *
+ * <p>The URL processed has the format <caname>/getcert/<queueindex></p>
+ *
+ * @param {HttpRequest} req the request object
+ * @param {HttpResponse} req the response object
+ * @param {String[]} url array of URL path elements
+ */
+CommonUI.prototype.handleGetCertificateRequestDetails = function(req, res, url) {
+
+	var op = CertStoreBrowser.parseQueryString(req.queryString);
+	
+	var index = parseInt(op.index);
+	var sr = this.service.getInboundRequest(index);
+	
+	if (typeof(op.action) != "undefined") {
+		if (op.action == "delete") {
+			this.service.deleteInboundRequest(index);
+			this.serveRefreshPage(req, res, url);
+		} else {
+			sr.setStatusInfo(op.action);
+			var status = this.service.processRequest(index);
+			this.serveRefreshPage(req, res, url, status);
+		}
+	} else {
+		var page = this.renderServiceRequestPage(sr);
+
+		var actions = <ul/>
+		
+		if (sr.getMessageID()) {
+			CommonUI.addAction(actions, "getcert", op.index, ServiceRequest.OK_CERT_AVAILABLE);
+			CommonUI.addAction(actions, "getcert", op.index, ServiceRequest.FAILURE_SYNTAX);
+			CommonUI.addAction(actions, "getcert", op.index, ServiceRequest.FAILURE_INTERNAL_ERROR);
+		}
+
+		actions.li += <li><a href={"getcert?index=" + op.index + "&action=delete"}>Delete</a> request</li>
+
+		var div = page.div.(@id == "actions");
+		div.h2 = <h2>Possible Actions</h2>
+		div.h2 += actions;
+
+		this.sendPage(req, res, url, page);
+	}
+}
+
+
+
+/**
+ * Render a basic details page for service requests
+ *
+ * @param {ServiceRequest} sr the service request
+ * @type XML
+ * @return the XML fragment for the page
+ */
+CommonUI.prototype.renderServiceRequestPage = function(sr) {
+
+	var finalStatusInfo = sr.getFinalStatusInfo();
+	status = finalStatusInfo ? "Completed" : "Pending";
+	var page = 
+		<div>
+			<h1>{status} Request</h1>
+			<table class="content">
+				<colgroup><col width="20"/><col width="80"/></colgroup>
+				<tr><td>Type</td><td>{sr.getType()}</td></tr>
+				<tr><td>StatusInfo</td><td>{sr.getStatusInfo()}</td></tr>
+			</table>
+			<div id="actions"/>
+			<div id="request"/>
+			<div id="certificates"/>
+		</div>;
+
+	var messageID = sr.getMessageID();
+
+	if (finalStatusInfo) {
+		page.table.tr += <tr><td>FinalStatusInfo</td><td>{finalStatusInfo}</td></tr>
+	}
+
+	if (messageID) {
+		page.table.tr += <tr><td>MessageID</td><td>{messageID}</td></tr>
+	}
+
+	var responseURL = sr.getResponseURL();
+	if (responseURL) {
+		page.table.tr += <tr><td>URL</td><td>{responseURL}</td></tr>
+	}
+		
+	var foreignCAR = sr.getForeignCAR();
+	if (foreignCAR) {
+		page.table.tr += <tr><td>Foreign CAR</td><td>{foreignCAR}</td></tr>
+	}
+		
+	var message = sr.getMessage();
+	if (message) {
+		page.table.tr += <tr><td>Message</td><td><pre>{message}</pre></td></tr>
+	}
+	
+	if (sr.isCertificateRequest()) {
+		var certreq = sr.getCertificateRequest();
+		certreq.decorate();
+		var div = page.div.(@id == "request");
+		div.h2 = <h2>Certificate Request</h2>
+		div.h2 += <pre>{certreq.getASN1()}</pre>
+	}
+
+	var certlist = sr.getCertificateList();
+	if (certlist) {
+		var div = page.div.(@id == "certificates");
+		div.h2 = <h2>Certificate List</h2>
+		
+		var str = "";
+		for each (var cvc in certlist) {
+			str += cvc.toString() + "\n";
+		}
+		div.h2 += <pre>{str}</pre>;
+	}
+	return page;
+}
+
+
+
+/**
+ * Render a list of service requests
+ *
+ * @param {ServiceRequest[]} srlist the service request list
+ * @param {boolean} isout is the outbound queue
+ * @param {String} url the base URL for generating links
+ * @type XML
+ * @return the XML fragment for the page
+ */
+CommonUI.prototype.renderServiceRequestListPage = function(srlist, isout, url) {
+	var t = <table class="content"/>;
+
+	t.tr += <tr><th width="20%">MessageID</th><th>Request</th><th>Status</th><th>Final Status</th></tr>;
+
+	for (var i = 0; i < srlist.length; i++) {
+		var sr = srlist[i];
+		
+		if (isout) {
+			var refurl = url + "/outrequest?index=" + i;
+		} else {
+			if (sr.isCertificateRequest()) {
+				var refurl = url + "/request?index=" + i;
+			} else {
+				var refurl = url + "/getcert?index=" + i;
+			}
+		}
+		
+		var messageID = sr.getMessageID();
+		if  (!messageID) {
+			messageID = "Synchronous";
+		}
+			
+		if (sr.isCertificateRequest()) {
+			var reqstr = sr.getCertificateRequest().toString();
+		} else {
+			var reqstr = sr.getType();
+			if (reqstr) {
+				reqstr = reqstr.substr(0, 21);
+			} else {
+				reqstr = "Unknown";
+			}
+		}
+		
+		var status = sr.getStatusInfo();
+		if (!status) {
+			status = "Undefined";
+		}
+		
+		var finalStatus = sr.getFinalStatusInfo();
+		if (!finalStatus) {
+			if (isout) {
+				finalStatus = "Not yet received";
+			} else {
+				finalStatus = "Not yet send";
+			}
+		}
+		
+		t.tr += <tr>
+					<td><a href={refurl}>{messageID.substr(0, 21)}</a></td>
+					<td>{reqstr}</td>
+					<td>{status.substr(0, 21)}</td>
+					<td>{finalStatus.substr(0, 21)}</td>
+				</tr>
+	}
+	
+	return t;
+}
+
+
+
+/**
+ * Serves a details page for pending RequestCertificate requests.
+ *
+ * <p>The URL processed has the format <caname>/request/<queueindex></p>
+ *
+ * @param {HttpRequest} req the request object
+ * @param {HttpResponse} req the response object
+ * @param {String[]} url array of URL path elements
+ */
+CommonUI.prototype.handleOutboundRequestDetails = function(req, res, url) {
+
+	var op = CertStoreBrowser.parseQueryString(req.queryString);
+	
+	var index = parseInt(op.index);
+	var sr = this.service.getOutboundRequest(index);
+
+	if (typeof(op.op) != "undefined") {
+		var certreq = sr.getCertificateRequest();
+		reqbin = certreq.getBytes();
+		res.setContentType("application/octet-stream");
+		res.setContentLength(reqbin.length);
+		var filename = certreq.getCHR().toString() + ".cvreq";
+		// ToDo: Remove nativeResponse once addHeader is provided in host class
+		res.nativeResponse.addHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+		res.write(reqbin);
+	} else {
+		var page = this.renderServiceRequestPage(sr);
+
+		var div = page.div.(@id == "request");
+		div.h2 += <a href={url[url.length - 1] + "?" + req.queryString + "&op=download"}>Download...</a>
+
+		this.sendPage(req, res, url, page);
+	}
+}
+
+
+
+/**
  * Serves a simple certificate list page.
  *
  * <p>The URL processed has the format <caname>/certificates?path=path&start=start</p>
@@ -310,4 +503,10 @@ CommonUI.prototype.serveRefreshPage = function(req, res, url, statusMessage) {
 	
 	res.setContentType("text/html");
 	res.print(page.toXMLString());
+}
+
+
+
+CommonUI.addAction = function(ul, cmd, index, action) {
+	ul.li += <li><a href={cmd + "?index=" + index + "&action=" + action}>Respond</a>{" with " + action}</li>
 }

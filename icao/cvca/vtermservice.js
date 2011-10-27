@@ -35,6 +35,8 @@ load("tools/eccutils.js");
  * @param {String} parentURL the URL of the parent CA's webservice
  */ 
 function VTermService(certstorepath, path, parentURL) {
+	BaseService.call(this);
+
 	if (typeof(certstorepath) == "undefined") {
 		return; 	// Empty constructor for prototype
 	}
@@ -54,13 +56,14 @@ function VTermService(certstorepath, path, parentURL) {
 	
 	this.ss = new CVCertificateStore(certstorepath);
 //	this.tcc = new CVCCA(this.crypto, this.ss, this.name, this.parent, path);
-	this.outqueue = [];
-	this.outqueuemap = [];
 	
 	this.lock = new java.util.concurrent.locks.ReentrantLock(true);
 	this.version = "1.1";
 	this.rsaKeySize = 1024;
 }
+
+VTermService.prototype = new BaseService();
+VTermService.constructor = VTermService;
 
 
 
@@ -132,61 +135,6 @@ VTermService.prototype.getCVCCA = function(holderID) {
 VTermService.prototype.getCertificateList = function(holderID) {
 	var tcc = this.getCVCCA(holderID);
 	return tcc.getCertificateList();
-}
-
-
-
-/**
- * Enumerate all pending service requests to superior systems
- *
- * @returns the pending service requests
- * @type ServiceRequest[]
- */
-VTermService.prototype.listOutboundRequests = function() {
-	return this.outqueue;
-}
-
-
-
-/**
- * Gets the indexed request
- *
- * @param {Number} index the index into the work queue identifying the request
- * @returns the indexed request
- * @type ServiceRequest
- */
-VTermService.prototype.getOutboundRequest = function(index) {
-	return this.outqueue[index];
-}
-
-
-
-/**
- * Adds an outbound request to the internal queue, removing the oldest entry if more than
- * 10 entries are contained
- *
- * @param {ServiceRequest} sr the service request
- */
-VTermService.prototype.addOutboundRequest = function(sr) {
-	this.lock.lock();
-	
-	try	{
-		if (this.outqueue.length >= 10) {
-			var oldsr = this.outqueue.shift();
-			var msgid = oldsr.getMessageID();
-			if (msgid) {
-				delete(this.outqueuemap[msgid]);
-			}
-		}
-		this.outqueue.push(sr);
-		var msgid = sr.getMessageID();
-		if (msgid) {
-			this.outqueuemap[msgid] = sr;
-		}
-	}
-	finally {
-		this.lock.unlock();
-	}
 }
 
 
@@ -440,7 +388,7 @@ VTermService.prototype.SendCertificates = function(soapBody) {
 		var msgid = soapBody.messageID.ns1::messageID.toString();
 	}
 	
-	var sr = this.outqueuemap[msgid];
+	var sr = this.getOutboundRequestByMessageId(msgid);
 	if (sr) {
 		sr.setStatusInfo(statusInfo);
 		var returnCode = ServiceRequest.OK_RECEIVED_CORRECTLY;

@@ -49,7 +49,52 @@
 
 
 <!-- Each test case must be declared with an id that starts with a 3 digit number -->
-	<testcase id="001FullChain">
+	<testcase id="001RequestDomesticCertificate">
+		<name>Request Domestic Certificate</name>
+		<description>
+			<p><ol>
+				<li>Generate CVCA certificate</li>
+				<li>Populate to DVCA</li>
+				<li>Request initial certificate synchronously (must fail)</li>
+				<li>Request initial certificate asynchronously</li>
+				<li>Issue certificate on CVCA</li>
+				<li>Renew certificate synchronously</li>
+				</ol></p>
+		</description>
+		<requirement>
+			<p></p>
+		</requirement>
+		<reference>
+			<p></p>
+		</reference>
+		<Script><![CDATA[
+
+	this.log(" Switch to brainpoolP256r1withSHA256");
+	this.t.call("cvca?op=change&keyspec=brainpoolP256r1withSHA256");
+
+	this.log(" Generate root certificate");
+	this.t.call("cvca?op=linkdp", "Operation completed");
+
+	this.log(" DVCA synchronous GetCACertificates");
+	this.t.call("dvca?op=update", "ok_cert_available");
+
+	this.log(" DVCA synchronous request for foreign initial certificate");
+	this.t.call("dvca?op=initial&cvca=UTCVCA", "failure_synchronous_processing_not_possible");
+
+	this.log(" DVCA asynchronous request for foreign initial certificate");
+	this.t.call("dvca?op=initialasync&cvca=UTCVCA", "ok_syntax");
+	this.t.call("cvca/request?index=-1&action=ok_cert_available", "ok_received_correctly");
+
+	this.log(" DVCA synchronous request for foreign certificate renewal");
+	this.t.call("dvca?op=renew&cvca=UTCVCA", "ok_cert_available");
+
+		]]></Script>
+	</testcase>
+
+
+
+<!-- Each test case must be declared with an id that starts with a 3 digit number -->
+	<testcase id="999FullChain">
 		<name>Supply a certificate for all entities along the chain</name>
 		<description>
 			<p></p>
@@ -68,7 +113,7 @@
 	this.log(" Generate root certificate");
 	this.t.call("cvca?op=linkdp", "Operation completed");
 
-	print(" DVCA synchronous GetCACertificates");
+	this.log(" DVCA synchronous GetCACertificates");
 	this.t.call("dvca?op=update", "ok_cert_available");
 
 	this.log(" DVCA synchronous request for domestic initial certificate");
@@ -76,9 +121,9 @@
 
 	this.log(" DVCA asynchronous request for domestic initial certificate");
 	this.t.call("dvca?op=initialasync&cvca=UTCVCA", "ok_syntax");
-	this.t.call("cvca/getcert?index=-1&action=ok_cert_available", "ok_received_correctly");
+	this.t.call("cvca/request?index=-1&action=ok_cert_available", "ok_received_correctly");
 
-	print(" TCC synchronous GetCACertificates");
+	this.log(" TCC synchronous GetCACertificates");
 	this.t.call("tcc?op=update", "ok_cert_available");
 
 	this.log(" TCC synchronous request for domestic initial certificate");
@@ -86,9 +131,9 @@
 
 	this.log(" TCC asynchronous request for domestic initial certificate");
 	this.t.call("tcc?op=initialasync", "ok_syntax");
-	this.t.call("dvca/getcert?index=-1&action=ok_cert_available", "ok_received_correctly");
+	this.t.call("dvca/request?index=-1&action=ok_cert_available", "ok_received_correctly");
 
-	print(" VT synchronous GetCACertificates");
+	this.log(" VT synchronous GetCACertificates");
 	this.t.call("vt?op=update", "ok_cert_available");
 
 	this.log(" VT synchronous request for domestic initial certificate");

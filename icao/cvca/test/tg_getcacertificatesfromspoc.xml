@@ -3,8 +3,8 @@
 <testgroup 
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:noNamespaceSchemaLocation="http://www.openscdp.org/schema/testframework-1.0.xsd"
-	id="tg_getcacertificates" arrayElement="testcase,function" arrayIndex="id,Name">
-	<name>Testing GetCACertificates</name>
+	id="tg_getcacertificatesfromspoc" arrayElement="testcase,function" arrayIndex="id,Name">
+	<name>Testing GetCACertificates in SPOC setup</name>
 	<description>
 		<p>Test basic communication between EAC-PKI components</p>
 	</description>
@@ -48,55 +48,8 @@
 
 
 
-<!-- Each test case must be declared with an id that starts with a 3 digit number -->
-	<testcase id="001NoCertificates">
-		<name>GetCACertificates() without certificates in the system</name>
-		<description>
-			<p></p>
-		</description>
-		<requirement>
-			<p></p>
-		</requirement>
-		<reference>
-			<p></p>
-		</reference>
-		<Script><![CDATA[
-
-	this.log(" SPOC synchronous GetCACertificates");
-	this.t.call("cvca-fu?op=getcacertificates", "ok_cert_available");
-
-	this.log(" SPOC asynchronous GetCACertificates");
-	this.t.call("cvca?op=getcacertificates", "ok_reception_ack");
-	this.t.call("cvca-fu/getcert?index=-1&action=ok_cert_available", "ok_received_correctly");
-
-	this.log(" DVCA synchronous GetCACertificates");
-	this.t.call("dvca?op=update", "ok_cert_available");
-
-	this.log(" DVCA asynchronous GetCACertificates");
-	this.t.call("dvca?op=updateasync", "ok_syntax");
-	this.t.call("cvca/getcert?index=-1&action=ok_cert_available", "ok_received_correctly");
-
-	this.log(" TCC synchronous GetCACertificates");
-	this.t.call("tcc?op=update", "ok_cert_available");
-
-	this.log(" TCC asynchronous GetCACertificates");
-	this.t.call("tcc?op=updateasync", "ok_syntax");
-	this.t.call("dvca/getcert?index=-1&action=ok_cert_available", "ok_received_correctly");
-
-	this.log(" VT synchronous GetCACertificates");
-	this.t.call("vt?op=update", "ok_cert_available");
-
-	this.log(" VT asynchronous GetCACertificates");
-	this.t.call("vt?op=updateasync&holderID=UTVT1234567", "ok_syntax");
-	this.t.call("dvca/getcert?index=-1&action=ok_cert_available", "ok_received_correctly");
-
-		]]></Script>
-	</testcase>
-
-
-
 	<!-- Each test case must be declared with an id that starts with a 3 digit number -->
-	<testcase id="002OneECCCertificate">
+	<testcase id="001OneECCCertificate">
 		<name></name>
 		<description>
 			<p>GetCACertificates() with one root ECC certificate in the system</p>
@@ -110,13 +63,10 @@
 		<Script><![CDATA[
 
 	this.log(" Switch to brainpoolP256r1withSHA256");
-	this.t.call("cvca?op=change&keyspec=brainpoolP256r1withSHA256");
+	this.t.call("cvca-fu?op=change&keyspec=brainpoolP256r1withSHA256");
 
 	this.log(" Generate root certificate");
-	this.t.call("cvca?op=linkdp", "Operation completed");
-
-	this.log(" SPOC synchronous GetCACertificates");
-	this.t.call("cvca-fu?op=getcacertificates", "ok_cert_available");
+	this.t.call("cvca-fu?op=linkdp", "Operation completed");
 
 	this.log(" SPOC asynchronous GetCACertificates");
 	this.t.call("cvca?op=getcacertificates", "ok_reception_ack");
@@ -149,7 +99,7 @@
 
 
 <!-- Each test case must be declared with an id that starts with a 3 digit number -->
-	<testcase id="003TwoECCCertificates">
+	<testcase id="002TwoECCCertificates">
 		<name></name>
 		<description>
 			<p>GetCACertificates() with two ECC certificate (root / link) in the system</p>
@@ -163,16 +113,13 @@
 		<Script><![CDATA[
 
 	this.log(" Switch to brainpoolP256r1withSHA256");
-	this.t.call("cvca?op=change&keyspec=brainpoolP256r1withSHA256");
+	this.t.call("cvca-fu?op=change&keyspec=brainpoolP256r1withSHA256");
 
 	this.log(" Generate root certificate");
-	this.t.call("cvca?op=linkdp", "Operation completed");
+	this.t.call("cvca-fu?op=linkdp", "Operation completed");
 
 	this.log(" Generate link certificate with domain parameter");
-	this.t.call("cvca?op=linkdp", "Operation completed");
-
-	this.log(" SPOC synchronous GetCACertificates");
-	this.t.call("cvca-fu?op=getcacertificates", "ok_cert_available");
+	this.t.call("cvca-fu?op=linkdp", "Operation completed");
 
 	this.log(" SPOC asynchronous GetCACertificates");
 	this.t.call("cvca?op=getcacertificates", "ok_reception_ack");
@@ -203,9 +150,8 @@
 	</testcase>
 
 
-
 	<!-- Each test case must be declared with an id that starts with a 3 digit number -->
-	<testcase id="004ThreeECCCertificates">
+	<testcase id="003ThreeECCCertificates">
 		<name></name>
 		<description>
 			<p>GetCACertificates() with three ECC certificate (root / link with dp / link without dp) in the system</p>
@@ -219,19 +165,16 @@
 		<Script><![CDATA[
 
 	this.log(" Switch to brainpoolP256r1withSHA256");
-	this.t.call("cvca?op=change&keyspec=brainpoolP256r1withSHA256");
+	this.t.call("cvca-fu?op=change&keyspec=brainpoolP256r1withSHA256");
 
 	this.log(" Generate root certificate");
-	this.t.call("cvca?op=linkdp", "Operation completed");
+	this.t.call("cvca-fu?op=linkdp", "Operation completed");
 
 	this.log(" Generate link certificate with domain parameter");
-	this.t.call("cvca?op=linkdp", "Operation completed");
+	this.t.call("cvca-fu?op=linkdp", "Operation completed");
 
 	this.log(" Generate link certificate without domain parameter");
-	this.t.call("cvca?op=link", "Operation completed");
-
-	this.log(" SPOC synchronous GetCACertificates");
-	this.t.call("cvca-fu?op=getcacertificates", "ok_cert_available");
+	this.t.call("cvca-fu?op=link", "Operation completed");
 
 	this.log(" SPOC asynchronous GetCACertificates");
 	this.t.call("cvca?op=getcacertificates", "ok_reception_ack");
@@ -264,7 +207,7 @@
 
 
 	<!-- Each test case must be declared with an id that starts with a 3 digit number -->
-	<testcase id="005ThreeECCOneRSACertificates">
+	<testcase id="004ThreeECCOneRSACertificates">
 		<name></name>
 		<description>
 			<p>GetCACertificates() with three ECC certificates (root / link with dp / link without dp) and one RSA certificate in the system</p>
@@ -278,25 +221,22 @@
 		<Script><![CDATA[
 
 	this.log(" Switch to brainpoolP256r1withSHA256");
-	this.t.call("cvca?op=change&keyspec=brainpoolP256r1withSHA256");
+	this.t.call("cvca-fu?op=change&keyspec=brainpoolP256r1withSHA256");
 
 	this.log(" Generate root certificate");
-	this.t.call("cvca?op=linkdp", "Operation completed");
+	this.t.call("cvca-fu?op=linkdp", "Operation completed");
 
 	this.log(" Generate link certificate with domain parameter");
-	this.t.call("cvca?op=linkdp", "Operation completed");
+	this.t.call("cvca-fu?op=linkdp", "Operation completed");
 
 	this.log(" Generate link certificate with domain parameter");
-	this.t.call("cvca?op=link", "Operation completed");
+	this.t.call("cvca-fu?op=link", "Operation completed");
 
 	this.log(" Switch to RSA2048PSSwithSHA256");
-	this.t.call("cvca?op=change&keyspec=RSA2048PSSwithSHA256");
+	this.t.call("cvca-fu?op=change&keyspec=RSA2048PSSwithSHA256");
 
 	this.log(" Generate link certificate");
-	this.t.call("cvca?op=link", "Operation completed");
-
-	this.log(" SPOC synchronous GetCACertificates");
-	this.t.call("cvca-fu?op=getcacertificates", "ok_cert_available");
+	this.t.call("cvca-fu?op=link", "Operation completed");
 
 	this.log(" SPOC asynchronous GetCACertificates");
 	this.t.call("cvca?op=getcacertificates", "ok_reception_ack");
@@ -329,7 +269,7 @@
 
 
 	<!-- Each test case must be declared with an id that starts with a 3 digit number -->
-	<testcase id="006ThreeECCOneRSAOneECCCertificates">
+	<testcase id="005ThreeECCOneRSAOneECCCertificates">
 		<name></name>
 		<description>
 			<p>GetCACertificates() with three ECC certificates (root / link with dp / link without dp) and one RSA and one ECC certificate in the system</p>
@@ -343,31 +283,28 @@
 		<Script><![CDATA[
 
 	this.log(" Switch to brainpoolP256r1withSHA256");
-	this.t.call("cvca?op=change&keyspec=brainpoolP256r1withSHA256");
+	this.t.call("cvca-fu?op=change&keyspec=brainpoolP256r1withSHA256");
 
 	this.log(" Generate root certificate");
-	this.t.call("cvca?op=linkdp", "Operation completed");
+	this.t.call("cvca-fu?op=linkdp", "Operation completed");
 
 	this.log(" Generate link certificate with domain parameter");
-	this.t.call("cvca?op=linkdp", "Operation completed");
+	this.t.call("cvca-fu?op=linkdp", "Operation completed");
 
 	this.log(" Generate link certificate with domain parameter");
-	this.t.call("cvca?op=link", "Operation completed");
+	this.t.call("cvca-fu?op=link", "Operation completed");
 
 	this.log(" Switch to RSA2048PSSwithSHA256");
-	this.t.call("cvca?op=change&keyspec=RSA2048PSSwithSHA256");
+	this.t.call("cvca-fu?op=change&keyspec=RSA2048PSSwithSHA256");
 
 	this.log(" Generate link certificate");
-	this.t.call("cvca?op=link", "Operation completed");
+	this.t.call("cvca-fu?op=link", "Operation completed");
 
 	this.log(" Switch to brainpoolP256r1withSHA256");
-	this.t.call("cvca?op=change&keyspec=brainpoolP256r1withSHA256");
+	this.t.call("cvca-fu?op=change&keyspec=brainpoolP256r1withSHA256");
 
 	this.log(" Generate link certificate");
-	this.t.call("cvca?op=link", "Operation completed");
-
-	this.log(" SPOC synchronous GetCACertificates");
-	this.t.call("cvca-fu?op=getcacertificates", "ok_cert_available");
+	this.t.call("cvca-fu?op=link", "Operation completed");
 
 	this.log(" SPOC asynchronous GetCACertificates");
 	this.t.call("cvca?op=getcacertificates", "ok_reception_ack");

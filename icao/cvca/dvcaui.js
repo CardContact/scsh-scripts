@@ -44,97 +44,6 @@ DVCAUI.constructor = DVCAUI;
 
 
 /**
- * Serves a details page for pending outbound RequestCertificate requests.
- *
- * <p>The URL processed has the format <caname>/request/<queueindex></p>
- *
- * @param {HttpRequest} req the request object
- * @param {HttpResponse} req the response object
- * @param {String[]} url array of URL path elements
- */
-DVCAUI.prototype.handleRequestCertificateOutboundRequestDetails = function(req, res, url) {
-
-	var op = CertStoreBrowser.parseQueryString(req.queryString);
-	
-	var index = parseInt(op.index);
-	var sr = this.service.getOutboundRequest(index);
-	var certreq = sr.getCertificateRequest();
-	
-	if (typeof(op.op) != "undefined") {
-		reqbin = certreq.getBytes();
-		print(reqbin);
-		res.setContentType("application/octet-stream");
-		res.setContentLength(reqbin.length);
-		var filename = certreq.getCHR().toString() + ".cvreq";
-		print(filename);
-		// ToDo: Remove nativeResponse once addHeader is provided in host class
-		res.nativeResponse.addHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
-		res.write(reqbin);
-	} else {
-		certreq.decorate();
-	
-		var page = 
-			<div>
-				<h1>Outbound RequestCertificate request</h1>
-				<p>  MessageID: {sr.getMessageID()}</p>
-				<p>  ResponseURL: {sr.getResponseURL()}</p>
-				<a href={url[url.length - 1] + "?" + req.queryString + "&op=download"}>Download...</a>
-				<pre>{certreq.getASN1()}</pre>
-			</div>;
-
-		this.sendPage(req, res, url, page);
-	}
-}
-
-
-
-/**
- * Serves a details page for pending GetCertifcate requests.
- *
- * <p>The URL processed has the format <caname>/getcert/<queueindex></p>
- *
- * @param {HttpRequest} req the request object
- * @param {HttpResponse} req the response object
- * @param {String[]} url array of URL path elements
- */
-DVCAUI.prototype.handleGetCertificateRequestDetails = function(req, res, url) {
-
-	var op = CertStoreBrowser.parseQueryString(req.queryString);
-	
-	var index = parseInt(op.index);
-	var sr = this.service.getInboundRequest(index);
-	
-	if (typeof(op.action) != "undefined") {
-		if (op.action == "delete") {
-			this.service.deleteInboundRequest(index);
-			this.serveRefreshPage(req, res, url);
-		} else {
-			sr.setStatusInfo(op.action);
-			var status = this.service.processInboundRequest(index);
-			this.serveRefreshPage(req, res, url, status);
-		}
-	} else {
-		var page = 
-			<div>
-				<h1>Pending GetCertificates request</h1>
-				<p>  MessageID: {sr.getMessageID()}</p>
-				<p>  ResponseURL: {sr.getResponseURL()}</p>
-				<h2>Possible actions:</h2>
-				<ul>
-					<li><a href={"getcert?index=" + op.index + "&action=ok_cert_available"}>Respond</a> with "ok_cert_available"</li>
-					<li><a href={"getcert?index=" + op.index + "&action=failure_syntax"}>Respond</a> with "failure_syntax"</li>
-					<li><a href={"getcert?index=" + op.index + "&action=failure_request_not_accepted"}>Respond</a> with "failure_request_not_accepted"</li>
-					<li><a href={"getcert?index=" + op.index + "&action=delete"}>Delete</a> request without a response</li>
-				</ul>
-			</div>;
-
-		this.sendPage(req, res, url, page);
-	}
-}
-
-
-
-/**
  * Serves a details page for pending RequestCertificate requests.
  *
  * <p>The URL processed has the format <caname>/request/<queueindex></p>
@@ -150,38 +59,36 @@ DVCAUI.prototype.handleRequestCertificateInboundRequestDetails = function(req, r
 	var index = parseInt(op.index);
 	var sr = this.service.getInboundRequest(index);
 	
-	var certreq = sr.getCertificateRequest();
-	certreq.decorate();
-	
 	if (typeof(op.action) != "undefined") {
 		if (op.action == "delete") {
 			this.service.deleteInboundRequest(index);
 			this.serveRefreshPage(req, res, url);
 		} else {
 			sr.setStatusInfo(op.action);
-			var status = this.service.processInboundRequest(index);
+			var status = this.service.processRequest(index);
 			this.serveRefreshPage(req, res, url, status);
 		}
 	} else {
-		var page = 
-			<div>
-				<h1>Pending RequestCertificate request</h1>
-				<p>  MessageID: {sr.getMessageID()}</p>
-				<p>  ResponseURL: {sr.getResponseURL()}</p>
-				<h2>Possible actions:</h2>
-				<ul>
-					<li><a href={"inrequest?index=" + op.index + "&action=ok_cert_available"}>Respond</a> with "ok_cert_available"</li>
-					<li><a href={"inrequest?index=" + op.index + "&action=failure_syntax"}>Respond</a> with "failure_syntax"</li>
-					<li><a href={"inrequest?index=" + op.index + "&action=failure_inner_signature"}>Respond</a> with "failure_inner_signature"</li>
-					<li><a href={"inrequest?index=" + op.index + "&action=failure_outer_signature"}>Respond</a> with "failure_outer_signature"</li>
-					<li><a href={"inrequest?index=" + op.index + "&action=failure_expired"}>Respond</a> with "failure_expired"</li>
-					<li><a href={"inrequest?index=" + op.index + "&action=failure_domain_parameter"}>Respond</a> with "failure_domain_parameter"</li>
-					<li><a href={"inrequest?index=" + op.index + "&action=failure_request_not_accepted"}>Respond</a> with "failure_request_not_accepted"</li>
-					<li><a href={"inrequest?index=" + op.index + "&action=failure_internal_error"}>Respond</a> with "failure_internal_error"</li>
-					<li><a href={"inrequest?index=" + op.index + "&action=delete"}>Delete</a> request without a response</li>
-				</ul>
-				<pre>{certreq.getASN1()}</pre>
-			</div>;
+		var page = this.renderServiceRequestPage(sr);
+		
+		var actions = <ul/>
+		
+		if (sr.getMessageID()) {
+			CommonUI.addAction(actions, "request", op.index, ServiceRequest.OK_CERT_AVAILABLE);
+			CommonUI.addAction(actions, "request", op.index, ServiceRequest.FAILURE_SYNTAX);
+			CommonUI.addAction(actions, "request", op.index, ServiceRequest.FAILURE_INNER_SIGNATURE);
+			CommonUI.addAction(actions, "request", op.index, ServiceRequest.FAILURE_OUTER_SIGNATURE);
+			CommonUI.addAction(actions, "request", op.index, ServiceRequest.FAILURE_EXPIRED);
+			CommonUI.addAction(actions, "request", op.index, ServiceRequest.FAILURE_DOMAIN_PARAMETER);
+			CommonUI.addAction(actions, "request", op.index, ServiceRequest.FAILURE_REQUEST_NOT_ACCEPTED);
+			CommonUI.addAction(actions, "request", op.index, ServiceRequest.FAILURE_INTERNAL_ERROR);
+		}
+
+		actions.li += <li><a href={"getcert?index=" + op.index + "&action=delete"}>Delete</a> request</li>
+
+		var div = page.div.(@id == "actions");
+		div.h2 = <h2>Possible Actions</h2>
+		div.h2 += actions;
 
 		this.sendPage(req, res, url, page);
 	}
@@ -199,7 +106,7 @@ DVCAUI.prototype.serveStatusPage = function(req, res, url) {
 
 	// Handle status page
 	// ToDo: Refactor to getter
-	var status = this.service.dvca.isOperational() ? "operational" : "not operational";
+	var status = this.service.isOperational(this.currentCVCA) ? "operational" : "not operational";
 
 	var page =
 		<div>
@@ -212,8 +119,8 @@ DVCAUI.prototype.serveStatusPage = function(req, res, url) {
 				<button type="submit">Change</button>
 			</form>
 			<div id="activechain"/>
-			<div id="pendingoutboundrequests"/>
-			<div id="pendinginboundrequests"/>
+			<div id="outboundrequests"/>
+			<div id="inboundrequests"/>
 			<h2>Possible actions:</h2>
 			<ul>
 				<li><a href="?op=update">Update CVCA certificates synchronously</a></li>
@@ -288,84 +195,19 @@ DVCAUI.prototype.serveStatusPage = function(req, res, url) {
 	var queue = this.service.listOutboundRequests();
 	
 	if (queue.length > 0) {
-		var t = <table class="content"/>;
-
-		t.tr += <tr><th width="20%">MessageID</th><th>Request</th><th>Status</th><th>Final Status</th></tr>;
-
-		for (var i = 0; i < queue.length; i++) {
-			var sr = queue[i];
-
-			var tr = <tr/>;
-			var msgid = sr.getMessageID();
-			if (!msgid) {
-				msgid = "";
-			}
-			tr.td += <td>{msgid}</td>
-			
-			if (sr.isCertificateRequest()) {
-				var refurl = url[0] + "/outrequest?" + "index=" + i;
-				tr.td += <td><a href={refurl}>{sr.getCertificateRequest().toString()}</a></td>;
-			} else {
-				tr.td += <td>GetCertificates</td>;
-			}
-			var status = sr.getStatusInfo();
-			if (!status) {
-				status = "Undefined";
-			}
-			var finalStatus = sr.getFinalStatusInfo();
-			if (!finalStatus) {
-				finalStatus = "Not yet received";
-			}
-			
-			tr.td += <td>{status.substr(0, 24)}</td>
-			tr.td += <td>{finalStatus.substr(0, 24)}</td>
-			t.tr += tr;
-		}
-
-		// Pending requests list
-		var div = page.div.(@id == "pendingoutboundrequests");
+		var t = this.renderServiceRequestListPage(queue, true, url[0]);
+		var div = page.div.(@id == "outboundrequests");
 		div.h2 = "Outbound requests:";
-		
 		div.appendChild(t);
 	}
 
 	var queue = this.service.listInboundRequests();
 
 	if (queue.length > 0) {
-		var t = <table class="content"/>;
+		var t = this.renderServiceRequestListPage(queue, false, url[0]);
 
-		t.tr += <tr><th width="20%">MessageID</th><th>Request</th><th>Status</th><th>Final Status</th></tr>;
-
-		for (var i = 0; i < queue.length; i++) {
-			var sr = queue[i];
-
-			if (sr.isCertificateRequest()) {
-				var refurl = url[0] + "/inrequest?index=" + i;
-				var reqstr = sr.getCertificateRequest().toString();
-			} else {
-				var refurl = url[0] + "/getcert?index=" + i;
-				var reqstr = "GetCertificates";
-			}
-			var status = sr.getStatusInfo();
-			if (!status) {
-				status = "Undefined";
-			}
-			var finalStatus = sr.getFinalStatusInfo();
-			if (!finalStatus) {
-				finalStatus = "Not yet send";
-			}
-			t.tr += <tr>
-				<td><a href={refurl}>{sr.getMessageID()}</a></td>
-				<td>{reqstr}</td>
-				<td>{status}</td>
-				<td>{finalStatus}</td>
-			</tr>
-		}
-
-		// Pending requests list
-		var div = page.div.(@id == "pendinginboundrequests");
+		var div = page.div.(@id == "inboundrequests");
 		div.h2 = "Inbound requests:";
-		
 		div.appendChild(t);
 	}
 
@@ -401,11 +243,11 @@ DVCAUI.prototype.handleInquiry = function(req, res) {
 		case "getcert":
 			this.handleGetCertificateRequestDetails(req, res, url);
 			break;
-		case "inrequest":
+		case "request":
 			this.handleRequestCertificateInboundRequestDetails(req, res, url);
 			break;
 		case "outrequest":
-			this.handleRequestCertificateOutboundRequestDetails(req, res, url);
+			this.handleOutboundRequestDetails(req, res, url);
 			break;
 		default:
 			res.setStatus(HttpResponse.SC_NOT_FOUND);

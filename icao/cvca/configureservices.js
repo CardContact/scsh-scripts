@@ -83,7 +83,8 @@ var dVPolicy = { certificateValidityDays: 4,
 				   extensions: null,
 				   authenticatedRequestsApproved: false,
 				   initialRequestsApproved: false,
-				   declineExpiredAuthenticatedRequest: true
+				   declineExpiredAuthenticatedRequest: true,
+				   authenticatedRequestsForwarded: true
 				 };
 
 // Default policy
@@ -97,7 +98,8 @@ var dVPolicy = { certificateValidityDays: 4,
 				   extensions: null,
 				   authenticatedRequestsApproved: true,
 				   initialRequestsApproved: false,
-				   declineExpiredAuthenticatedRequest: true
+				   declineExpiredAuthenticatedRequest: true,
+				   authenticatedRequestsForwarded: true
 				 };
 
 // Policy for UTDVCA
@@ -120,6 +122,19 @@ SOAPServer.registerService("spoc", cvca.getSPOCServicePort(), cvcaui);
 var cvca = new CVCAService(datadir +  "/cvca-fu", "FUCVCA");
 cvca.setRootCertificatePolicy(rootPolicy);
 cvca.setLinkCertificatePolicy(linkPolicy);
+
+var dVPolicy = { certificateValidityDays: 4,
+				   chatRoleOID: new ByteString("id-IS", OID),
+				   chatRights: new ByteString("A3", HEX),
+				   includeDomainParameter: false,
+				   shellModelForExpirationDate: true,
+				   extensions: null,
+				   authenticatedRequestsApproved: true,
+				   initialRequestsApproved: false,
+				   declineExpiredAuthenticatedRequest: true,
+				   authenticatedRequestsForwarded: true
+				 };
+
 cvca.setDVCertificatePolicy(dVPolicy);
 
 var spoc = { country: "UT", name: "Utopia",  holderIDs: ["UTCVCA"], url: "http://localhost:8080/se/spoc", async: true };

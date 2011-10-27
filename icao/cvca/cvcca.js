@@ -445,6 +445,8 @@ CVCCA.prototype.getCertificateList = function(fromCAR) {
 CVCCA.prototype.getIssuedCertificate = function(chr) {
 	var path = this.path + "/" + chr.getHolder();
 	
+	print("path=" + path);
+	print("holder=" + chr);
 	var cvc = this.certstore.getCertificate(path, chr);
 	if (cvc == null) {
 		GPSystem.trace("No certificate found for " + chr);

@@ -52,6 +52,7 @@ ServiceRequest.OK_SYNTAX									= "ok_syntax";
 ServiceRequest.OK_RECEIVED_CORRECTLY						= "ok_received_correctly";
 ServiceRequest.OK_RECEPTION_ACK								= "ok_reception_ack";
 ServiceRequest.OK_SIGNATURE_AVAILABLE						= "ok_signature_available";
+ServiceRequest.OK_REQUEST_FORWARDED							= "ok_request_forwarded";
 ServiceRequest.NEW_CERT_AVAILABLE_NOTIFICATION				= "new_cert_available_notification";
 ServiceRequest.FAILURE_SYNTAX								= "failure_syntax";
 ServiceRequest.FAILURE_INNER_SIGNATURE						= "failure_inner_signature";
@@ -68,6 +69,13 @@ ServiceRequest.FAILURE_CAR_UNKNOWN							= "failure_CAR_unknown";
 ServiceRequest.FAILURE_CHR_UNKNOWN							= "failure_CHR_unknown";
 ServiceRequest.FAILURE_INTERNAL_ERROR						= "failure_internal_error";
 
+ServiceRequest.DVCA_GET_CA_CERTIFICATES						= "DVCA.GetCACertificates";
+ServiceRequest.DVCA_REQUEST_CERTIFICATE						= "DVCA.RequestCertificate";
+ServiceRequest.DVCA_REQUEST_FOREIGN_CERTIFICATE				= "DVCA.RequestForeignCertificate";
+
+ServiceRequest.SPOC_GET_CA_CERTIFICATES						= "SPOC.GetCACertificates";
+ServiceRequest.SPOC_REQUEST_CERTIFICATE						= "SPOC.RequestCertificate";
+ServiceRequest.SPOC_FORWARD_REQUEST_CERTIFICATE				= "SPOC.ForwardRequestCertificate";
 
 /**
  * Returns true if this is a certificate request
@@ -172,6 +180,99 @@ ServiceRequest.prototype.setType = function(type) {
 ServiceRequest.prototype.getType = function() {
 	return this.type;
 }
+
+
+
+/**
+ * Adds a list of certificates to the service request
+ *
+ * @param {CVC[]} certlist the list of certificates
+ */
+ServiceRequest.prototype.setCertificateList = function(certlist) {
+	this.certlist = certlist;
+}
+
+
+
+/**
+ * Gets the list of certificates associated with this request
+ *
+ * @returns the list of certificates
+ * @type CVC[]
+ */
+ServiceRequest.prototype.getCertificateList = function() {
+	return this.certlist;
+}
+
+
+
+/**
+ * Set a message related to this service request
+ *
+ * @param {String} message the message
+ */
+ServiceRequest.prototype.setMessage = function(message) {
+	this.message = message;
+}
+
+
+
+/**
+ * Gets the message associated with this request
+ *
+ * @returns the message
+ * @type String
+ */
+ServiceRequest.prototype.getMessage = function() {
+	return this.message;
+}
+
+
+
+/**
+ * Set a foreignCAR related to this service request
+ *
+ * @param {String} foreignCAR the foreignCAR
+ */
+ServiceRequest.prototype.setForeignCAR = function(foreignCAR) {
+	this.foreignCAR = foreignCAR;
+}
+
+
+
+/**
+ * Gets the foreignCAR associated with this request
+ *
+ * @returns the foreignCAR
+ * @type String
+ */
+ServiceRequest.prototype.getForeignCAR = function() {
+	return this.foreignCAR;
+}
+
+
+
+/**
+ * Sets the related service request
+ *
+ * @param {ServiceRequest} sr the related service request
+ */
+ServiceRequest.prototype.setRelatedServiceRequest = function(relatedServiceRequest) {
+	this.relatedServiceRequest = relatedServiceRequest;
+}
+
+
+
+/**
+ * Gets the related service request
+ *
+ * @returns the related service request
+ * @type ServiceRequest
+ */
+ServiceRequest.prototype.getRelatedServiceRequest = function() {
+	return this.relatedServiceRequest;
+}
+
 
 
 /**

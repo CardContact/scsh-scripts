@@ -43,52 +43,6 @@ CVCAUI.constructor = CVCAUI;
 
 
 /**
- * Serves a details page for pending GetCertifcate requests.
- *
- * <p>The URL processed has the format <caname>/getcert/<queueindex></p>
- *
- * @param {HttpRequest} req the request object
- * @param {HttpResponse} req the response object
- * @param {String[]} url array of URL path elements
- */
-CVCAUI.prototype.handleGetCertificateRequestDetails = function(req, res, url) {
-
-	var op = CertStoreBrowser.parseQueryString(req.queryString);
-	
-	var index = parseInt(op.index);
-	var sr = this.service.getRequest(index);
-	
-	if (typeof(op.action) != "undefined") {
-		if (op.action == "delete") {
-			this.service.deleteRequest(index);
-			this.serveRefreshPage(req, res, url);
-		} else {
-			sr.setStatusInfo(op.action);
-			var status = this.service.processRequest(index);
-			this.serveRefreshPage(req, res, url, status);
-		}
-	} else {
-		var page = 
-			<div>
-				<h1>Pending GetCertificates request</h1>
-				<p>  MessageID: {sr.getMessageID()}</p>
-				<p>  ResponseURL: {sr.getResponseURL()}</p>
-				<h2>Possible actions:</h2>
-				<ul>
-					<li><a href={"getcert?index=" + op.index + "&action=ok_cert_available"}>Respond</a> with "ok_cert_available"</li>
-					<li><a href={"getcert?index=" + op.index + "&action=failure_syntax"}>Respond</a> with "failure_syntax"</li>
-					<li><a href={"getcert?index=" + op.index + "&action=failure_internal_error"}>Respond</a> with "failure_internal_error"</li>
-					<li><a href={"getcert?index=" + op.index + "&action=delete"}>Delete</a> request without a response</li>
-				</ul>
-			</div>;
-
-		this.sendPage(req, res, url, page);
-	}
-}
-
-
-
-/**
  * Serves a details page for pending RequestCertificate requests.
  *
  * <p>The URL processed has the format <caname>/request/<queueindex></p>
@@ -102,14 +56,11 @@ CVCAUI.prototype.handleRequestCertificateRequestDetails = function(req, res, url
 	var op = CertStoreBrowser.parseQueryString(req.queryString);
 	
 	var index = parseInt(op.index);
-	var sr = this.service.getRequest(index);
-	
-	var certreq = sr.getCertificateRequest();
-	certreq.decorate();
+	var sr = this.service.getInboundRequest(index);
 	
 	if (typeof(op.action) != "undefined") {
 		if (op.action == "delete") {
-			this.service.deleteRequest(index);
+			this.service.deleteInboundRequest(index);
 			this.serveRefreshPage(req, res, url);
 		} else {
 			sr.setStatusInfo(op.action);
@@ -117,25 +68,33 @@ CVCAUI.prototype.handleRequestCertificateRequestDetails = function(req, res, url
 			this.serveRefreshPage(req, res, url, status);
 		}
 	} else {
-		var page = 
-			<div>
-				<h1>Pending RequestCertificate request</h1>
-				<p>  MessageID: {sr.getMessageID()}</p>
-				<p>  ResponseURL: {sr.getResponseURL()}</p>
-				<h2>Possible actions:</h2>
-				<ul>
-					<li><a href={"request?index=" + op.index + "&action=ok_cert_available"}>Respond</a> with "ok_cert_available"</li>
-					<li><a href={"request?index=" + op.index + "&action=failure_syntax"}>Respond</a> with "failure_syntax"</li>
-					<li><a href={"request?index=" + op.index + "&action=failure_inner_signature"}>Respond</a> with "failure_inner_signature"</li>
-					<li><a href={"request?index=" + op.index + "&action=failure_outer_signature"}>Respond</a> with "failure_outer_signature"</li>
-					<li><a href={"request?index=" + op.index + "&action=failure_expired"}>Respond</a> with "failure_expired"</li>
-					<li><a href={"request?index=" + op.index + "&action=failure_domain_parameter"}>Respond</a> with "failure_domain_parameter"</li>
-					<li><a href={"request?index=" + op.index + "&action=failure_request_not_accepted"}>Respond</a> with "failure_request_not_accepted"</li>
-					<li><a href={"request?index=" + op.index + "&action=failure_internal_error"}>Respond</a> with "failure_internal_error"</li>
-					<li><a href={"request?index=" + op.index + "&action=delete"}>Delete</a> request without a response</li>
-				</ul>
-				<pre>{certreq.getASN1()}</pre>
-			</div>;
+		var page = this.renderServiceRequestPage(sr);
+
+		var actions = <ul/>
+		
+		if (sr.getMessageID()) {
+			if (sr.getType() == ServiceRequest.DVCA_REQUEST_FOREIGN_CERTIFICATE) {
+				CommonUI.addAction(actions, "request", op.index, ServiceRequest.OK_REQUEST_FORWARDED);
+			} else {
+				CommonUI.addAction(actions, "request", op.index, ServiceRequest.OK_CERT_AVAILABLE);
+			}
+			CommonUI.addAction(actions, "request", op.index, ServiceRequest.FAILURE_SYNTAX);
+			CommonUI.addAction(actions, "request", op.index, ServiceRequest.FAILURE_INNER_SIGNATURE);
+			CommonUI.addAction(actions, "request", op.index, ServiceRequest.FAILURE_OUTER_SIGNATURE);
+			CommonUI.addAction(actions, "request", op.index, ServiceRequest.FAILURE_EXPIRED);
+			CommonUI.addAction(actions, "request", op.index, ServiceRequest.FAILURE_DOMAIN_PARAMETER);
+			CommonUI.addAction(actions, "request", op.index, ServiceRequest.FAILURE_REQUEST_NOT_ACCEPTED);
+			CommonUI.addAction(actions, "request", op.index, ServiceRequest.FAILURE_FOREIGNCAR_UNKNOWN);
+			CommonUI.addAction(actions, "request", op.index, ServiceRequest.FAILURE_NOT_FORWARDED);
+			CommonUI.addAction(actions, "request", op.index, ServiceRequest.FAILURE_REQUEST_NOT_ACCEPTED_FOREIGN);
+			CommonUI.addAction(actions, "request", op.index, ServiceRequest.FAILURE_INTERNAL_ERROR);
+		}
+
+		actions.li += <li><a href={"getcert?index=" + op.index + "&action=delete"}>Delete</a> request</li>
+
+		var div = page.div.(@id == "actions");
+		div.h2 = <h2>Possible Actions</h2>
+		div.h2 += actions;
 
 		this.sendPage(req, res, url, page);
 	}
@@ -159,8 +118,8 @@ CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 		<div>
 			<h1>CVCA Service {status}</h1>
 			<div id="activechain"/>
-			<div id="pendingoutboundrequests"/>
-			<div id="pendingrequests"/>
+			<div id="outboundrequests"/>
+			<div id="inboundrequests"/>
 			<h2>Possible actions:</h2>
 			<form action="" method="get">
 				Public Key Specification
@@ -239,89 +198,19 @@ CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 	var queue = this.service.listOutboundRequests();
 	
 	if (queue.length > 0) {
-		var t = <table class="content"/>;
-
-		t.tr += <tr><th width="20%">MessageID</th><th>Request</th><th>Status</th><th>Final Status</th></tr>;
-
-		for (var i = 0; i < queue.length; i++) {
-			var sr = queue[i];
-
-			var tr = <tr/>;
-			var msgid = sr.getMessageID();
-			if (!msgid) {
-				msgid = "";
-			}
-			tr.td += <td>{msgid}</td>
-			
-			if (sr.isCertificateRequest()) {
-				var refurl = url[0] + "/outrequest?" + "index=" + i;
-				tr.td += <td><a href={refurl}>{sr.getCertificateRequest().toString()}</a></td>;
-			} else {
-				tr.td += <td>GetCertificates</td>;
-			}
-			var status = sr.getStatusInfo();
-			if (!status) {
-				status = "Undefined";
-			}
-			var finalStatus = sr.getFinalStatusInfo();
-			if (!finalStatus) {
-				finalStatus = "Not yet received";
-			}
-			
-			tr.td += <td>{status.substr(0, 24)}</td>
-			tr.td += <td>{finalStatus.substr(0, 24)}</td>
-			t.tr += tr;
-		}
-
-		// Pending requests list
-		var div = page.div.(@id == "pendingoutboundrequests");
+		var t = this.renderServiceRequestListPage(queue, true, url[0]);
+		var div = page.div.(@id == "outboundrequests");
 		div.h2 = "Outbound requests:";
-		
 		div.appendChild(t);
 	}
 
-	var queue = this.service.listRequests();
+	var queue = this.service.listInboundRequests();
 
 	if (queue.length > 0) {
-		var t = <table class="content"/>;
+		var t = this.renderServiceRequestListPage(queue, false, url[0]);
 
-		t.tr += <tr><th width="20%">MessageID</th><th>Request</th><th>Status</th><th>Final Status</th></tr>;
-
-		for (var i = 0; i < queue.length; i++) {
-			var sr = queue[i];
-
-			if (sr.isCertificateRequest()) {
-				var refurl = url[0] + "/request?index=" + i;
-				var reqstr = sr.getCertificateRequest().toString();
-			} else {
-				var refurl = url[0] + "/getcert?index=" + i;
-				var reqstr = "GetCertificates";
-				if (sr.getType() == "SPOC") {
-					reqstr += " (SPOC)";
-				} else {
-					reqstr += " (DVCA)";
-				}
-			}
-			var status = sr.getStatusInfo();
-			if (!status) {
-				status = "Undefined";
-			}
-			var finalStatus = sr.getFinalStatusInfo();
-			if (!finalStatus) {
-				finalStatus = "Not yet send";
-			}
-			t.tr += <tr>
-				<td><a href={refurl}>{sr.getMessageID()}</a></td>
-				<td>{reqstr}</td>
-				<td>{status}</td>
-				<td>{finalStatus}</td>
-			</tr>
-		}
-
-		// Pending requests list
-		var div = page.div.(@id == "pendingrequests");
+		var div = page.div.(@id == "inboundrequests");
 		div.h2 = "Inbound requests:";
-		
 		div.appendChild(t);
 	}
 
@@ -359,6 +248,9 @@ CVCAUI.prototype.handleInquiry = function(req, res) {
 			break;
 		case "request":
 			this.handleRequestCertificateRequestDetails(req, res, url);
+			break;
+		case "outrequest":
+			this.handleOutboundRequestDetails(req, res, url);
 			break;
 		default:
 			res.setStatus(HttpResponse.SC_NOT_FOUND);
