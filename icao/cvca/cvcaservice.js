@@ -288,6 +288,86 @@ CVCAService.prototype.checkRequestSemantics = function(req, requestedCAR) {
 
 	// Currently we do not check authenticated requests that are forwarded to another SPOC
 	if (req.isAuthenticatedRequest() && (typeof(requestedCAR) == "undefined")) {
+		if (req.isCountersignedRequest()) {
+			// Countersigned requests
+		} else {
+			var puk = this.cvca.getAuthenticPublicKey(req.getOuterCAR());
+			if (puk) {
+				var oid = this.cvca.getIssuedCertificate(req.getOuterCAR()).getPublicKeyOID();
+				if (!req.verifyATWith(this.crypto, puk, oid)) {
+					GPSystem.trace("Error verifying outer signature");
+					return ServiceRequest.FAILURE_OUTER_SIGNATURE;
+				}
+			} else {
+				GPSystem.trace("No public key found for authenticated request");
+				return ServiceRequest.FAILURE_OUTER_SIGNATURE;
+			}
+		}
+	}
+
+	return ServiceRequest.OK_CERT_AVAILABLE;
+}
+
+
+
+/**
+ * Check certificate request semantic
+ *
+ * @param {CVC} req the request
+ * @returns one of the ServiceRequest status results (ok_cert_available if successful).
+ * @type String
+ */
+CVCAService.prototype.checkForeignRequestSemantics = function(req) {
+	var path = this.path;
+
+	// Check inner signature
+	try	{
+		var puk = req.getPublicKey();
+	}
+	catch(e) {
+		GPSystem.trace("Error checking request semantics in " + e.fileName + "#" + e.lineNumber + " : " + e);
+		return ServiceRequest.FAILURE_SYNTAX;
+	}
+	
+	if (!req.verifyWith(this.crypto, puk)) {
+		GPSystem.trace("Error verifying inner signature");
+		return ServiceRequest.FAILURE_INNER_SIGNATURE;
+	}
+
+	// Check that request key algorithm matches the algorithm for the current certificate
+
+	var chr = this.ss.getCurrentCHR(path);
+	if (!chr) {
+		return ServiceRequest.FAILURE_FOREIGNCAR_UNKNOWN;
+	}
+	var cvc = this.ss.getCertificate(path, chr);
+	var oid = cvc.getPublicKeyOID();
+	var reqoid = req.getPublicKeyOID();
+	
+	if (!reqoid.equals(oid)) {
+		GPSystem.trace("Public key algorithm " + reqoid.toString(OID) + " in request does not match current public key algorithm " + oid.toString(OID));
+		return ServiceRequest.FAILURE_SYNTAX;
+	}
+	
+	if (CVC.isECDSA(oid)) {
+		// Check that request key domain parameter match current domain parameter
+		var dp = this.ss.getDomainParameter(path, chr);
+	
+		if (!puk.getComponent(Key.ECC_P).equals(dp.getComponent(Key.ECC_P)) ||
+			!puk.getComponent(Key.ECC_A).equals(dp.getComponent(Key.ECC_A)) ||
+			!puk.getComponent(Key.ECC_B).equals(dp.getComponent(Key.ECC_B)) ||
+			!puk.getComponent(Key.ECC_GX).equals(dp.getComponent(Key.ECC_GX)) ||
+			!puk.getComponent(Key.ECC_GY).equals(dp.getComponent(Key.ECC_GY)) ||
+			!puk.getComponent(Key.ECC_N).equals(dp.getComponent(Key.ECC_N)) ||
+			!puk.getComponent(Key.ECC_H).equals(dp.getComponent(Key.ECC_H))) {
+			GPSystem.trace("Domain parameter in request do not match current domain parameter");
+			return ServiceRequest.FAILURE_DOMAIN_PARAMETER;
+		}
+	}
+
+	// Currently we do not check authenticated requests that are forwarded to another SPOC
+	if (req.isAuthenticatedRequest()) {
+		/*
 		var puk = this.cvca.getAuthenticPublicKey(req.getOuterCAR());
 		if (puk) {
 			var oid = this.cvca.getIssuedCertificate(req.getOuterCAR()).getPublicKeyOID();
@@ -299,6 +379,7 @@ CVCAService.prototype.checkRequestSemantics = function(req, requestedCAR) {
 			GPSystem.trace("No public key found for authenticated request");
 			return ServiceRequest.FAILURE_OUTER_SIGNATURE;
 		}
+		*/
 	}
 
 	return ServiceRequest.OK_CERT_AVAILABLE;
@@ -324,7 +405,17 @@ CVCAService.prototype.checkPolicy = function(req, returnCode, callback) {
 	
 	if (req.isAuthenticatedRequest()) {
 		print("Authenticated request");
-		var cvc = this.cvca.getIssuedCertificate(req.getOuterCAR());
+		if (req.isCountersignedRequest()) {
+			var path = "/" + req.getOuterCAR().getHolder();
+			var cvc = this.ss.getCertificate(path, req.getOuterCAR());
+			if (cvc == null) {
+				GPSystem.trace("Countersigning CVCA certificate not found");
+				return ServiceRequest.FAILURE_OUTER_SIGNATURE;
+			}
+		} else {
+			var cvc = this.cvca.getIssuedCertificate(req.getOuterCAR());
+		}
+		
 		var now = new Date();
 		now.setHours(12, 0, 0, 0);
 		if (now.valueOf() > cvc.getCXD().valueOf()) {
@@ -377,6 +468,7 @@ CVCAService.prototype.checkForwardingPolicy = function(sr, callback) {
 		sr.setStatusInfo(ServiceRequest.FAILURE_SYNCHRONOUS_PROCESSING_NOT_POSSIBLE);
 	}
 }
+
 
 
 
@@ -519,7 +611,6 @@ CVCAService.prototype.getCACertificatesFromSPOC = function(country) {
 
 
 CVCAService.prototype.countersignRequest = function(sr) {
-	//
 }
 
 
@@ -577,19 +668,20 @@ CVCAService.prototype.processRequestForeignCertificate = function(sr, callback) 
 
 	this.addInboundRequest(sr);
 
-	// Did we get a valid ASN.1 encoded request ?
-	var req = sr.getCertificateRequest();
-
+	var req = this.checkRequestSyntax(sr.getRawCertificateRequest());
 	if (!req) {
 		sr.setStatusInfo(ServiceRequest.FAILURE_SYNTAX);
+		sr.setMessage("Certificate request is not a valid ASN.1 structure: " + sr.getRawCertificateRequest().toString(HEX));
 		return;
 	}
+	
+	sr.setCertificateRequest(req);
 
 	GPSystem.trace("CVCAService - Received certificate request: ");
 	GPSystem.trace(req);
 
 	// Check basic semantics of request
-	var returnCode = this.checkRequestSemantics(req, sr.getForeignCAR(), callback);
+	var returnCode = this.checkRequestSemantics(req, sr.getForeignCAR());
 	sr.setStatusInfo(returnCode);
 
 	if (returnCode == ServiceRequest.OK_CERT_AVAILABLE) {
@@ -627,6 +719,58 @@ CVCAService.prototype.processRequestForeignCertificate = function(sr, callback) 
 
 
 
+/*
+/**
+ * Process a request to issue a certificate received via the SPOC
+ *
+ * @param {ServiceRequest} sr the service request
+ */
+CVCAService.prototype.processSPOCRequestCertificate = function(sr) {
+
+	this.addInboundRequest(sr);
+
+	var spoc = this.getSPOC(sr.getCallerID());
+	if (!spoc) {
+		sr.setStatusInfo(ServiceRequest.FAILURE_REQUEST_NOT_ACCEPTED);
+		sr.setMessage("Unknown callerID");
+		return;
+	}
+	sr.setResponseURL(spoc.url);
+	
+	var req = this.checkRequestSyntax(sr.getRawCertificateRequest());
+	if (!req) {
+		sr.setStatusInfo(ServiceRequest.FAILURE_SYNTAX);
+		sr.setMessage("Certificate request is not a valid ASN.1 structure: " + sr.getRawCertificateRequest().toString(HEX));
+		return;
+	}
+	
+	sr.setCertificateRequest(req);
+	
+	GPSystem.trace("SPOCService - Received certificate request: ");
+	GPSystem.trace(req);
+
+	// Check basic semantics of request
+	var returnCode = this.checkForeignRequestSemantics(req);
+	sr.setStatusInfo(returnCode);
+
+	if (returnCode == ServiceRequest.OK_CERT_AVAILABLE) {
+		var returnCode = this.checkPolicy(req, returnCode, true);
+		sr.setStatusInfo(returnCode);
+		
+		if (sr.getStatusInfo() == ServiceRequest.OK_CERT_AVAILABLE) {
+			certlist = this.determineCertificateList(req);
+
+			var cert = this.issueCertificate(sr.getCertificateRequest());
+			// Add certificate list to response
+			certlist.push(cert);
+			sr.setCertificateList(certlist);
+			sr.setFinalStatusInfo(sr.getStatusInfo());		// Nothing else will happen
+		}
+	}
+}
+
+
+
 // ---- GUI handling ----------------------------------------------------------
 
 /**
@@ -655,7 +799,10 @@ CVCAService.prototype.processRequest = function(index) {
 				sr.setStatusInfo(response);
 			}
 		} else if (sr.getStatusInfo() == ServiceRequest.OK_REQUEST_FORWARDED) {
-			this.countersignRequest(sr);
+			if (this.cvca.isOperational() && !sr.getCertificateRequest().isAuthenticatedRequest()) {
+				var req = this.cvca.counterSignRequest(sr.getCertificateRequest());
+				sr.setCertificateRequest(req);
+			}
 			this.forwardRequestToSPOC(sr);
 		}
 	} else {								// GetCertificates
@@ -937,23 +1084,19 @@ TR3129ServicePort.prototype.RequestForeignCertificate = function(soapBody) {
 	var ns = new Namespace("uri:EAC-PKI-CVCA-Protocol/" + this.version);
 	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
-	var reqbin = new ByteString(soapBody.certReq, BASE64);
-	
-	var cvcreq = this.service.checkRequestSyntax(reqbin);
+	var messageID = soapBody.messageID.ns1::messageID;
+	var sr = new ServiceRequest(messageID);
+	sr.setType(ServiceRequest.DVCA_REQUEST_FOREIGN_CERTIFICATE);
+	sr.setSOAPRequest(soapBody);
+
+	sr.setRawCertificateRequest(new ByteString(soapBody.certReq, BASE64));
+	sr.setForeignCAR(soapBody.foreignCAR.toString());
 	
 	var callback = soapBody.callbackIndicator.toString() == "callback_possible";
-	var foreignCAR = soapBody.foreignCAR.toString();
-	var messageID = soapBody.messageID.ns1::messageID;
-	var responseURL = soapBody.responseURL.ns1::string;
-
-	var sr = new ServiceRequest(messageID, responseURL, cvcreq);
-	sr.setType(ServiceRequest.DVCA_REQUEST_FOREIGN_CERTIFICATE);
-	sr.setForeignCAR(foreignCAR);
-	
-	if (cvcreq == null) {
-		sr.setMessage("Certificate request is not a valid ASN.1 structure: " + reqbin.toString(HEX));
+	if (callback) {
+		sr.setResponseURL(soapBody.responseURL.ns1::string.toString());
 	}
-	
+
 	this.service.processRequestForeignCertificate(sr, callback);
 
 	var certlist = sr.getCertificateList();
@@ -983,6 +1126,7 @@ TR3129ServicePort.prototype.RequestForeignCertificate = function(soapBody) {
 			</ns:RequestCertificateResponse>
 	}
 
+	sr.setSOAPResponse(response);
 	return response;
 }
 
@@ -1096,63 +1240,23 @@ SPOCServicePort.prototype.RequestCertificateRequest = function(soapBody) {
 
 	var ns = new Namespace("http://namespaces.unmz.cz/csn369791");
 
-	var callerID = soapBody.ns::callerID.toString();
-	var messageID = soapBody.ns::messageID.toString();
-	var certlist = [];
-
-	var spoc = this.service.getSPOC(callerID);
-	if (!spoc) {
-		var returnCode = ServiceRequest.FAILURE_REQUEST_NOT_ACCEPTED;
-	} else {
-		try	{
-			var reqbin = new ByteString(soapBody.ns::certificateRequest, BASE64);
-
-			var req = this.service.checkRequestSyntax(reqbin);
-
-			if (req == null) {
-				var returnCode = ServiceRequest.FAILURE_SYNTAX;
-			} else {
-				GPSystem.trace("SPOCServicePort - Received certificate request: ");
-				GPSystem.trace(req);
-
-				var returnCode = this.service.checkRequestSemantics(req);
-
-				var returnCode = this.service.checkPolicy(req, returnCode, true);
-
-				if (returnCode == ServiceRequest.OK_SYNTAX) {
-					var asyncreq = new ServiceRequest(
-									messageID,
-									spoc.url,
-									req);
-
-					asyncreq.setType(ServiceRequest.SPOC_REQUEST_CERTIFICATE);
-					asyncreq.setStatusInfo(returnCode);
-					this.service.addInboundRequest(asyncreq);
-					returnCode = ServiceRequest.OK_RECEPTION_ACK;
-				} else {
-					if (returnCode == ServiceRequest.OK_CERT_AVAILABLE) {
-						certlist = this.service.determineCertificateList(req);
-
-						var cert = this.service.issueCertificate(req);
-						// Add certificate list to response
-						certlist.push(cert);
-					}
-				}
-			}
-		}
-		catch(e) {
-			GPSystem.trace("SPOCServicePort - Error decoding request in " + e.fileName + "#" + e.lineNumber + " : " + e);
-			var returnCode = ServiceRequest.FAILURE_SYNTAX;
-		}
-	}
-
-	if (certlist.length > 0) {
+	var sr = new ServiceRequest(soapBody.ns::messageID.toString());
+	sr.setType(ServiceRequest.SPOC_REQUEST_CERTIFICATE);
+	sr.setSOAPRequest(soapBody);
+	
+	sr.setCallerID(soapBody.ns::callerID.toString());
+	sr.setRawCertificateRequest(new ByteString(soapBody.ns::certificateRequest, BASE64));
+	
+	this.service.processSPOCRequestCertificate(sr);
+	
+	var certlist = sr.getCertificateList();
+	if (certlist && (certlist.length > 0)) {
 		var response =
 			<csn:RequestCertificateResponse xmlns:csn={ns}>
 				<!--Optional:-->
 				<csn:certificateSequence>
 				</csn:certificateSequence>
-				<csn:result>{returnCode}</csn:result>
+				<csn:result>{sr.getStatusInfo()}</csn:result>
 			</csn:RequestCertificateResponse>
 	
 		var list = response.ns::certificateSequence;
@@ -1164,10 +1268,11 @@ SPOCServicePort.prototype.RequestCertificateRequest = function(soapBody) {
 	} else {
 		var response =
 			<csn:RequestCertificateResponse xmlns:csn={ns}>
-				<csn:result>{returnCode}</csn:result>
+				<csn:result>{sr.getStatusInfo()}</csn:result>
 			</csn:RequestCertificateResponse>
 	}
 
+	sr.setSOAPResponse(response);
 	return response;
 }
 
@@ -1199,8 +1304,8 @@ SPOCServicePort.prototype.SendCertificatesRequest = function(soapBody) {
 		sr.setStatusInfo(statusInfo);
 		var returnCode = ServiceRequest.OK_RECEIVED_CORRECTLY;
 
+		var certlist = [];
 		if (statusInfo.substr(0, 3) == "ok_") {
-			var certlist = [];
 			GPSystem.trace("Received certificates from SPOC:");
 			for each (var c in soapBody.ns::certificateSequence.ns::certificate) {
 				try	{
@@ -1217,13 +1322,13 @@ SPOCServicePort.prototype.SendCertificatesRequest = function(soapBody) {
 			
 			sr.setCertificateList(certlist);
 			this.service.cvca.importCertificates(certlist);		// Store locally
-
-			if (sr.getType() == ServiceRequest.SPOC_FORWARD_REQUEST_CERTIFICATE) {
-				var relatedsr = sr.getRelatedServiceRequest();
-				relatedsr.setCertificateList(certlist);
-				this.service.sendCertificates(relatedsr);
-				returnCode = relatedsr.getFinalStatusInfo();
-			}
+		}
+		if (sr.getType() == ServiceRequest.SPOC_FORWARD_REQUEST_CERTIFICATE) {
+			var relatedsr = sr.getRelatedServiceRequest();
+			relatedsr.setCertificateList(certlist);
+			relatedsr.setStatusInfo(sr.getStatusInfo());
+			this.service.sendCertificates(relatedsr);
+			returnCode = relatedsr.getFinalStatusInfo();
 		}
 		sr.setFinalStatusInfo(returnCode);
 	} else {

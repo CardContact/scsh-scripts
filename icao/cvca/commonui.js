@@ -268,14 +268,20 @@ CommonUI.prototype.renderServiceRequestPage = function(sr) {
 			<div id="actions"/>
 			<div id="request"/>
 			<div id="certificates"/>
+			<div id="soaprequest"/>
+			<div id="soapresponse"/>
 		</div>;
-
-	var messageID = sr.getMessageID();
 
 	if (finalStatusInfo) {
 		page.table.tr += <tr><td>FinalStatusInfo</td><td>{finalStatusInfo}</td></tr>
 	}
 
+	var callerID = sr.getCallerID();
+	if (callerID) {
+		page.table.tr += <tr><td>CallerID</td><td>{callerID}</td></tr>
+	}
+
+	var messageID = sr.getMessageID();
 	if (messageID) {
 		page.table.tr += <tr><td>MessageID</td><td>{messageID}</td></tr>
 	}
@@ -314,6 +320,21 @@ CommonUI.prototype.renderServiceRequestPage = function(sr) {
 		}
 		div.h2 += <pre>{str}</pre>;
 	}
+	
+	var soapRequest = sr.getSOAPRequest();
+	if (soapRequest) {
+		var div = page.div.(@id == "soaprequest");
+		div.h2 = <h2>SOAP Request</h2>
+		div.h2 += <pre>{soapRequest.toXMLString()}</pre>
+	}
+
+	var soapResponse = sr.getSOAPResponse();
+	if (soapResponse) {
+		var div = page.div.(@id == "soapresponse");
+		div.h2 = <h2>SOAP Response</h2>
+		div.h2 += <pre>{soapResponse.toXMLString()}</pre>
+	}
+
 	return page;
 }
 
@@ -390,7 +411,7 @@ CommonUI.prototype.renderServiceRequestListPage = function(srlist, isout, url) {
 
 
 /**
- * Serves a details page for pending RequestCertificate requests.
+ * Serves a details page for outbound service requests.
  *
  * <p>The URL processed has the format <caname>/request/<queueindex></p>
  *
@@ -405,9 +426,9 @@ CommonUI.prototype.handleOutboundRequestDetails = function(req, res, url) {
 	var index = parseInt(op.index);
 	var sr = this.service.getOutboundRequest(index);
 
-	if (typeof(op.op) != "undefined") {
-		var certreq = sr.getCertificateRequest();
-		reqbin = certreq.getBytes();
+	var certreq = sr.getCertificateRequest();
+	if (typeof(op.action) != "undefined") {
+		var reqbin = certreq.getBytes();
 		res.setContentType("application/octet-stream");
 		res.setContentLength(reqbin.length);
 		var filename = certreq.getCHR().toString() + ".cvreq";
@@ -417,9 +438,11 @@ CommonUI.prototype.handleOutboundRequestDetails = function(req, res, url) {
 	} else {
 		var page = this.renderServiceRequestPage(sr);
 
-		var div = page.div.(@id == "request");
-		div.h2 += <a href={url[url.length - 1] + "?" + req.queryString + "&op=download"}>Download...</a>
-
+		if (certreq) {
+			var div = page.div.(@id == "request");
+			div.h2 += <a href={url[url.length - 1] + "?" + req.queryString + "&action=download"}>Download...</a>
+		}
+		
 		this.sendPage(req, res, url, page);
 	}
 }
@@ -507,6 +530,14 @@ CommonUI.prototype.serveRefreshPage = function(req, res, url, statusMessage) {
 
 
 
+/**
+ * Add an action entry to the list of possible actions
+ *
+ * @param {XML} ul the list of action elements
+ * @param {String} cmd the command part of the URL
+ * @param {Number} index the index into the service request list
+ * @param {String} action the action to be performed
+ */
 CommonUI.addAction = function(ul, cmd, index, action) {
 	ul.li += <li><a href={cmd + "?index=" + index + "&action=" + action}>Respond</a>{" with " + action}</li>
 }

@@ -130,7 +130,7 @@ CVCCA.prototype.setRemovePreviousKey = function(removePreviousKey) {
  *
  * @param {PublicKeyReference} car the CA at which this request is addressed
  * @param {boolean} forceInitial force an initial request, even if a current certificate is available
- * @param {boolean} signedInitial sign with initial key (sequence = 00000)
+ * @param {boolean} signinitial sign with initial key (sequence = 00000)
  * @return the certificate request
  * @type CVC
  */
@@ -199,6 +199,31 @@ CVCCA.prototype.generateRequest = function(car, forceinitial, signinitial) {
 	this.certstore.storeRequest(this.path, req);
 	
 	return req;
+}
+
+
+
+/**
+ * Counter-sign a request
+ *
+ * @param {CVC} req the initial request
+ * @return the certificate request
+ * @type CVC
+ */
+CVCCA.prototype.counterSignRequest = function(request) {
+	assert(!request.isAuthenticatedRequest());
+	
+	var car = this.certstore.getCurrentCHR(this.path);
+	assert(car != null);
+	
+	var cacvc = this.certstore.getCertificate(this.path, car);
+	assert(cacvc != null);
+	
+	var signingTAAlgorithmIdentifier = cacvc.getPublicKeyOID();
+	var prk = this.certstore.getPrivateKey(this.path, car);
+
+	var req = EAC2CVRequestGenerator.signAuthenticatedCVRequest(this.crypto, request.getASN1(), prk, car, signingTAAlgorithmIdentifier);
+	return new CVC(req);
 }
 
 
@@ -445,8 +470,6 @@ CVCCA.prototype.getCertificateList = function(fromCAR) {
 CVCCA.prototype.getIssuedCertificate = function(chr) {
 	var path = this.path + "/" + chr.getHolder();
 	
-	print("path=" + path);
-	print("holder=" + chr);
 	var cvc = this.certstore.getCertificate(path, chr);
 	if (cvc == null) {
 		GPSystem.trace("No certificate found for " + chr);

@@ -53,6 +53,7 @@
 		<name>Request Foreign Certificate</name>
 		<description>
 			<p><ol>
+				<li>Generate domestic CVCA certificate</li>
 				<li>Generate foreign CVCA certificate</li>
 				<li>Populate to domestic CVCA</li>
 				<li>Populate to DVCA</li>
@@ -71,6 +72,12 @@
 		<Script><![CDATA[
 
 	this.log(" Switch to brainpoolP256r1withSHA256");
+	this.t.call("cvca?op=change&keyspec=brainpoolP256r1withSHA256");
+
+	this.log(" Generate root certificate");
+	this.t.call("cvca?op=linkdp", "Operation completed");
+
+	this.log(" Switch to brainpoolP256r1withSHA256");
 	this.t.call("cvca-fu?op=change&keyspec=brainpoolP256r1withSHA256");
 
 	this.log(" Generate root certificate");
@@ -79,6 +86,9 @@
 	this.log(" SPOC asynchronous GetCACertificates");
 	this.t.call("cvca?op=getcacertificates", "ok_reception_ack");
 	this.t.call("cvca-fu/getcert?index=-1&action=ok_cert_available", "ok_received_correctly");
+
+	this.log(" SPOC synchronous GetCACertificates");
+	this.t.call("cvca-fu?op=getcacertificates", "ok_cert_available");
 
 	this.log(" DVCA synchronous GetCACertificates");
 	this.t.call("dvca?op=update", "ok_cert_available");

@@ -566,6 +566,21 @@ CVC.prototype.isAuthenticatedRequest = function() {
 
 
 /**
+ * Determine if this is a countersigned authenticated request
+ *
+ * @returns true, if countersigned authenticated request
+ * @type Boolean
+ */
+CVC.prototype.isCountersignedRequest = function() {
+	if (!this.isAuthenticatedRequest()) {
+		return false;
+	}
+	return (this.getCHR().getHolder() != this.getOuterCAR().getHolder());
+}
+
+
+
+/**
  * Verify certificate signature with public key
  *
  * @param {Key} puk the public key

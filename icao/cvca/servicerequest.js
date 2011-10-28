@@ -126,6 +126,17 @@ ServiceRequest.prototype.getResponseURL = function() {
 
 
 /**
+ * Sets response URL
+ *
+ * @param {String} responseURL the response URL
+ */
+ServiceRequest.prototype.setResponseURL = function(responseURL) {
+	this.responseURL = responseURL;
+}
+
+
+
+/**
  * Gets the certificate request
  *
  * @returns the certificate request which may be undefined
@@ -133,6 +144,40 @@ ServiceRequest.prototype.getResponseURL = function() {
  */
 ServiceRequest.prototype.getCertificateRequest = function() {
 	return this.certificateRequest;
+}
+
+
+
+/**
+ * Sets certificate request
+ *
+ * @param {CVC} certificateRequest the certificate request
+ */
+ServiceRequest.prototype.setCertificateRequest = function(certificateRequest) {
+	this.certificateRequest = certificateRequest;
+}
+
+
+
+/**
+ * Sets raw certificate request
+ *
+ * @param {ByteString} certificateRequest the raw certificate request
+ */
+ServiceRequest.prototype.setRawCertificateRequest = function(certificateRequest) {
+	this.rawCertificateRequest = certificateRequest;
+}
+
+
+
+/**
+ * Gets the raw certificate request
+ *
+ * @returns the certificate request which may be undefined
+ * @type ByteString
+ */
+ServiceRequest.prototype.getRawCertificateRequest = function() {
+	return this.rawCertificateRequest;
 }
 
 
@@ -230,6 +275,29 @@ ServiceRequest.prototype.getMessage = function() {
 
 
 /**
+ * Set a callerID related to this service request
+ *
+ * @param {String} foreignCAR the foreignCAR
+ */
+ServiceRequest.prototype.setCallerID = function(callerID) {
+	this.callerID = callerID;
+}
+
+
+
+/**
+ * Gets the callerID associated with this request
+ *
+ * @returns the callerID
+ * @type String
+ */
+ServiceRequest.prototype.getCallerID = function() {
+	return this.callerID;
+}
+
+
+
+/**
  * Set a foreignCAR related to this service request
  *
  * @param {String} foreignCAR the foreignCAR
@@ -271,6 +339,52 @@ ServiceRequest.prototype.setRelatedServiceRequest = function(relatedServiceReque
  */
 ServiceRequest.prototype.getRelatedServiceRequest = function() {
 	return this.relatedServiceRequest;
+}
+
+
+
+/**
+ * Sets the raw SOAP XML request
+ *
+ * @param {XML} request the raw SOAP xml request
+ */
+ServiceRequest.prototype.setSOAPRequest = function(soapRequest) {
+	this.soapRequest = soapRequest;
+}
+
+
+
+/**
+ * Gets the raw SOAP XML request
+ *
+ * @returns the the raw SOAP xml request
+ * @type XML
+ */
+ServiceRequest.prototype.getSOAPRequest = function() {
+	return this.soapRequest;
+}
+
+
+
+/**
+ * Sets the raw SOAP XML response
+ *
+ * @param {XML} request the raw SOAP xml response
+ */
+ServiceRequest.prototype.setSOAPResponse = function(soapResponse) {
+	this.soapResponse = soapResponse;
+}
+
+
+
+/**
+ * Gets the raw SOAP XML response
+ *
+ * @returns the the raw SOAP xml response
+ * @type XML
+ */
+ServiceRequest.prototype.getSOAPResponse = function() {
+	return this.soapResponse;
 }
 
 

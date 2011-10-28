@@ -318,9 +318,10 @@ EAC2CVRequestGenerator.prototype.generateCVRequest = function(privateKey) {
 
 
 /**
- * Generate authenticated request
+ * Countersign request
  *
- * @param {Key} requestKey Private key for the request signature
+ * @param {Crypto} crypto the crypto provide to use for signing the request
+ * @param {CVC} request the self-signed request
  * @param {Key} authenticationKey Private key for used for signing and authenticating the request
  * @param {PublicKeyReference} authCHR CHR of the authenticating authority 
  * @param {ByteString} taOID the public key object identifier of the authentication key
@@ -328,20 +329,15 @@ EAC2CVRequestGenerator.prototype.generateCVRequest = function(privateKey) {
  * @return The DER-encoded authenticated CV request
  * @type ASN1
  */
-EAC2CVRequestGenerator.prototype.generateAuthenticatedCVRequest = function(requestKey, authenticationKey, authCHR, outertaOID) {
+EAC2CVRequestGenerator.signAuthenticatedCVRequest = function(crypto, request, authenticationKey, authCHR, outertaOID) {
 	var authRequest = new ASN1("Authentication", 0x67);
-
-	var request = this.generateCVRequest(requestKey);
 
 	var chr = new ASN1("Certification Authority Reference", 0x42, authCHR.getBytes());
 
 	var signatureInput = request.getBytes().concat(chr.getBytes());
 
-	if (typeof(outertaOID) == "undefined") {
-		outertaOID = this.taOID;
-	}
 	var mech = CVC.getSignatureMech(outertaOID);
-	var signature = this.crypto.sign(authenticationKey, mech, signatureInput);
+	var signature = crypto.sign(authenticationKey, mech, signatureInput);
 
 	if (CVC.isECDSA(outertaOID)) {
 		var keylen = authenticationKey.getComponent(Key.ECC_P).length;
@@ -355,4 +351,27 @@ EAC2CVRequestGenerator.prototype.generateAuthenticatedCVRequest = function(reque
 	authRequest.add(signatureValue);
 
 	return authRequest;
+}
+
+
+
+/**
+ * Generate authenticated request
+ *
+ * @param {Key} requestKey Private key for the request signature
+ * @param {Key} authenticationKey Private key for used for signing and authenticating the request
+ * @param {PublicKeyReference} authCHR CHR of the authenticating authority 
+ * @param {ByteString} taOID the public key object identifier of the authentication key
+ *
+ * @return The DER-encoded authenticated CV request
+ * @type ASN1
+ */
+EAC2CVRequestGenerator.prototype.generateAuthenticatedCVRequest = function(requestKey, authenticationKey, authCHR, outertaOID) {
+
+	var request = this.generateCVRequest(requestKey);
+
+	if (typeof(outertaOID) == "undefined") {
+		outertaOID = this.taOID;
+	}
+	return EAC2CVRequestGenerator.signAuthenticatedCVRequest(this.crypto, request, authenticationKey, authCHR, outertaOID);
 }

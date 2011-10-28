@@ -59,10 +59,21 @@ CVCAUI.prototype.handleRequestCertificateRequestDetails = function(req, res, url
 	var sr = this.service.getInboundRequest(index);
 	
 	if (typeof(op.action) != "undefined") {
-		if (op.action == "delete") {
+		switch(op.action) {
+		case "delete":
 			this.service.deleteInboundRequest(index);
 			this.serveRefreshPage(req, res, url);
-		} else {
+			break;
+		case "download":
+			var reqbin = certreq.getBytes();
+			res.setContentType("application/octet-stream");
+			res.setContentLength(reqbin.length);
+			var filename = certreq.getCHR().toString() + ".cvreq";
+			// ToDo: Remove nativeResponse once addHeader is provided in host class
+			res.nativeResponse.addHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+			res.write(reqbin);
+			return;
+		default:
 			sr.setStatusInfo(op.action);
 			var status = this.service.processRequest(index);
 			this.serveRefreshPage(req, res, url, status);
@@ -96,6 +107,9 @@ CVCAUI.prototype.handleRequestCertificateRequestDetails = function(req, res, url
 		div.h2 = <h2>Possible Actions</h2>
 		div.h2 += actions;
 
+		var div = page.div.(@id == "request");
+		div.h2 += <a href={url[url.length - 1] + "?" + req.queryString + "&action=download"}>Download...</a>
+
 		this.sendPage(req, res, url, page);
 	}
 }
@@ -107,6 +121,7 @@ CVCAUI.prototype.handleRequestCertificateRequestDetails = function(req, res, url
  *
  * @param {HttpRequest} req the request object
  * @param {HttpResponse} req the response object
+ * @param {String[]} url array of URL path elements
  */
 CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 
