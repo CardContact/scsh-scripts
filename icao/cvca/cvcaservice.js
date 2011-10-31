@@ -610,7 +610,92 @@ CVCAService.prototype.getCACertificatesFromSPOC = function(country) {
 
 
 
-CVCAService.prototype.countersignRequest = function(sr) {
+// ---- WebService handling ---------------------------------------------------
+
+/**
+ * Process a request from a DVCA to return current CA certificates
+ *
+ * @param {ServiceRequest} sr the service request
+ * @param {boolean} callback true if callback is possible
+ */
+CVCAService.prototype.processGetCACertificates = function(sr, callback) {
+
+	this.addInboundRequest(sr);
+
+	if (callback) {
+		sr.setStatusInfo(ServiceRequest.OK_SYNTAX);
+	} else {
+		sr.setCertificateList(this.compileCertificateList(false));
+		sr.setStatusInfo(ServiceRequest.OK_CERT_AVAILABLE);
+	}
+}
+
+
+
+/**
+ * Process a request via the SPOC to return current CA certificates
+ *
+ * @param {ServiceRequest} sr the service request
+ */
+CVCAService.prototype.processSPOCGetCACertificates = function(sr) {
+
+	this.addInboundRequest(sr);
+
+	var callerID = sr.getCallerID();		// Request via SPOC interface
+	var spoc = this.getSPOC(callerID);
+	if (!spoc) {
+		sr.setStatusInfo(ServiceRequest.FAILURE_REQUEST_NOT_ACCEPTED);
+		sr.setMessage("No SPOC for callerID " + callerID + " known");
+		return;
+	}
+	sr.setResponseURL(spoc.url);
+
+	if (spoc.async) {
+		sr.setStatusInfo(ServiceRequest.OK_RECEPTION_ACK);
+	} else {
+		sr.setCertificateList(this.compileCertificateList(true));
+		sr.setStatusInfo(ServiceRequest.OK_CERT_AVAILABLE);
+	}
+}
+
+
+
+/**
+ * Process a request to issue a domestic DV certificate
+ *
+ * @param {ServiceRequest} sr the service request
+ * @param {boolean} callback true if callback is possible
+ */
+CVCAService.prototype.processRequestCertificate = function(sr, callback) {
+
+	this.addInboundRequest(sr);
+
+	var req = this.checkRequestSyntax(sr.getRawCertificateRequest());
+	if (!req) {
+		sr.setStatusInfo(ServiceRequest.FAILURE_SYNTAX);
+		sr.setMessage("Certificate request is not a valid ASN.1 structure: " + sr.getRawCertificateRequest().toString(HEX));
+		return;
+	}
+	
+	sr.setCertificateRequest(req);
+
+	GPSystem.trace("CVCAService - Received certificate request: ");
+	GPSystem.trace(req);
+
+	// Check basic semantics of request
+	var returnCode = this.checkRequestSemantics(req);
+
+	var returnCode = this.checkPolicy(req, returnCode, callback);
+	sr.setStatusInfo(returnCode);
+
+	if (returnCode == ServiceRequest.OK_CERT_AVAILABLE) {
+		var certlist = this.determineCertificateList(req);
+
+		var cert = this.issueCertificate(req);
+		// Add certificate list to response
+		certlist.push(cert);
+		sr.setCertificateList(certlist);
+	}
 }
 
 
@@ -677,7 +762,7 @@ CVCAService.prototype.processRequestForeignCertificate = function(sr, callback) 
 	
 	sr.setCertificateRequest(req);
 
-	GPSystem.trace("CVCAService - Received certificate request: ");
+	GPSystem.trace("CVCAService - Received foreign certificate request: ");
 	GPSystem.trace(req);
 
 	// Check basic semantics of request
@@ -889,141 +974,6 @@ CVCAService.prototype.getCACertificatesFromSPOCs = function() {
 
 
 
-// ---- WebService handling ---------------------------------------------------
-
-/**
- * Webservice that returns the list of certificates for this CA
- * 
- * @param {XML} soapBody the body of the SOAP message
- * @returns the soapBody of the response
- * @type XML
- */
-CVCAService.prototype.GetCACertificates = function(soapBody) {
-
-	// Create empty response
-	var ns = new Namespace("uri:EAC-PKI-CVCA-Protocol/" + this.version);
-	var ns1 = new Namespace("uri:eacBT/" + this.version);
-
-	var callback = soapBody.callbackIndicator;
-	
-	var certlist = [];
-	var response = ServiceRequest.OK_CERT_AVAILABLE;
-	
-	if (callback == "callback_possible") {
-		var asyncreq = new ServiceRequest(
-							soapBody.messageID.ns1::messageID,
-							soapBody.responseURL.ns1::string);
-
-		asyncreq.setType(ServiceRequest.DVCA_GET_CA_CERTIFICATES);
-		this.addInboundRequest(asyncreq);
-		asyncreq.setStatusInfo(ServiceRequest.OK_SYNTAX);
-		var response = ServiceRequest.OK_SYNTAX;
-	} else {
-		// Add certificate list to response
-		certlist = this.compileCertificateList(false);
-	}
-	
-	var response =
-		<ns:GetCACertificatesResponse xmlns:ns={ns} xmlns:ns1={ns1}>
-			<Result>
-				<ns1:returnCode>{response}</ns1:returnCode>
-				<!--Optional:-->
-				<ns1:certificateSeq>
-					<!--Zero or more repetitions:-->
-				</ns1:certificateSeq>
-			</Result>
-		</ns:GetCACertificatesResponse>
-	
-	var list = response.Result.ns1::certificateSeq;
-
-	for (var i = 0; i < certlist.length; i++) {
-		var cvc = certlist[i];
-		list.certificate += <ns1:certificate xmlns:ns1={ns1}>{cvc.getBytes().toString(BASE64)}</ns1:certificate>
-	}
-
-	return response;
-}
-
-
-
-/**
- * Webservice that issues a new certificate for the submitted request
- * 
- * @param {XML} soapBody the body of the SOAP message
- * @returns the soapBody of the response
- * @type XML
- */
-CVCAService.prototype.RequestCertificate = function(soapBody) {
-	
-	var ns = new Namespace("uri:EAC-PKI-CVCA-Protocol/" + this.version);
-	var ns1 = new Namespace("uri:eacBT/" + this.version);
-
-	var certlist = [];
-
-	try	{
-		var reqbin = new ByteString(soapBody.certReq, BASE64);
-
-		var req = this.checkRequestSyntax(reqbin);
-
-		if (req == null) {
-			var returnCode = ServiceRequest.FAILURE_SYNTAX;
-		} else {
-			GPSystem.trace("CVCAService - Received certificate request: ");
-			GPSystem.trace(req);
-
-			var returnCode = this.checkRequestSemantics(req);
-
-			var callback = soapBody.callbackIndicator;
-			var returnCode = this.checkPolicy(req, returnCode, (callback == "callback_possible"));
-
-			if (returnCode == ServiceRequest.OK_SYNTAX) {
-				var asyncreq = new ServiceRequest(
-								soapBody.messageID.ns1::messageID,
-								soapBody.responseURL.ns1::string,
-								req);
-
-				asyncreq.setType(ServiceRequest.DVCA_REQUEST_CERTIFICATE);
-				asyncreq.setStatusInfo(returnCode);
-				this.addInboundRequest(asyncreq);
-			} else {
-				if (returnCode == ServiceRequest.OK_CERT_AVAILABLE) {
-					certlist = this.determineCertificateList(req);
-
-					var cert = this.issueCertificate(req);
-					// Add certificate list to response
-					certlist.push(cert);
-				}
-			}
-		}
-	}
-	catch(e) {
-		GPSystem.trace("CVCAService - Error decoding request in " + e.fileName + "#" + e.lineNumber + " : " + e);
-		var returnCode = ServiceRequest.FAILURE_SYNTAX;
-	}
-
-	var response =
-		<ns:RequestCertificateResponse xmlns:ns={ns} xmlns:ns1={ns1}>
-			<Result>
-				<ns1:returnCode>{returnCode}</ns1:returnCode>
-				<!--Optional:-->
-				<ns1:certificateSeq>
-					<!--Zero or more repetitions:-->
-				</ns1:certificateSeq>
-			</Result>
-		</ns:RequestCertificateResponse>
-	
-	var list = response.Result.ns1::certificateSeq;
-
-	for (var i = 0; i < certlist.length; i++) {
-		var cvc = certlist[i];
-		list.certificate += <ns1:certificate xmlns:ns1={ns1}>{cvc.getBytes().toString(BASE64)}</ns1:certificate>
-	}
-
-	return response;
-}
-
-
-
 // ---- TR-03129 Service ------------------------------------------------------
 
 /**
@@ -1039,6 +989,49 @@ function TR3129ServicePort(service) {
 
 
 /**
+ * Compile the response message using the returnCode and certificate list from the completed service request
+ *
+ * @param {String} type the response type name
+ * @param {ServiceRequest} sr the completed service request
+ * @type XML
+ * @return the complete SOAP response body
+ */
+TR3129ServicePort.prototype.generateResponse = function(type, sr) {
+	var ns = new Namespace("uri:EAC-PKI-CVCA-Protocol/" + this.version);
+	var ns1 = new Namespace("uri:eacBT/" + this.version);
+
+	var certlist = sr.getCertificateList();
+	if (certlist && (certlist.length > 0)) {
+		var response =
+			<ns:{type} xmlns:ns={ns} xmlns:ns1={ns1}>
+				<Result>
+					<ns1:returnCode>{sr.getStatusInfo()}</ns1:returnCode>
+					<!--Optional:-->
+					<ns1:certificateSeq>
+						<!--Zero or more repetitions:-->
+					</ns1:certificateSeq>
+				</Result>
+			</ns:{type}>
+		
+		var list = response.Result.ns1::certificateSeq;
+
+		for each (var cvc in certlist) {
+			list.certificate += <ns1:certificate xmlns:ns1={ns1}>{cvc.getBytes().toString(BASE64)}</ns1:certificate>
+		}
+	} else {
+		var response =
+			<ns:{type} xmlns:ns={ns} xmlns:ns1={ns1}>
+				<Result>
+					<ns1:returnCode>{sr.getStatusInfo()}</ns1:returnCode>
+				</Result>
+			</ns:{type}>
+	}
+	return response;
+}
+
+
+
+/**
  * Implements GetCACertificates from TR-03129, chapter 4.2.3
  *
  * <p>Either respond synchronously with all known certificate chains or schedule an asychronous response</p>
@@ -1048,8 +1041,25 @@ function TR3129ServicePort(service) {
  * @return the SOAP response body
  */
 TR3129ServicePort.prototype.GetCACertificates = function(soapBody) {
-	// ToDo: Move code from service
-	return this.service.GetCACertificates(soapBody);
+	var ns = new Namespace("uri:EAC-PKI-CVCA-Protocol/" + this.version);
+	var ns1 = new Namespace("uri:eacBT/" + this.version);
+
+	var messageID = soapBody.messageID.ns1::messageID;
+	var sr = new ServiceRequest(messageID);
+	sr.setType(ServiceRequest.DVCA_GET_CA_CERTIFICATES);
+	sr.setSOAPRequest(soapBody);
+
+	var callback = soapBody.callbackIndicator.toString() == "callback_possible";
+	if (callback) {
+		sr.setResponseURL(soapBody.responseURL.ns1::string.toString());
+	}
+
+	this.service.processGetCACertificates(sr, callback);
+
+	var response = this.generateResponse("GetCACertificatesResponse", sr);
+	
+	sr.setSOAPResponse(response);
+	return response;
 }
 
 
@@ -1064,8 +1074,27 @@ TR3129ServicePort.prototype.GetCACertificates = function(soapBody) {
  * @return the SOAP response body
  */
 TR3129ServicePort.prototype.RequestCertificate = function(soapBody) {
-	// ToDo: Move code from service
-	return this.service.RequestCertificate(soapBody);
+	var ns = new Namespace("uri:EAC-PKI-CVCA-Protocol/" + this.version);
+	var ns1 = new Namespace("uri:eacBT/" + this.version);
+
+	var messageID = soapBody.messageID.ns1::messageID;
+	var sr = new ServiceRequest(messageID);
+	sr.setType(ServiceRequest.DVCA_REQUEST_CERTIFICATE);
+	sr.setSOAPRequest(soapBody);
+
+	sr.setRawCertificateRequest(new ByteString(soapBody.certReq, BASE64));
+	
+	var callback = soapBody.callbackIndicator.toString() == "callback_possible";
+	if (callback) {
+		sr.setResponseURL(soapBody.responseURL.ns1::string.toString());
+	}
+
+	this.service.processRequestCertificate(sr, callback);
+
+	var response = this.generateResponse("RequestCertificateResponse", sr);
+
+	sr.setSOAPResponse(response);
+	return response;
 }
 
 
@@ -1099,32 +1128,7 @@ TR3129ServicePort.prototype.RequestForeignCertificate = function(soapBody) {
 
 	this.service.processRequestForeignCertificate(sr, callback);
 
-	var certlist = sr.getCertificateList();
-	if (certlist && (certlist.length > 0)) {
-		var response =
-			<ns:RequestCertificateResponse xmlns:ns={ns} xmlns:ns1={ns1}>
-				<Result>
-					<ns1:returnCode>{sr.getStatusInfo()}</ns1:returnCode>
-					<!--Optional:-->
-					<ns1:certificateSeq>
-						<!--Zero or more repetitions:-->
-					</ns1:certificateSeq>
-				</Result>
-			</ns:RequestCertificateResponse>
-		
-		var list = response.Result.ns1::certificateSeq;
-
-		for each (var cvc in certlist) {
-			list.certificate += <ns1:certificate xmlns:ns1={ns1}>{cvc.getBytes().toString(BASE64)}</ns1:certificate>
-		}
-	} else {
-		var response =
-			<ns:RequestCertificateResponse xmlns:ns={ns} xmlns:ns1={ns1}>
-				<Result>
-					<ns1:returnCode>{sr.getStatusInfo()}</ns1:returnCode>
-				</Result>
-			</ns:RequestCertificateResponse>
-	}
+	var response = this.generateResponse("RequestForeignCertificateResponse", sr);
 
 	sr.setSOAPResponse(response);
 	return response;
@@ -1143,6 +1147,45 @@ TR3129ServicePort.prototype.RequestForeignCertificate = function(soapBody) {
  */
 function SPOCServicePort(service) {
 	this.service = service;
+}
+
+
+
+/**
+ * Compile the response message using the returnCode and certificate list from the completed service request
+ *
+ * @param {String} type the response type name
+ * @param {ServiceRequest} sr the completed service request
+ * @type XML
+ * @return the complete SOAP response body
+ */
+SPOCServicePort.prototype.generateResponse = function(type, sr) {
+
+	var ns = new Namespace("http://namespaces.unmz.cz/csn369791");
+
+	var certlist = sr.getCertificateList();
+	if (certlist && (certlist.length > 0)) {
+		var response =
+			<csn:RequestCertificateResponse xmlns:csn={ns}>
+				<!--Optional:-->
+				<csn:certificateSequence>
+				</csn:certificateSequence>
+				<csn:result>{sr.getStatusInfo()}</csn:result>
+			</csn:RequestCertificateResponse>
+	
+		var list = response.ns::certificateSequence;
+
+		for (var i = 0; i < certlist.length; i++) {
+			var cvc = certlist[i];
+			list.ns::certificate += <cns:certificate xmlns:cns={ns}>{cvc.getBytes().toString(BASE64)}</cns:certificate>
+		}
+	} else {
+		var response =
+			<csn:RequestCertificateResponse xmlns:csn={ns}>
+				<csn:result>{sr.getStatusInfo()}</csn:result>
+			</csn:RequestCertificateResponse>
+	}
+	return response;
 }
 
 
@@ -1176,54 +1219,17 @@ SPOCServicePort.prototype.GetCACertificatesRequest = function(soapBody) {
 
 	var ns = new Namespace("http://namespaces.unmz.cz/csn369791");
 
-	var callerID = soapBody.ns::callerID.toString();
-	var messageID = soapBody.ns::messageID.toString();
-
-	var certlist = [];
-
-	var spoc = this.service.getSPOC(callerID);
-	if (!spoc) {
-		var result = ServiceRequest.FAILURE_REQUEST_NOT_ACCEPTED;
-	} else {
-		var result = ServiceRequest.OK_CERT_AVAILABLE;
+	var sr = new ServiceRequest(soapBody.ns::messageID.toString());
+	sr.setType(ServiceRequest.SPOC_GET_CA_CERTIFICATES);
+	sr.setSOAPRequest(soapBody);
 	
-		if (spoc.async) {
-			var asyncreq = new ServiceRequest(
-							messageID,
-							spoc.url);
-			asyncreq.setType(ServiceRequest.SPOC_GET_CA_CERTIFICATES);
-			
-			this.service.addInboundRequest(asyncreq);
-			var result = ServiceRequest.OK_RECEPTION_ACK;
-			asyncreq.setStatusInfo(result);
-		} else {
-			// Add certificate list to response
-			certlist = this.service.compileCertificateList(true);
-		}
-	}
-
-	if (certlist.length > 0) {
-		var response =
-			<csn:GetCACertificatesResponse xmlns:csn={ns}>
-				<!--Optional:-->
-				<csn:certificateSequence>
-				</csn:certificateSequence>
-				<csn:result>{result}</csn:result>
-			</csn:GetCACertificatesResponse>
+	sr.setCallerID(soapBody.ns::callerID.toString());
 	
-		var list = response.ns::certificateSequence;
+	this.service.processSPOCGetCACertificates(sr);
+	
+	var response = this.generateResponse("GetCACertificatesResponse", sr);
 
-		for (var i = 0; i < certlist.length; i++) {
-			var cvc = certlist[i];
-			list.ns::certificate += <cns:certificate xmlns:cns={ns}>{cvc.getBytes().toString(BASE64)}</cns:certificate>
-		}
-	} else {
-		var response =
-			<csn:GetCACertificatesResponse xmlns:csn={ns}>
-				<csn:result>{result}</csn:result>
-			</csn:GetCACertificatesResponse>
-	}
-
+	sr.setSOAPResponse(response);
 	return response;
 }
 
@@ -1249,28 +1255,7 @@ SPOCServicePort.prototype.RequestCertificateRequest = function(soapBody) {
 	
 	this.service.processSPOCRequestCertificate(sr);
 	
-	var certlist = sr.getCertificateList();
-	if (certlist && (certlist.length > 0)) {
-		var response =
-			<csn:RequestCertificateResponse xmlns:csn={ns}>
-				<!--Optional:-->
-				<csn:certificateSequence>
-				</csn:certificateSequence>
-				<csn:result>{sr.getStatusInfo()}</csn:result>
-			</csn:RequestCertificateResponse>
-	
-		var list = response.ns::certificateSequence;
-
-		for (var i = 0; i < certlist.length; i++) {
-			var cvc = certlist[i];
-			list.ns::certificate += <cns:certificate xmlns:cns={ns}>{cvc.getBytes().toString(BASE64)}</cns:certificate>
-		}
-	} else {
-		var response =
-			<csn:RequestCertificateResponse xmlns:csn={ns}>
-				<csn:result>{sr.getStatusInfo()}</csn:result>
-			</csn:RequestCertificateResponse>
-	}
+	var response = this.generateResponse("RequestCertificateResponse", sr);
 
 	sr.setSOAPResponse(response);
 	return response;
@@ -1299,7 +1284,7 @@ SPOCServicePort.prototype.SendCertificatesRequest = function(soapBody) {
 		var msgid = soapBody.ns::messageID.toString();
 		var sr = this.service.getOutboundRequestByMessageId(msgid);
 	}
-	
+
 	if (sr) {
 		sr.setStatusInfo(statusInfo);
 		var returnCode = ServiceRequest.OK_RECEIVED_CORRECTLY;
@@ -1319,7 +1304,7 @@ SPOCServicePort.prototype.SendCertificatesRequest = function(soapBody) {
 				certlist.push(cvc);
 				GPSystem.trace(cvc);
 			}
-			
+
 			sr.setCertificateList(certlist);
 			this.service.cvca.importCertificates(certlist);		// Store locally
 		}
