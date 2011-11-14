@@ -91,7 +91,7 @@ TAConnection.prototype.close = function() {
 
 
 /**
- * Obtain a list of certificates from the DVCA
+ * Obtain a list of certificates from the CVCA or DVCA
  *
  * @param {String} messageID the messageID for asynchronous requests (optional)
  * @param {String} responseURL the URL to which the asynchronous response is send (optional)
@@ -129,6 +129,8 @@ TAConnection.prototype.getCACertificates = function(messageID, responseURL) {
 		GPSystem.trace(request.toXMLString());
 	}
 
+	this.request = request;
+
 	try	 {
 		var response = this.soapcon.call(this.url, request);
 		if (this.verbose) {
@@ -140,13 +142,15 @@ TAConnection.prototype.getCACertificates = function(messageID, responseURL) {
 		throw new GPError("TAConnection", GPError.DEVICE_ERROR, 0, "getCACertificates failed with : " + e);
 	}
 	
+	this.response = response;
+
 	var certlist = [];
 
 	this.lastReturnCode = response.Result.ns1::returnCode.toString();
 
 	if (this.lastReturnCode == "ok_cert_available") {
 		for each (var c in response.Result.ns1::certificateSeq.ns1::certificate) {
-			var cvc = new ByteString(c, BASE64);
+			var cvc = new CVC(new ByteString(c, BASE64));
 			certlist.push(cvc);
 			GPSystem.trace(cvc);
 		}
@@ -202,6 +206,8 @@ TAConnection.prototype.requestCertificate = function(certreq, messageID, respons
 		GPSystem.trace(request.toXMLString());
 	}
 
+	this.request = request;
+
 	try	{
 		var response = this.soapcon.call(this.url, request);
 		if (this.verbose) {
@@ -213,6 +219,8 @@ TAConnection.prototype.requestCertificate = function(certreq, messageID, respons
 		throw new GPError("TAConnection", GPError.DEVICE_ERROR, 0, "RequestCertificate failed with : " + e);
 	}
 	
+	this.response = response;
+
 	var certlist = [];
 
 	this.lastReturnCode = response.Result.ns1::returnCode.toString();
@@ -276,6 +284,8 @@ TAConnection.prototype.requestForeignCertificate = function(certreq, foreignCAR,
 		GPSystem.trace(request.toXMLString());
 	}
 
+	this.request = request;
+
 	try	{
 		var response = this.soapcon.call(this.url, request);
 		if (this.verbose) {
@@ -287,6 +297,8 @@ TAConnection.prototype.requestForeignCertificate = function(certreq, foreignCAR,
 		throw new GPError("TAConnection", GPError.DEVICE_ERROR, 0, "RequestForeignCertificate failed with : " + e);
 	}
 	
+	this.response = response;
+
 	var certlist = [];
 
 	this.lastReturnCode = response.Result.ns1::returnCode.toString();
@@ -310,10 +322,9 @@ TAConnection.prototype.requestForeignCertificate = function(certreq, foreignCAR,
 /**
  * Send a certificate to the DVCA
  *
- * @param {String} foreignCAR the CAR of the foreign CVCA
+ * @param {CVC[]} certificates the list of certificates to post or null
  * @param {String} messageID the messageID for asynchronous requests (optional)
- * @param {String} responseURL the URL to which the asynchronous response is send (optional)
- * @param {CVC[]} cert the list of certificates to post
+ * @param {String} statusInfo the statusInfo field of the message
  * @type String
  * @return the returnCode
  */
@@ -351,14 +362,18 @@ TAConnection.prototype.sendCertificates = function(certificates, messageID, stat
 
 	var list = request.certificateSeq;
 
-	for (var i = 0; i < certificates.length; i++) {
-		var cvc = certificates[i];
-		list.certificate += <ns1:certificate xmlns:ns1={ns1}>{cvc.getBytes().toString(BASE64)}</ns1:certificate>
+	if (certificates) {
+		for (var i = 0; i < certificates.length; i++) {
+			var cvc = certificates[i];
+			list.certificate += <ns1:certificate xmlns:ns1={ns1}>{cvc.getBytes().toString(BASE64)}</ns1:certificate>
+		}
 	}
 
 	if (this.verbose) {
 		GPSystem.trace(request.toXMLString());
 	}
+
+	this.request = request;
 
 	try	{
 		var response = this.soapcon.call(this.url, request);
@@ -370,6 +385,8 @@ TAConnection.prototype.sendCertificates = function(certificates, messageID, stat
 		GPSystem.trace("SOAP call to " + this.url + " failed : " + e);
 		throw new GPError("TAConnection", GPError.DEVICE_ERROR, 0, "SendCertificates failed with : " + e);
 	}
+
+	this.response = response;
 
 	this.lastReturnCode = response.Result.ns1::returnCode.toString();
 	return this.lastReturnCode;
