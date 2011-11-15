@@ -855,6 +855,10 @@ CVC.prototype.toString = function() {
 		str += "CXD=" + cxd.toLocaleDateString() + " ";
 	}
 
+	if (this.isAuthenticatedRequest()) {
+		str += "oCAR=" + this.getOuterCAR().toString() + " ";
+	}
+	
 	return str;
 }
 
