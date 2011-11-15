@@ -299,9 +299,14 @@ CVCCA.prototype.generateCertificate = function(req, policy) {
 	var expDate = new Date((policy.certificateValidityDays - 1) * (1000 * 60 * 60 * 24) + effDate.getTime());
 	expDate.setHours(12, 0, 0, 0);
 
-	// Expiration date of issued certificate must not exceed expiration date of issuing CA
-	if ((maxExpDate != null) && (expDate.getTime() > maxExpDate.getTime())) {
-		expDate = maxExpDate;
+	if (maxExpDate != null) {
+		if (effDate.getTime() > maxExpDate.getTime()) {
+			throw new GPError("CVCCA", GPError.INVALID_DATA, 0, "CA certificate is expired");
+		}
+		// Expiration date of issued certificate must not exceed expiration date of issuing CA
+		if (expDate.getTime() > maxExpDate.getTime()) {
+			expDate = maxExpDate;
+		}
 	}
 	
 	generator.setEffectiveDate(effDate);
@@ -365,47 +370,22 @@ CVCCA.prototype.importCertificate = function(cert) {
  * @param {CVC[]} certs the list of certificates
  */
 CVCCA.prototype.importCertificates = function(certs) {
-/*
-	var mycerts = [];
-	var othercerts = [];
-
-	// Separate my certificates from all others
-	for (var i = 0; i < certs.length; i++) {
-		var cvc = certs[i];
-		var chr = cvc.getCHR();
-		if (this.holderId == chr.getHolder()) {
-			mycerts.push(cvc);
-		} else {
-			othercerts.push(cvc);
-		}
-	}
-*/
-	// Insert all other certificates into certificate store
-//	var list = this.certstore.insertCertificates2(this.crypto, othercerts, true, this.path);
 	var list = this.certstore.insertCertificates2(this.crypto, certs, true, this.path);
 	
 	// Process my own certificates. Should be one at maximum, matching a request
-//	for (var i = 0; i < mycerts.length; i++) {
 	for (var i = 0; i < certs.length; i++) {
-//		var cert = mycerts[i];
 		var cert = certs[i];
 		var chr = cert.getCHR();
 		
 		if (this.holderId == chr.getHolder()) {
-//		var havecert = this.certstore.getCertificate(this.path, chr);
-//		if (havecert != null) {
-//			GPSystem.trace("We already have " + cert.toString() + " - ignored...");
-//		} else {
 			var prk = this.certstore.getPrivateKey(this.path, chr);
 			if (prk == null) {
 				GPSystem.trace("We do not have a key for " + cert.toString() + " - ignored...");
 			} else {
-//				this.certstore.storeCertificate(this.path, cert, true);
 
 				if (this.removePreviousKey) {
 					var req = this.certstore.getRequest(this.path, chr);
 					var previous = req.getOuterCAR();
-//					print("Previous key: " + previous);
 					if ((previous != null) && (previous.getSequenceNo() != "00000")) {
 						this.certstore.deleteCertificate(this.path, previous, false);
 						this.certstore.deleteRequest(this.path, previous);

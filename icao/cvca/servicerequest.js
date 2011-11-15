@@ -263,6 +263,21 @@ ServiceRequest.prototype.setMessage = function(message) {
 
 
 /**
+ * Add a message related to this service request
+ *
+ * @param {String} message the message
+ */
+ServiceRequest.prototype.addMessage = function(message) {
+	if (typeof(this.message) == "undefined") {
+		this.setMessage(message);
+	} else {
+		this.message += "\n" + message;
+	}
+}
+
+
+
+/**
  * Gets the message associated with this request
  *
  * @returns the message

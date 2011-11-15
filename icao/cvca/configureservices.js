@@ -84,7 +84,8 @@ var dVPolicy = { certificateValidityDays: 4,
 				   authenticatedRequestsApproved: false,
 				   initialRequestsApproved: false,
 				   declineExpiredAuthenticatedRequest: true,
-				   authenticatedRequestsForwarded: true
+				   authenticatedRequestsForwarded: true,
+				   countersignedRequestsApproved: false
 				 };
 
 // Default policy
@@ -99,11 +100,12 @@ var dVPolicy = { certificateValidityDays: 4,
 				   authenticatedRequestsApproved: true,
 				   initialRequestsApproved: false,
 				   declineExpiredAuthenticatedRequest: true,
-				   authenticatedRequestsForwarded: true
+				   authenticatedRequestsForwarded: true,
+				   countersignedRequestsApproved: false
 				 };
 
-// Policy for UTDVCA
-cvca.setDVCertificatePolicy(dVPolicy, /^UTDVCA.*$/);
+// Policy for DVCAs operated by UT
+cvca.setDVCertificatePolicy(dVPolicy, /^UT.*$/);
 
 var spoc = { country: "FU", name: "Other country", holderIDs: ["FUCVCA"], url: "http://localhost:8080/se/spoc-fu", async: false };
 cvca.addSPOC(spoc);
@@ -125,14 +127,15 @@ cvca.setLinkCertificatePolicy(linkPolicy);
 
 var dVPolicy = { certificateValidityDays: 4,
 				   chatRoleOID: new ByteString("id-IS", OID),
-				   chatRights: new ByteString("A3", HEX),
+				   chatRights: new ByteString("63", HEX),
 				   includeDomainParameter: false,
 				   shellModelForExpirationDate: true,
 				   extensions: null,
 				   authenticatedRequestsApproved: true,
 				   initialRequestsApproved: false,
 				   declineExpiredAuthenticatedRequest: true,
-				   authenticatedRequestsForwarded: true
+				   authenticatedRequestsForwarded: true,
+				   countersignedRequestsApproved: false
 				 };
 
 cvca.setDVCertificatePolicy(dVPolicy);

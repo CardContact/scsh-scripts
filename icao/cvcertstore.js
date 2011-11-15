@@ -718,7 +718,7 @@ CVCertificateStore.prototype.getDomainParameter = function(path, chr) {
 		chr = cvc.getCAR();
 	} while (!chr.equals(cvc.getCHR()));
 
-	throw new GPError("CVCertificateStore", GPError.INVALID_ARGUMENTS, 0, "Could not locate current CVCA certificate");
+	throw new GPError("CVCertificateStore", GPError.INVALID_ARGUMENTS, 0, "Could not locate CVCA certificate with domain parameter");
 }
 
 
@@ -967,7 +967,11 @@ CVCertificateStore.prototype.insertCertificate = function(crypto, cvc, cvcahint)
 		}
 	}
 	
-	var dp = this.getDomainParameter(path, car);
+	if (CVC.isECDSA(cacert.getPublicKeyOID())) {
+		var dp = this.getDomainParameter(path, car);
+	} else {
+		var dp = null;
+	}
 	var result = cvc.verifyWith(crypto, cacert.getPublicKey(dp), cacert.getPublicKeyOID());
 	if (!result) {
 		GPSystem.trace("Certificate " + cvc + " failed signature verification with " + cacert);

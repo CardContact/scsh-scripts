@@ -265,6 +265,7 @@ CommonUI.prototype.renderServiceRequestPage = function(sr) {
 				<tr><td>Type</td><td>{sr.getType()}</td></tr>
 				<tr><td>StatusInfo</td><td>{sr.getStatusInfo()}</td></tr>
 			</table>
+			<div id="message"/>
 			<div id="actions"/>
 			<div id="request"/>
 			<div id="certificates"/>
@@ -298,7 +299,9 @@ CommonUI.prototype.renderServiceRequestPage = function(sr) {
 		
 	var message = sr.getMessage();
 	if (message) {
-		page.table.tr += <tr><td>Message</td><td><pre>{message}</pre></td></tr>
+		var div = page.div.(@id == "message");
+		div.h2 = <h2>Message</h2>
+		div.h2 += <pre>{message}</pre>;
 	}
 	
 	if (sr.isCertificateRequest()) {

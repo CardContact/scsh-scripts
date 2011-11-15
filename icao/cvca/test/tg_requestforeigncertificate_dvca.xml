@@ -98,7 +98,7 @@
 
 	this.log(" DVCA asynchronous request for foreign initial certificate");
 	this.t.call("dvca?op=initialasync&cvca=FUCVCA", "ok_syntax");
-	this.t.call("cvca/request?index=-1&action=ok_request_forwarded", "ok_received_correctly");
+	this.t.call("cvca/request?index=-1&action=ok_request_forwarded", "ok_reception_ack");
 	this.t.call("cvca-fu/request?index=-1&action=ok_cert_available", "ok_received_correctly");
 
 	this.log(" DVCA synchronous request for foreign certificate renewal");
