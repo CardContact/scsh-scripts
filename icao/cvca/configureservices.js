@@ -184,6 +184,7 @@ var terminalPolicyVT = { certificateValidityDays: 6,
 				 };
 
 dvca.setTerminalCertificatePolicy(terminalPolicyVT, /UTVT/);
+dvca.setTerminalCertificatePolicy(terminalPolicyVT, /UTTEST/);
 
 dvca.addForeignCVCA("FUCVCA");
 
