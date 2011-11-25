@@ -45,9 +45,11 @@
 	var param = { dut: certlist[1]};
 	var result = this.runTestProcedure("tp_cvc", param);
 
+	var certs = [];
 	// Determine PKI path from DV certificate
 	for (var i = 0; i < certlist.length; i++) {
 		var cvc = new CVC(certlist[i]);
+		certs.push(cvc);
 		var level = cvc.getCHAT().get(1).value.byteAt(0) & 0xC0;
 		if ((level == 0x80) || (level == 0x40)) {
 			this.parameter.dvcapath = "/" + cvc.getCAR().getHolder() + "/" + cvc.getCHR().getHolder();
@@ -55,7 +57,7 @@
 	}
 
 	var certstore = this.parameter.certstore;
-//	certstore.insertCertificates2(this.parameter.crypto, certlist, true, this.parameter.dvcapath);
+	certstore.insertCertificates2(this.parameter.crypto, certs, true, this.parameter.dvcapath);
 
 		]]></Script>
 	</testcase>
@@ -98,12 +100,18 @@
 	this.log(req);
 	this.log(req.getASN1());
 	
-	var certlist = dvca.requestCertificate(req);
+	var certlist = dvca.requestCertificate(req.getBytes());
 	
 	this.assertTrue(certlist.length >= 1, "DVCA must return at least one certificates");
 	
+	var certs = [];
+	for (var i = 0; i < certlist.length; i++) {
+		var cvc = new CVC(certlist[i]);
+		certs.push(cvc);
+	}
+
 	var certstore = this.parameter.certstore;
-	certstore.insertCertificates2(this.parameter.crypto, certlist, true, this.parameter.dvcapath);
+	certstore.insertCertificates2(this.parameter.crypto, certs, true, this.parameter.dvcapath);
 	
 		]]></Script>
 	</testcase>
@@ -147,12 +155,18 @@
 	this.log(req);
 	this.log(req.getASN1());
 	
-	var certlist = dvca.requestCertificate(req);
+	var certlist = dvca.requestCertificate(req.getBytes());
 	
 	this.assertTrue(certlist.length >= 1, "DVCA must return at least one certificates");
 	
+	var certs = [];
+	for (var i = 0; i < certlist.length; i++) {
+		var cvc = new CVC(certlist[i]);
+		certs.push(cvc);
+	}
+
 	var certstore = this.parameter.certstore;
-	certstore.insertCertificates2(this.parameter.crypto, certlist, true, this.parameter.dvcapath);
+	certstore.insertCertificates2(this.parameter.crypto, certs, true, this.parameter.dvcapath);
 	
 		]]></Script>
 	</testcase>

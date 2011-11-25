@@ -790,10 +790,11 @@ CVCertificateStore.prototype.getCurrentCHR = function(path) {
  * Return the next CHR
  *
  * @param {String} path the relative path of the PKI element (e.g. "/UTCVCA1/UTDVCA1")
+ * @param {String} countryseq the 2 digit country code to include in the sequence number (optional)
  * @returns the next CHR based on the sequence counter maintained in the configuration file
  * @type PublicKeyReference
  */
-CVCertificateStore.prototype.getNextCHR = function(path) {
+CVCertificateStore.prototype.getNextCHR = function(path, countryseq) {
 	var cfg = this.loadConfig(path);
 	if (cfg == null) {
 		cfg = this.getDefaultConfig();
@@ -803,7 +804,43 @@ CVCertificateStore.prototype.getNextCHR = function(path) {
 	cfg.sequence.current = seq;
 	this.saveConfig(path, cfg);
 
-	return this.getCHRForSequenceNumber(path, seq);
+	return this.getCHRForSequenceNumber(path, seq, countryseq);
+}
+
+
+
+/**
+ * Encode a three character alpha-numeric sequence number
+ *
+ * <p>This function encodes values in the range 0 to 999 as numeric string with leading zeros.</p>
+ * <p>Value in the range 1000 to 34695 (999 + 26 * 36 * 36) are encoded as alphanumeric string.</p>
+ * <p>Value beyond 34696 are truncated</p>
+ *
+ * @param {Number} value integer sequence value
+ * @type String
+ * @return the 3 character string
+ */
+CVCertificateStore.encodeBase36 = function(value) {
+	value = value % (1000 + 26 * 36 * 36);
+	var seq;
+	if (value < 1000) {
+		seq = "" + value;
+	} else {
+		value += 11960;			10 * 36 * 36 - 1000
+		seq = "";
+		while(value > 0) {
+			var c = value % 36;
+			if (c >= 10) {
+				c += 55;
+			} else {
+				c += 48;
+			}
+			seq = String.fromCharCode(c) + seq;
+			value = Math.floor(value / 36);
+		}
+	}
+	seq = "000".substr(0, 3 - seq.length) + seq;
+	return seq;
 }
 
 
@@ -812,17 +849,23 @@ CVCertificateStore.prototype.getNextCHR = function(path) {
  * Create a CHR for the given path and sequence number
  *
  * @param {String} path the relative path of the PKI element (e.g. "/UTCVCA1/UTDVCA1")
+ * @param {Number} the sequence number to be translated
+ * @param {String} countryseq the 2 digit country code to include in the sequence number (optional)
  * @return the CHR
  * @type PublicKeyReference
  */
-CVCertificateStore.prototype.getCHRForSequenceNumber = function(path, sequence) {
+CVCertificateStore.prototype.getCHRForSequenceNumber = function(path, sequence, countryseq) {
 	var pe = path.substr(1).split("/");
 	var l = pe[pe.length - 1];
 
-	var str = "" + sequence;
-	str = "0000".substr(4 - (5 - str.length)).concat(str);
+	var str;
+	if (countryseq) {
+		str = countryseq + CVCertificateStore.encodeBase36(sequence);
+	} else {
+		str = "" + sequence;
+		str = "0000".substr(4 - (5 - str.length)).concat(str);
+	}
 	return new PublicKeyReference(l + str);
-
 }
 
 

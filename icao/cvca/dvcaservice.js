@@ -21,7 +21,7 @@
  *  along with OpenSCDP; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  * 
- * @fileoverview A simple DVCA web service implementing TR-03129 web services
+ * @fileoverview A DVCA web service implementing TR-03129 service calls
  */
 
 
@@ -49,13 +49,15 @@ function DVCAService(path, name, parent, parentURL) {
 	this.terminalCertificatePolicies = [];
 	this.version = "1.1";
 	this.rsaKeySize = 1536;
-	this.cvcas = [ parent ];
-	this.cvccamap = [];
-	this.cvccamap[parent] = this.dvca;
+	this.namingscheme == DVCAService.CountryCodeAndSequence;
 }
 
 DVCAService.prototype = new BaseService();
 DVCAService.constructor = DVCAService;
+
+// The DVCA supports two different naming schemes for DVCA public key references using for foreign certifications.
+DVCAService.MnemonicAndCountryCode = 1;		// Append the foreign country code to the holder mnemonic
+DVCAService.CountryCodeAndSequence = 2;		// Place the country code in the first two digits of the sequence number (default)
 
 
 
@@ -90,7 +92,7 @@ DVCAService.prototype.setRSAKeySize = function(keysize) {
  * @param {ByteString} algorithm the terminal authentication algorithm object identifier
  */
 DVCAService.prototype.setKeySpec = function(keyparam, algorithm) {
-	this.cvca.setKeySpec(keyparam, algorithm);
+	this.dvca.setKeySpec(keyparam, algorithm);
 }
 
 
@@ -112,13 +114,45 @@ DVCAService.prototype.setTerminalCertificatePolicy = function(policy, chrregex) 
 
 
 /**
- * Adds the holderID of an supported foreign CVCA
+ * Sets the naming scheme to by used when requesting foreign certificates.
  *
- * @param {String} holderID the holderID of the supported foreign CVCA
+ * <p>With DVCAService.MnemonicAndCountryCode the country code of the foreign CVCA is appended to the holder mnemonic.</p>
+ * <p>With DVCAService.CountryCodeAndSequence the counter code is stored in the first two digits of the sequence number.</p>
  */
-DVCAService.prototype.addForeignCVCA = function(holderID) {
-	this.cvcas.push(holderID);
-	this.cvccamap[holderID] = new CVCCA(this.crypto, this.ss, this.name, holderID);
+DVCAService.prototype.setNamingScheme = function(namingscheme) {
+	this.namingscheme = namingscheme;
+}
+
+
+
+/**
+ * Return a DVCA associated with the given CVCA
+ *
+ * @param {String} cvcaHolderID the holderID of the supported CVCA
+ * @type CVCCA
+ * @return the CVCCA object
+ */
+DVCAService.prototype.getCVCCA = function(cvcaHolderID) {
+	var path = this.getPathFor(cvcaHolderID);
+
+	var cvcca = new CVCCA(this.crypto, this.ss, null, null, path);
+
+	if ((cvcaHolderID != this.parent) && (this.namingscheme != DVCAService.MnemonicAndCountryCode)) {
+		cvcca.setCountryCodeForSequence(cvcaHolderID.substr(0, 2));
+	}
+	return cvcca;
+}
+
+
+
+/**
+ * Obtain a service port for TR-03129 service calls
+ * 
+ * @type Object
+ * @return the service port that can be registered with the SOAP Server
+ */
+DVCAService.prototype.getTR3129ServicePort = function() {
+	return new DVCATR3129ServicePort(this);
 }
 
 
@@ -132,7 +166,7 @@ DVCAService.prototype.addForeignCVCA = function(holderID) {
  * @return true if operational
  */
 DVCAService.prototype.isOperational = function(cvca) {
-	var cvcca = this.cvccamap[cvca];
+	var cvcca = this.getCVCCA(cvca);
 	return cvcca.isOperational();
 }
 
@@ -151,13 +185,21 @@ DVCAService.prototype.getCVCAURL = function() {
 
 
 /**
- * Returns a list of CVCAs supported by this DVCA
+ * Returns a list of CVCAs supported by this DVCA. The domestic CVCA is always first in the list.
  *
  * @type String[]
  * @return the list of CVCA holderIDs
  */
 DVCAService.prototype.getCVCAList = function() {
-	return this.cvcas;
+	var cvcas = [];
+	cvcas.push(this.parent);
+	var holders = this.ss.listHolders("/");
+	for each (var holder in holders) {
+		if (holder != this.parent) {
+			cvcas.push(holder);
+		}
+	}
+	return cvcas;
 }
 
 
@@ -170,11 +212,48 @@ DVCAService.prototype.getCVCAList = function() {
  * @return the path or null if no such CVCA known
  */
 DVCAService.prototype.getPathFor = function(cvcaHolderId) {
-	var cvcca = this.cvccamap[cvcaHolderId];
-	if (typeof(cvcca) == "undefined") {
-		return null;
+	var name = this.name;
+	print(cvcaHolderId);
+	
+	if ((cvcaHolderId != this.parent) && (this.namingscheme == DVCAService.MnemonicAndCountryCode)) {
+		name += cvcaHolderId.substr(0, 2);
 	}
-	return cvcca.path;
+
+	return "/" + cvcaHolderId + "/" + name;
+}
+
+
+
+/**
+ * Returns the path for a given DVCA public key reference based on the naming scheme
+ *
+ * @param {PublicKeyReference} chr the certificate holder reference
+ * @type String
+ * @return the path or null if no such DVCA known
+ */
+DVCAService.prototype.resolvePathForDVCA = function(chr) {
+	var cvcas = this.getCVCAList();
+	
+	// Determine country based on naming scheme
+	if (this.namingscheme == DVCAService.MnemonicAndCountryCode) {
+		var country = chr.getHolder().substr(-2);
+	} else {
+		var country = chr.getSequenceNo().substr(0, 2);
+	}
+	
+	// Locate CVCA for requested country
+	for (var i = 1; i < cvcas.length; i++) {
+		if (cvcas[i].substr(0, 2) == country) {
+			break;
+		}
+	}
+	
+	// Country no found, assume domestic DVCA
+	if (i >= cvcas.length) {
+		i = 0;
+	}
+	
+	return "/" + cvcas[i] + "/" + chr.getHolder();
 }
 
 
@@ -199,64 +278,62 @@ DVCAService.prototype.getTerminalCertificatePolicyForCHR = function(chr) {
 
 
 /**
- * Check certificate request syntax
+ * Check certificate request parameter
  *
- * @param {ByteString} req the request in binary format
- * @returns the decoded request or null in case of error
- * @type CVC
+ * @param {ServiceRequest} sr the service request
+ * @returns true if all checks passed or false and update in statusInfo
+ * @type boolean
  */
-DVCAService.prototype.checkRequestSyntax = function(reqbin) {
-	try	{
-		var reqtlv = new ASN1(reqbin);
-		var req = new CVC(reqtlv);
-	}
-	catch(e) {
-		GPSystem.trace("Error decoding ASN1 structure of request: " + e);
-		return null;
-	}
+DVCAService.prototype.checkRequestParameter = function(sr) {
+	var req = sr.getCertificateRequest();
+
+	var chr = req.getCAR();
+	var path = this.dvca.path;
 	
-	return req;
-}
-
-
-
-/**
- * Check certificate request semantic
- *
- * @param {CVC} req the request
- * @returns one of the ServiceRequest status results (ok_cert_available if successful).
- * @type String
- */
-DVCAService.prototype.checkRequestSemantics = function(req) {
-	// Check inner signature
-	try	{
-		var puk = req.getPublicKey();
-	}
-	catch(e) {
-		GPSystem.trace("Error checking request semantics in " + e.fileName + "#" + e.lineNumber + " : " + e);
-		return ServiceRequest.FAILURE_SYNTAX;
-	}
-	
-	if (!req.verifyWith(this.crypto, puk)) {
-		GPSystem.trace("Error verifying inner signature");
-		return ServiceRequest.FAILURE_INNER_SIGNATURE;
+	if (chr) {
+		var path = this.resolvePathForDVCA(chr);
+		if (!path) {
+			sr.addMessage("FAILED - Could not locate the DVCA requested in the inner CAR of the certificate request");
+			sr.setStatusInfo(ServiceRequest.FAILURE_SYNTAX);
+			return false;
+		}
+	} else {
+		sr.addMessage("Info - Request without inner CAR routed to domestic DVCA instance");
 	}
 	
 	// Check that request key algorithm matches the algorithm for the current certificate
-	var chr = this.ss.getCurrentCHR(this.path);
-	var cvc = this.ss.getCertificate(this.path, chr);
+
+	var chr = this.ss.getCurrentCHR(path);
+	if (!chr) {
+		sr.addMessage("Internal error - could not find current DVCA certficate");
+		sr.setStatusInfo(ServiceRequest.FAILURE_INTERNAL_ERROR);
+		return false;
+	}
+	
+	var cvc = this.ss.getCertificate(path, chr);
+
+	if (!cvc) {
+		sr.addMessage("Internal error - could not find DVCA certficate with CHR " + chr);
+		sr.setStatusInfo(ServiceRequest.FAILURE_INTERNAL_ERROR);
+		return false;
+	}
+
 	var oid = cvc.getPublicKeyOID();
 	var reqoid = req.getPublicKeyOID();
 	
 	if (!reqoid.equals(oid)) {
-		GPSystem.trace("Public key algorithm " + reqoid.toString(OID) + " in request does not match current public key algorithm " + oid.toString(OID));
-		return ServiceRequest.FAILURE_SYNTAX;
+		sr.addMessage("FAILED - Public key algorithm " + reqoid.toString(OID) + " in request does not match current public key algorithm " + oid.toString(OID));
+		sr.setStatusInfo(ServiceRequest.FAILURE_SYNTAX);
+		return false;
 	}
+	sr.addMessage("Passed - Public key algorithm in request matches current public key algorithm of CA");
 	
 	if (CVC.isECDSA(oid)) {
 		// Check that request key domain parameter match current domain parameter
-		var dp = this.ss.getDomainParameter(this.path, chr);
+		var dp = this.ss.getDomainParameter(path, chr);
 	
+		var puk = req.getPublicKey();
+
 		if (!puk.getComponent(Key.ECC_P).equals(dp.getComponent(Key.ECC_P)) ||
 			!puk.getComponent(Key.ECC_A).equals(dp.getComponent(Key.ECC_A)) ||
 			!puk.getComponent(Key.ECC_B).equals(dp.getComponent(Key.ECC_B)) ||
@@ -264,26 +341,102 @@ DVCAService.prototype.checkRequestSemantics = function(req) {
 			!puk.getComponent(Key.ECC_GY).equals(dp.getComponent(Key.ECC_GY)) ||
 			!puk.getComponent(Key.ECC_N).equals(dp.getComponent(Key.ECC_N)) ||
 			!puk.getComponent(Key.ECC_H).equals(dp.getComponent(Key.ECC_H))) {
-			GPSystem.trace("Domain parameter in request do not match current domain parameter");
-			return ServiceRequest.FAILURE_DOMAIN_PARAMETER;
+			sr.addMessage("FAILED - Public key domain parameter in request do not match current domain parameter used by CA");
+			sr.setStatusInfo(ServiceRequest.FAILURE_DOMAIN_PARAMETER);
+		return false;
 		}
+		sr.addMessage("Passed - Public key domain parameters match current domain parameters used by CA");
+	}
+	return true;
+}
+
+
+
+/**
+ * Check certificate request outer signature
+ *
+ * <p>The method first determines the certificate that verifies the outer signature.
+ *    This is either a previously issued certificate for this entity or a CVCA
+ *    certificate if it is a countersigned request.</p>
+ *
+ * @param {ServiceRequest} sr the service request
+ * @returns true if all checks passed or false and update in statusInfo
+ * @type boolean
+ */
+DVCAService.prototype.checkRequestOuterSignature = function(sr) {
+	var req = sr.getCertificateRequest();
+
+	if (!req.isAuthenticatedRequest()) {
+		return true;
 	}
 	
-	if (req.isAuthenticatedRequest()) {
-		var puk = this.dvca.getAuthenticPublicKey(req.getOuterCAR());
-		if (puk) {
-			var oid = this.dvca.getIssuedCertificate(req.getOuterCAR()).getPublicKeyOID();
-			if (!req.verifyATWith(this.crypto, puk, oid)) {
-				GPSystem.trace("Error verifying outer signature");
-				return ServiceRequest.FAILURE_OUTER_SIGNATURE;
-			}
-		} else {
-			GPSystem.trace("No public key found for authenticated request");
-			return ServiceRequest.FAILURE_OUTER_SIGNATURE;
-		}
+	var chr = req.getCAR();
+	var path = this.dvca.path;
+	
+	if (chr) {
+		var path = this.resolvePathForDVCA(chr);
+	}
+	path += "/" + req.getCHR().getHolder();
+	
+	var outerCAR = req.getOuterCAR();
+	
+	var cvc = this.ss.getCertificate(path, outerCAR);
+	
+	if (!cvc) {
+		sr.addMessage("FAILED - Could not locate certificate " + outerCAR + " issued by " + path + " to verify outer signature");
+		sr.setStatusInfo(ServiceRequest.FAILURE_OUTER_SIGNATURE);
+		return false;
+	}
+		
+	if (CVC.isECDSA(cvc.getPublicKeyOID())) {
+		var dp = this.ss.getDomainParameter(path, outerCAR);
+	} else {
+		var dp = null;
+	}
+		
+	if (!req.verifyATWith(this.crypto, cvc.getPublicKey(dp), cvc.getPublicKeyOID())) {
+		sr.addMessage("FAILED - Outer signature invalid or content tampered");
+		sr.setStatusInfo(ServiceRequest.FAILURE_OUTER_SIGNATURE);
+		return false;
+	}
+	sr.addMessage("Passed - Outer signature provided by " + outerCAR + " is valid");
+		
+	var now = new Date();
+	now.setHours(12, 0, 0, 0);
+	if (now.valueOf() > cvc.getCXD().valueOf()) {
+		sr.addMessage("FAILED - Certificate " + outerCAR +" for verification of outer signature is expired");
+		sr.setStatusInfo(ServiceRequest.FAILURE_EXPIRED);
+		return false;
+	}
+
+	return true;
+}
+
+
+
+/**
+ * Check certificate request semantic
+ *
+ * @param {ServiceRequest} sr the service request
+ * @returns true if all checks passed or false and update in statusInfo
+ * @type boolean
+ */
+DVCAService.prototype.checkRequestSemantics = function(sr) {
+	
+	if (!this.checkRequestInnerSignature(sr)) {
+		return false;
 	}
 	
-	return ServiceRequest.OK_CERT_AVAILABLE;
+	if (!this.checkRequestParameter(sr)) {
+		return false;
+	}
+	
+	if (!this.checkRequestOuterSignature(sr)) {
+		return false;
+	}
+
+	sr.setStatusInfo(ServiceRequest.OK_SYNTAX);
+	return true;
 }
 
 
@@ -291,40 +444,55 @@ DVCAService.prototype.checkRequestSemantics = function(req) {
 /**
  * Check certificate request against policy
  *
- * @param {CVC} req the request
- * @param {String} returnCode the proposed return code string
+ * @param {ServiceRequest} sr the service request
+ * @returns true if all checks passed or false and update in statusInfo
  * @param {Boolean} callback the indicator if a call-back is possible
- * @returns one of the ServiceRequest status results (ok_cert_available if successful).
+ * @returns true if request is approved based on policy
  * @type String
  */
-DVCAService.prototype.checkPolicy = function(req, returnCode, callback) {
-	if (returnCode != ServiceRequest.OK_CERT_AVAILABLE) {
-		return returnCode;
-	}
+DVCAService.prototype.checkPolicy = function(sr, callback) {
+
+	var req = sr.getCertificateRequest();
 	
 	var policy = this.getTerminalCertificatePolicyForCHR(req.getCHR());
 	
+	if ((sr.getStatusInfo() == ServiceRequest.FAILURE_EXPIRED) && !policy.declineExpiredAuthenticatedRequest) {
+		sr.addMessage("Overwrite - Expired certificate for outer signature accepted due to policy overwrite");
+		sr.setStatusInfo(ServiceRequest.OK_SYNTAX);
+	}
+
+	if (sr.getStatusInfo() != ServiceRequest.OK_SYNTAX) {
+		return false;
+	}
+	
 	if (req.isAuthenticatedRequest()) {
-		var cvc = this.dvca.getIssuedCertificate(req.getOuterCAR());
-		var now = new Date();
-		now.setHours(12, 0, 0, 0);
-		if (now.valueOf() > cvc.getCXD().valueOf()) {
-			GPSystem.trace("Certificate " + cvc.toString() + " is expired");
-			if (policy.declineExpiredAuthenticatedRequest) {
-				return ServiceRequest.FAILURE_EXPIRED;
+		if (req.isCountersignedRequest()) {
+			if (policy.countersignedRequestsApproved) {
+				sr.addMessage("Overwrite - Countersigned request automatically approved by policy");
+				sr.setStatusInfo(ServiceRequest.OK_CERT_AVAILABLE);
+				return true;
 			}
 		} else {
 			if (policy.authenticatedRequestsApproved) {
-				return ServiceRequest.OK_CERT_AVAILABLE;
+				sr.addMessage("Overwrite - Authenticated request automatically approved by policy");
+				sr.setStatusInfo(ServiceRequest.OK_CERT_AVAILABLE);
+				return true;
 			}
 		}
 	} else {
 		if (policy.initialRequestsApproved) {
-			return ServiceRequest.OK_CERT_AVAILABLE;
+			sr.addMessage("Overwrite - Initial request approved automatically approved by policy");
+			sr.setStatusInfo(ServiceRequest.OK_CERT_AVAILABLE);
+			return true;
 		}
 	}
 	
-	return callback ? ServiceRequest.OK_SYNTAX : ServiceRequest.FAILURE_SYNCHRONOUS_PROCESSING_NOT_POSSIBLE;
+	if (!callback) {
+		sr.addMessage("FAILED - No callback available and request can not be completed synchronously");
+		sr.setStatusInfo(ServiceRequest.FAILURE_SYNCHRONOUS_PROCESSING_NOT_POSSIBLE);
+	}
+	
+	return false;
 }
 
 
@@ -358,7 +526,7 @@ DVCAService.prototype.issueCertificate = function(req) {
  * @return the list of CV certificates from the self-signed root to the DV
  */
 DVCAService.prototype.getCertificateList = function(cvcaHolderId) {
-	var cvcca = this.cvccamap[cvcaHolderId];
+	var cvcca = this.getCVCCA(cvcaHolderId);
 	return cvcca.getCertificateList();
 }
 
@@ -393,7 +561,7 @@ DVCAService.prototype.determineCertificateList = function(req) {
 DVCAService.prototype.importCertificates = function(certlist, foreignCAR) {
 	if (typeof(foreignCAR) != "undefined") {
 		var pkr = new PublicKeyReference(foreignCAR);
-		cvcca = this.cvccamap[pkr.getHolder()];
+		var cvcca = this.getCVCCA(pkr.getHolder());
 		var list = cvcca.importCertificates(certlist);
 	} else {
 		var list = this.dvca.importCertificates(certlist);
@@ -419,31 +587,62 @@ DVCAService.prototype.importCertificates = function(certlist, foreignCAR) {
 DVCAService.prototype.processRequest = function(index) {
 	var sr = this.getInboundRequest(index);
 
-	var certlist = [];
-	
 	if (sr.isCertificateRequest()) {		// RequestCertificate
 		if (sr.getStatusInfo() == ServiceRequest.OK_CERT_AVAILABLE) {
 			var req = sr.getCertificateRequest();
-			var response = this.checkRequestSemantics(req);	// Check request a second time
-
-			if (response == ServiceRequest.OK_CERT_AVAILABLE) {		// Still valid
-				certlist = this.determineCertificateList(req);
+			
+			sr.addMessage("Starting secondary check");
+			if (this.checkRequestSemantics(sr)) {		// Still valid
+				var certlist = this.determineCertificateList(req);
 				var cert = this.issueCertificate(req);
 				certlist.push(cert);
+				sr.setCertificateList(certlist);
 			} else {
 				GPSystem.trace("Request " + req + " failed secondary check");
-				sr.setStatusInfo(response);
 			}
 		}
 	} else {								// GetCertificates
 		if (sr.getStatusInfo().substr(0, 3) == "ok_") {
-			certlist = this.dvca.getCertificateList();
+			sr.setCertificateList(this.dvca.getCertificateList());
 		}
 	}
 
-	this.sendCertificates(sr, certlist);
+	this.sendCertificates(sr);
 	
 	return sr.getFinalStatusInfo();
+}
+
+
+
+/**
+ * Process list of certificates received from CVCA
+ *
+ * @param {ServiceRequest} sr the service request
+ * @param {ByteString[]} list the certificate list
+ * @type String
+ * @return The return code received from the other side
+ */
+DVCAService.prototype.processCertificateList = function(sr, list) {
+	var certlist = [];
+	
+	if (list) {
+		for (var i = 0; i < list.length; i++) {
+			var cvc = new CVC(list[i]);
+			certlist.push(cvc);
+			GPSystem.trace(cvc);
+		}
+		sr.setCertificateList(certlist);
+	}
+
+	var list = this.ss.insertCertificates2(this.crypto, certlist, true, this.path);
+
+	if (list.length > 0) {
+		var str = "Warning: Could not import the following certificates:\n";
+		for (var i = 0; i < list.length; i++) {
+			str += list[i].toString() + "\n";
+		}
+		sr.addMessage(str);
+	}
 }
 
 
@@ -459,21 +658,27 @@ DVCAService.prototype.updateCACertificates = function(async) {
 	var msgid = null;
 	
 	if (async) {
-		msgid = this.crypto.generateRandom(2).toString(HEX);
+		msgid = this.newMessageID();
 	}
 
 	var sr = new ServiceRequest(msgid, this.myURL);
+	sr.setType(ServiceRequest.DVCA_GET_CA_CERTIFICATES);
 	this.addOutboundRequest(sr);
-	
-	var certlist = this.getCACertificatesFromCVCA(sr);
-	var list = this.dvca.importCertificates(certlist);
 
-	if (list.length > 0) {
-		print("Warning: Could not import the following certificates");
-		for (var i = 0; i < list.length; i++) {
-			print(list[i]);
-		}
+	var con = new TAConnection(this.parentURL, true);
+	
+	if (async) {
+		var list = con.getCACertificates(sr.getMessageID(), sr.getResponseURL());
+	} else {
+		var list = con.getCACertificates();
 	}
+
+	con.close();
+
+	sr.setStatusInfo(con.getLastReturnCode());
+	
+	this.processCertificateList(sr, list);
+	
 	return sr.getStatusInfo();
 }
 
@@ -504,45 +709,34 @@ DVCAService.prototype.renewCertificate = function(async, forceinitial, cvca) {
 	
 	var car = this.ss.getCurrentCHR(CVCertificateStore.parentPathOf(path));
 
-	var dvca = this.cvccamap[cvca];
-	assert(dvca);
+	var cvcca = this.getCVCCA(cvca);
 	
-	dvca.setKeySpec(keyspec, algo);
+	cvcca.setKeySpec(keyspec, algo);
 	
 	// Create a new request
-	var req = dvca.generateRequest(car, forceinitial);
+	var req = cvcca.generateRequest(car, forceinitial);
 	print("Request: " + req);
 	print(req.getASN1());
 
 	var msgid = null;
 
 	if (async) {
-		msgid = this.crypto.generateRandom(2).toString(HEX);
+		msgid = this.newMessageID();
 	}
 
 	var sr = new ServiceRequest(msgid, this.myURL, req);
+	sr.setType(ServiceRequest.DVCA_REQUEST_CERTIFICATE);
 	this.addOutboundRequest(sr);
 
 	if (this.parentURL) {
-		if (this.cvcas[0] == cvca) {
-			var certlist = this.requestCertificateFromCVCA(sr);
+		if (cvcca.parentId == this.parent) {
+			var list = this.requestCertificateFromCVCA(sr);
 		} else {
 			sr.setForeignCAR(car.toString());
-			var certlist = this.requestCertificateFromForeignCVCA(sr);
+			var list = this.requestCertificateFromForeignCVCA(sr);
 		}
 
-		if (certlist && (certlist.length > 0)) {
-			sr.setFinalStatusInfo("" + certlist.length + " certificates received");
-	
-			var list = dvca.importCertificates(certlist);
-
-			if (list.length > 0) {
-				print("Warning: Could not import the following certificates");
-				for (var i = 0; i < list.length; i++) {
-					print(list[i]);
-				}
-			}
-		}
+		this.processCertificateList(sr, list);
 	} else {
 		sr.setStatusInfo("Local request");
 	}
@@ -558,103 +752,16 @@ DVCAService.prototype.renewCertificate = function(async, forceinitial, cvca) {
  * Send certificates using a webservice call
  *
  * @param {ServiceRequest} serviceRequest the underlying request
- * @param {CVC[]} certificates the list of certificates to send
  */
-DVCAService.prototype.sendCertificates = function(serviceRequest, certificates) {
-
-	var soapConnection = new SOAPConnection(SOAPConnection.SOAP11);
-
-	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/" + this.version);
-	var ns1 = new Namespace("uri:eacBT/" + this.version);
-
-	if (this.version == "1.0") {
-		var request =
-			<ns:SendCertificates xmlns:ns={ns} xmlns:ns1={ns1}>
-				<messageID>{serviceRequest.getMessageID()}</messageID>
-				<statusInfo>{serviceRequest.getStatusInfo()}</statusInfo>
-				<certificateSeq>
-				</certificateSeq>
-			</ns:SendCertificates>;
-	} else {
-		var request =
-			<ns:SendCertificates xmlns:ns={ns} xmlns:ns1={ns1}>
-				<messageID>
-					<ns1:messageID>{serviceRequest.getMessageID()}</ns1:messageID>
-				</messageID>
-				<statusInfo>{serviceRequest.getStatusInfo()}</statusInfo>
-				<certificateSeq>
-				</certificateSeq>
-			</ns:SendCertificates>;
-	}
-
-	var list = request.certificateSeq;
-
-	for (var i = 0; i < certificates.length; i++) {
-		var cvc = certificates[i];
-		list.certificate += <ns1:certificate xmlns:ns1={ns1}>{cvc.getBytes().toString(BASE64)}</ns1:certificate>
-	}
-
-	GPSystem.trace(request);
-	
-	try	{
-		var response = soapConnection.call(serviceRequest.getResponseURL(), request);
-	}
-	catch(e) {
-		GPSystem.trace("SOAP call to " + serviceRequest.getResponseURL() + " failed : " + e);
-		throw new GPError("DVCAService", GPError.DEVICE_ERROR, 0, "SendCertificates failed with : " + e);
-	}
-	
-	var result = response.Result.ns1::returnCode.toString();
-	
+DVCAService.prototype.sendCertificates = function(serviceRequest) {
+	var con = new TAConnection(serviceRequest.getResponseURL(), true);
+	con.version = this.version;
+	var list = TAConnection.fromCVCList(serviceRequest.getCertificateList());
+	var result = con.sendCertificates(list, serviceRequest.getMessageID(), serviceRequest.getStatusInfo());
+	serviceRequest.setSOAPRequest(con.request);
+	serviceRequest.setSOAPResponse(con.response);
 	serviceRequest.setFinalStatusInfo(result);
-}
-
-
-
-/**
- * Obtain a list of certificates from the parent CA using a web service
- *
- * @param {ServiceRequest} serviceRequest the underlying request
- * @returns a list of certificates
- * @type CVC[]
- */
-DVCAService.prototype.getCACertificatesFromCVCA = function(sr) {
-
-	var soapConnection = new SOAPConnection(SOAPConnection.SOAP11);
-
-	var ns = new Namespace("uri:EAC-PKI-CVCA-Protocol/" + this.version);
-	var ns1 = new Namespace("uri:eacBT/" + this.version);
-
-	var request =
-		<ns:GetCACertificates xmlns:ns={ns} xmlns:ns1={ns1}>
-			<callbackIndicator>callback_not_possible</callbackIndicator>
-			<messageID>
-			</messageID>
-			<responseURL>
-			</responseURL>
-		</ns:GetCACertificates>;
-
-	if (sr.getMessageID()) {
-		request.callbackIndicator = "callback_possible";
-		request.messageID.ns1::messageID = sr.getMessageID();
-		request.responseURL.ns1::string = sr.getResponseURL();
-	}
-	
-	var response = soapConnection.call(this.parentURL, request);
-	
-	sr.setStatusInfo(response.Result.ns1::returnCode.toString());
-	var certlist = [];
-
-	if (response.Result.ns1::returnCode.toString() == ServiceRequest.OK_CERT_AVAILABLE) {
-		GPSystem.trace("Received certificates from CVCA:");
-		for each (var c in response.Result.ns1::certificateSeq.ns1::certificate) {
-			var cvc = new CVC(new ByteString(c, BASE64));
-			certlist.push(cvc);
-			GPSystem.trace(cvc);
-		}
-	}
-
-	return certlist;
+	serviceRequest.addMessage("Completed");
 }
 
 
@@ -664,51 +771,21 @@ DVCAService.prototype.getCACertificatesFromCVCA = function(sr) {
  *
  * @param {ServiceRequest} serviceRequest the underlying request
  * @returns the new certificates
- * @type CVC[]
+ * @type ByteString[]
  */
 DVCAService.prototype.requestCertificateFromCVCA = function(sr) {
-
-	var soapConnection = new SOAPConnection(SOAPConnection.SOAP11);
-
-	var ns = new Namespace("uri:EAC-PKI-CVCA-Protocol/" + this.version);
-	var ns1 = new Namespace("uri:eacBT/" + this.version);
-
-	var request =
-		<ns:RequestCertificate xmlns:ns={ns} xmlns:ns1={ns1}>
-			<callbackIndicator>callback_not_possible</callbackIndicator>
-			<messageID>
-			</messageID>
-			<responseURL>
-			</responseURL>
-			<certReq>{sr.getCertificateRequest().getBytes().toString(BASE64)}</certReq>
-		</ns:RequestCertificate>
-
+	var con = new TAConnection(this.parentURL, true);
+	
 	if (sr.getMessageID()) {
-		request.callbackIndicator = "callback_possible";
-		request.messageID.ns1::messageID = sr.getMessageID();
-		request.responseURL.ns1::string = sr.getResponseURL();
+		var certlist = con.requestCertificate(sr.getCertificateRequest().getBytes(), sr.getMessageID(), sr.getResponseURL());
+	} else {
+		var certlist = con.requestCertificate(sr.getCertificateRequest().getBytes());
 	}
 
-	try	{
-		var response = soapConnection.call(this.parentURL, request);
-	}
-	catch(e) {
-		GPSystem.trace("SOAP call to " + this.parentURL + " failed : " + e);
-		throw new GPError("DVCAService", GPError.DEVICE_ERROR, 0, "RequestCertificate failed with : " + e);
-	}
+	con.close();
 
-	sr.setStatusInfo(response.Result.ns1::returnCode.toString());
-	var certlist = [];
-
-	if (response.Result.ns1::returnCode.substr(0, 3) == "ok_") {
-		GPSystem.trace("Received certificates from CVCA:");
-		for each (var c in response.Result.ns1::certificateSeq.ns1::certificate) {
-			var cvc = new CVC(new ByteString(c, BASE64));
-			certlist.push(cvc);
-			GPSystem.trace(cvc);
-		}
-	}
-
+	sr.setStatusInfo(con.getLastReturnCode());
+	print(con.getLastReturnCode());
 	return certlist;
 }
 
@@ -719,15 +796,15 @@ DVCAService.prototype.requestCertificateFromCVCA = function(sr) {
  *
  * @param {ServiceRequest} serviceRequest the underlying request
  * @returns the new certificates
- * @type CVC[]
+ * @type ByteString[]
  */
 DVCAService.prototype.requestCertificateFromForeignCVCA = function(sr) {
 	var con = new TAConnection(this.parentURL, true);
 	
 	if (sr.getMessageID()) {
-		var certlist = con.requestForeignCertificate(sr.getCertificateRequest(), sr.getForeignCAR(), sr.getMessageID(), sr.getResponseURL());
+		var certlist = con.requestForeignCertificate(sr.getCertificateRequest().getBytes(), sr.getForeignCAR(), sr.getMessageID(), sr.getResponseURL());
 	} else {
-		var certlist = con.requestForeignCertificate(sr.getCertificateRequest(), sr.getForeignCAR());
+		var certlist = con.requestForeignCertificate(sr.getCertificateRequest().getBytes(), sr.getForeignCAR());
 	}
 
 	con.close();
@@ -741,144 +818,201 @@ DVCAService.prototype.requestCertificateFromForeignCVCA = function(sr) {
 
 // Inbound Webservices
 
+// ---- WebService handling ---------------------------------------------------
+
 /**
- * Webservice that returns the list of certificates for this and superior CAs
- * 
- * @param {XML} soapBody the body of the SOAP message
- * @returns the soapBody of the response
- * @type XML
+ * Process a request from a terminal to return current CA certificates
+ *
+ * @param {ServiceRequest} sr the service request
+ * @param {boolean} callback true if callback is possible
  */
-DVCAService.prototype.GetCACertificates = function(soapBody) {
+DVCAService.prototype.processGetCACertificates = function(sr, callback) {
 
-	// Create empty response
-	var ns = new Namespace("uri:EAC-PKI-DV-Protocol/" + this.version);
-	var ns1 = new Namespace("uri:eacBT/" + this.version);
+	this.addInboundRequest(sr);
 
-	var callback = soapBody.callbackIndicator;
-	
-	var certlist = [];
-	var returnCode = ServiceRequest.OK_CERT_AVAILABLE;
-	
-	if (callback == "callback_possible") {
-		var asyncreq = new ServiceRequest(
-							soapBody.messageID.ns1::messageID,
-							soapBody.responseURL.ns1::string);
-
-		this.addInboundRequest(asyncreq);
-		var returnCode = ServiceRequest.OK_SYNTAX;
+	if (callback) {
+		sr.setStatusInfo(ServiceRequest.OK_SYNTAX);
 	} else {
-		// Add certificate list to response
-		certlist = this.dvca.getCertificateList();
+		sr.setCertificateList(this.dvca.getCertificateList());
+		sr.setStatusInfo(ServiceRequest.OK_CERT_AVAILABLE);
 	}
-	
-	var response =
-		<ns:GetCACertificatesResponse xmlns:ns={ns} xmlns:ns1={ns1}>
-			<Result>
-				<ns1:returnCode>{returnCode}</ns1:returnCode>
-				<!--Optional:-->
-				<ns1:certificateSeq>
-					<!--Zero or more repetitions:-->
-				</ns1:certificateSeq>
-			</Result>
-		</ns:GetCACertificatesResponse>
-	
-	var list = response.Result.ns1::certificateSeq;
-
-	for (var i = 0; i < certlist.length; i++) {
-		var cvc = certlist[i];
-		list.certificate += <ns1:certificate xmlns:ns1={ns1}>{cvc.getBytes().toString(BASE64)}</ns1:certificate>
-	}
-
-	return response;
 }
 
 
 
 /**
- * Webservice that issues a new certificate for the submitted request
- * 
- * @param {XML} soapBody the body of the SOAP message
- * @returns the soapBody of the response
- * @type XML
+ * Process a request to issue a terminal certificate
+ *
+ * @param {ServiceRequest} sr the service request
+ * @param {boolean} callback true if callback is possible
  */
-DVCAService.prototype.RequestCertificate = function(soapBody) {
+DVCAService.prototype.processRequestCertificate = function(sr, callback) {
+
+	this.addInboundRequest(sr);
+
+	var req = this.checkRequestSyntax(sr.getRawCertificateRequest());
+	if (!req) {
+		sr.setStatusInfo(ServiceRequest.FAILURE_SYNTAX);
+		sr.setMessage("Certificate request is not a valid ASN.1 structure: " + sr.getRawCertificateRequest().toString(HEX));
+		return;
+	}
 	
+	sr.setCertificateRequest(req);
+
+	GPSystem.trace("DVCAService - Received certificate request: ");
+	GPSystem.trace(req);
+
+	// Check basic semantics of request
+	this.checkRequestSemantics(sr);
+	if (this.checkPolicy(sr, callback)) {						// Synchronous processing approved by policy ?
+		var certlist = this.determineCertificateList(req);
+
+		var cert = this.issueCertificate(req);
+		// Add certificate list to response
+		certlist.push(cert);
+		sr.setCertificateList(certlist);
+		sr.setFinalStatusInfo(sr.getStatusInfo());		// Nothing else will happen
+		sr.addMessage("Completed");
+	}
+}
+
+
+
+// ---- TR-03129 Service ------------------------------------------------------
+
+/**
+ * The TR-03129 Service port class
+ * 
+ * <p>See BSI-TR-03129 at www.bsi.bund.de for the specification of the DVCA web service</p>
+ */
+function DVCATR3129ServicePort(service) {
+	this.service = service;
+	this.version = "1.1";
+}
+
+
+
+/**
+ * Compile the response message using the returnCode and certificate list from the completed service request
+ *
+ * @param {String} type the response type name
+ * @param {ServiceRequest} sr the completed service request
+ * @type XML
+ * @return the complete SOAP response body
+ */
+DVCATR3129ServicePort.prototype.generateResponse = function(type, sr) {
 	var ns = new Namespace("uri:EAC-PKI-DV-Protocol/" + this.version);
 	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
-	var certlist = [];
+	var certlist = sr.getCertificateList();
+	if (certlist && (certlist.length > 0)) {
+		var response =
+			<ns:{type} xmlns:ns={ns} xmlns:ns1={ns1}>
+				<Result>
+					<ns1:returnCode>{sr.getStatusInfo()}</ns1:returnCode>
+					<!--Optional:-->
+					<ns1:certificateSeq>
+						<!--Zero or more repetitions:-->
+					</ns1:certificateSeq>
+				</Result>
+			</ns:{type}>
+		
+		var list = response.Result.ns1::certificateSeq;
 
-	try	{
-		var reqbin = new ByteString(soapBody.certReq, BASE64);
-
-		var req = this.checkRequestSyntax(reqbin);
-
-		if (req == null) {
-			var returnCode = ServiceRequest.FAILURE_SYNTAX;
-		} else {
-			GPSystem.trace("DVCAService - Received certificate request: ");
-			GPSystem.trace(req);
-	
-			var returnCode = this.checkRequestSemantics(req);
-
-			var callback = soapBody.callbackIndicator;
-			var returnCode = this.checkPolicy(req, returnCode, (callback == "callback_possible"));
-
-			if (returnCode == ServiceRequest.OK_SYNTAX) {
-				var asyncreq = new ServiceRequest(
-								soapBody.messageID.ns1::messageID,
-								soapBody.responseURL.ns1::string,
-								req);
-
-				asyncreq.setStatusInfo(returnCode);
-				this.addInboundRequest(asyncreq);
-			} else {
-				if (returnCode == ServiceRequest.OK_CERT_AVAILABLE) {
-					certlist = this.determineCertificateList(req);
-
-					var cert = this.issueCertificate(req);
-					// Add certificate list to response
-					certlist.push(cert);
-				}
-			}
+		for each (var cvc in certlist) {
+			list.certificate += <ns1:certificate xmlns:ns1={ns1}>{cvc.getBytes().toString(BASE64)}</ns1:certificate>
 		}
+	} else {
+		var response =
+			<ns:{type} xmlns:ns={ns} xmlns:ns1={ns1}>
+				<Result>
+					<ns1:returnCode>{sr.getStatusInfo()}</ns1:returnCode>
+				</Result>
+			</ns:{type}>
 	}
-	catch(e) {
-		GPSystem.trace("DVCAService - Error decoding request in " + e.fileName + "#" + e.lineNumber + " : " + e);
-		var returnCode = ServiceRequest.FAILURE_SYNTAX;
-	}
-
-	var response =
-		<ns:RequestCertificateResponse xmlns:ns={ns} xmlns:ns1={ns1}>
-			<Result>
-				<ns1:returnCode>{returnCode}</ns1:returnCode>
-				<!--Optional:-->
-				<ns1:certificateSeq>
-					<!--Zero or more repetitions:-->
-				</ns1:certificateSeq>
-			</Result>
-		</ns:RequestCertificateResponse>
-	
-	var list = response.Result.ns1::certificateSeq;
-
-	for (var i = 0; i < certlist.length; i++) {
-		var cvc = certlist[i];
-		list.certificate += <ns1:certificate xmlns:ns1={ns1}>{cvc.getBytes().toString(BASE64)}</ns1:certificate>
-	}
-
 	return response;
 }
 
 
 
 /**
- * Webservice that receives certificates from parent CA
- * 
- * @param {XML} soapBody the body of the SOAP message
- * @returns the soapBody of the response
+ * Implements GetCACertificates from TR-03129, chapter 4.2.3
+ *
+ * <p>Either respond synchronously with all known certificate chains or schedule an asychronous response</p>
+ *
+ * @param {XML} soapBody the SOAP request body
  * @type XML
+ * @return the SOAP response body
  */
-DVCAService.prototype.SendCertificates = function(soapBody) {
+DVCATR3129ServicePort.prototype.GetCACertificates = function(soapBody) {
+	var ns = new Namespace("uri:EAC-PKI-DV-Protocol/" + this.version);
+	var ns1 = new Namespace("uri:eacBT/" + this.version);
+
+	var messageID = soapBody.messageID.ns1::messageID;
+	var sr = new ServiceRequest(messageID);
+	sr.setType(ServiceRequest.TERM_GET_CA_CERTIFICATES);
+	sr.setSOAPRequest(soapBody);
+
+	var callback = soapBody.callbackIndicator.toString() == "callback_possible";
+	if (callback) {
+		sr.setResponseURL(soapBody.responseURL.ns1::string.toString());
+	}
+
+	this.service.processGetCACertificates(sr, callback);
+
+	var response = this.generateResponse("GetCACertificatesResponse", sr);
+	
+	sr.setSOAPResponse(response);
+	return response;
+}
+
+
+
+/**
+ * Implements RequestCertificates from TR-03129, chapter 4.2.1
+ *
+ * <p>Check request and either respond with new certificate or schedule an asychronous response</p>
+ *
+ * @param {XML} soapBody the SOAP request body
+ * @type XML
+ * @return the SOAP response body
+ */
+DVCATR3129ServicePort.prototype.RequestCertificate = function(soapBody) {
+	var ns = new Namespace("uri:EAC-PKI-DV-Protocol/" + this.version);
+	var ns1 = new Namespace("uri:eacBT/" + this.version);
+
+	var messageID = soapBody.messageID.ns1::messageID;
+	var sr = new ServiceRequest(messageID);
+	sr.setType(ServiceRequest.TERM_REQUEST_CERTIFICATE);
+	sr.setSOAPRequest(soapBody);
+
+	sr.setRawCertificateRequest(new ByteString(soapBody.certReq, BASE64));
+	
+	var callback = soapBody.callbackIndicator.toString() == "callback_possible";
+	if (callback) {
+		sr.setResponseURL(soapBody.responseURL.ns1::string.toString());
+	}
+
+	this.service.processRequestCertificate(sr, callback);
+
+	var response = this.generateResponse("RequestCertificateResponse", sr);
+
+	sr.setSOAPResponse(response);
+	return response;
+}
+
+
+
+/**
+ * Implements RequestCertificates from TR-03129, chapter 4.2.1
+ *
+ * <p>Check request and either respond with new certificate or schedule an asychronous response</p>
+ *
+ * @param {XML} soapBody the SOAP request body
+ * @type XML
+ * @return the SOAP response body
+ */
+DVCATR3129ServicePort.prototype.SendCertificates = function(soapBody) {
 	
 	var ns = new Namespace("uri:EAC-PKI-DV-Protocol/" + this.version);
 	var ns1 = new Namespace("uri:eacBT/" + this.version);
@@ -893,8 +1027,10 @@ DVCAService.prototype.SendCertificates = function(soapBody) {
 	
 	if (msgid == "Synchronous") {		// Special handling for posts from the command line
 		var sr = new ServiceRequest();
+		sr.setType(ServiceRequest.CVCA_SEND_CERTIFICATE);
+		this.service.addInboundRequest(sr);
 	} else {
-		var sr = this.getOutboundRequestByMessageId(msgid);
+		var sr = this.service.getOutboundRequestByMessageId(msgid);
 	}
 	
 	if (sr) {
@@ -906,7 +1042,7 @@ DVCAService.prototype.SendCertificates = function(soapBody) {
 			GPSystem.trace("Received certificates from CVCA:");
 			for each (var c in soapBody.certificateSeq.ns1::certificate) {
 				try	{
-					var cvc = new CVC(new ByteString(c, BASE64));
+					var cvc = new ByteString(c, BASE64);
 				}
 				catch(e) {
 					GPSystem.trace("Error decoding certificate: " + e);
@@ -917,7 +1053,7 @@ DVCAService.prototype.SendCertificates = function(soapBody) {
 				GPSystem.trace(cvc);
 			}
 
-			this.importCertificates(certlist, sr.getForeignCAR());
+			this.service.processCertificateList(sr, certlist);
 		}
 		sr.setFinalStatusInfo(returnCode);
 	} else {
@@ -942,7 +1078,7 @@ DVCAService.prototype.SendCertificates = function(soapBody) {
  * @param {HttpRequest} req the request object
  * @param {HttpResponse} req the response object
  */
-DVCAService.prototype.GetWSDL = function(req, res) {
+DVCATR3129ServicePort.prototype.GetWSDL = function(req, res) {
 	switch(req.queryString) {
 	case "wsdl":
 		var xml = 

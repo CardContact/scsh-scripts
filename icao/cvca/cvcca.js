@@ -72,6 +72,7 @@ function CVCCA(crypto, certstore, holderId, parentId, path) {
 	this.keyspec = new Key();
 	this.keyspec.setComponent(Key.ECC_CURVE_OID, new ByteString("brainpoolP256r1", OID));
 	this.taAlgorithmIdentifier = new ByteString("id-TA-ECDSA-SHA-256", OID);
+	this.countryseq = null;
 }
 
 
@@ -126,6 +127,17 @@ CVCCA.prototype.setRemovePreviousKey = function(removePreviousKey) {
 
 
 /**
+ * Set country code to be included in sequence number of public key reference
+ *
+ * @param {String} countryseq the two character country code
+ */
+CVCCA.prototype.setCountryCodeForSequence = function(countryseq) {
+	this.countryseq = countryseq;
+}
+
+
+
+/**
  * Generate a certificate request
  *
  * @param {PublicKeyReference} car the CA at which this request is addressed
@@ -152,7 +164,7 @@ CVCCA.prototype.generateRequest = function(car, forceinitial, signinitial) {
 
 	// Determine CHR
 	var currentchr = this.certstore.getCurrentCHR(this.path);
-	var nextchr = this.certstore.getNextCHR(this.path);
+	var nextchr = this.certstore.getNextCHR(this.path, this.countryseq);
 	
 	// Generate key pair
 	this.crypto.generateKeyPair(keyalg, puk, prk);

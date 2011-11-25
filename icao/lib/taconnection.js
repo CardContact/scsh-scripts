@@ -96,7 +96,7 @@ TAConnection.prototype.close = function() {
  * @param {String} messageID the messageID for asynchronous requests (optional)
  * @param {String} responseURL the URL to which the asynchronous response is send (optional)
  * @returns a lists of card verifiable certificates from the DVCA or null in case of error
- * @type CVC[]
+ * @type ByteString[]
  */
 TAConnection.prototype.getCACertificates = function(messageID, responseURL) {
 
@@ -150,7 +150,7 @@ TAConnection.prototype.getCACertificates = function(messageID, responseURL) {
 
 	if (this.lastReturnCode == "ok_cert_available") {
 		for each (var c in response.Result.ns1::certificateSeq.ns1::certificate) {
-			var cvc = new CVC(new ByteString(c, BASE64));
+			var cvc = new ByteString(c, BASE64);
 			certlist.push(cvc);
 			GPSystem.trace(cvc);
 		}
@@ -166,11 +166,11 @@ TAConnection.prototype.getCACertificates = function(messageID, responseURL) {
 /**
  * Request a certificate from the parent CA using a web service
  *
- * @param {CVC} certreq the certificate request
+ * @param {ByteString} certreq the certificate request
  * @param {String} messageID the messageID for asynchronous requests (optional)
  * @param {String} responseURL the URL to which the asynchronous response is send (optional)
  * @returns the new certificates
- * @type CVC[]
+ * @type ByteString[]
  */
 TAConnection.prototype.requestCertificate = function(certreq, messageID, responseURL) {
 
@@ -193,7 +193,7 @@ TAConnection.prototype.requestCertificate = function(certreq, messageID, respons
 			</messageID>
 			<responseURL>
 			</responseURL>
-			<certReq>{certreq.getBytes().toString(BASE64)}</certReq>
+			<certReq>{certreq.toString(BASE64)}</certReq>
 		</ns:RequestCertificate>
 
 	if (typeof(messageID) != "undefined") {
@@ -228,7 +228,7 @@ TAConnection.prototype.requestCertificate = function(certreq, messageID, respons
 	if (this.lastReturnCode.substr(0, 3) == "ok_") {
 		GPSystem.trace("Received certificates from DVCA:");
 		for each (var c in response.Result.ns1::certificateSeq.ns1::certificate) {
-			var cvc = new CVC(new ByteString(c, BASE64));
+			var cvc = new ByteString(c, BASE64);
 			certlist.push(cvc);
 			GPSystem.trace(cvc);
 		}
@@ -244,12 +244,12 @@ TAConnection.prototype.requestCertificate = function(certreq, messageID, respons
 /**
  * Request a certificate from the parent CA using a web service
  *
- * @param {CVC} certreq the certificate request
+ * @param {ByteString} certreq the certificate request
  * @param {String} foreignCAR the CAR of the foreign CVCA
  * @param {String} messageID the messageID for asynchronous requests (optional)
  * @param {String} responseURL the URL to which the asynchronous response is send (optional)
  * @returns the new certificates
- * @type CVC[]
+ * @type ByteString[]
  */
 TAConnection.prototype.requestForeignCertificate = function(certreq, foreignCAR, messageID, responseURL) {
 
@@ -271,7 +271,7 @@ TAConnection.prototype.requestForeignCertificate = function(certreq, foreignCAR,
 			<messageID/>
 			<responseURL/>
 			<foreignCAR>{foreignCAR}</foreignCAR>
-			<certReq>{certreq.getBytes().toString(BASE64)}</certReq>
+			<certReq>{certreq.toString(BASE64)}</certReq>
 		</ns:RequestForeignCertificate>
 
 	if (typeof(messageID) != "undefined") {
@@ -306,7 +306,7 @@ TAConnection.prototype.requestForeignCertificate = function(certreq, foreignCAR,
 	if (this.lastReturnCode.substr(0, 3) == "ok_") {
 		GPSystem.trace("Received certificates from DVCA:");
 		for each (var c in response.Result.ns1::certificateSeq.ns1::certificate) {
-			var cvc = new CVC(new ByteString(c, BASE64));
+			var cvc = new ByteString(c, BASE64);
 			certlist.push(cvc);
 			GPSystem.trace(cvc);
 		}
@@ -322,7 +322,7 @@ TAConnection.prototype.requestForeignCertificate = function(certreq, foreignCAR,
 /**
  * Send a certificate to the DVCA
  *
- * @param {CVC[]} certificates the list of certificates to post or null
+ * @param {ByteString[]} certificates the list of certificates to post or null
  * @param {String} messageID the messageID for asynchronous requests (optional)
  * @param {String} statusInfo the statusInfo field of the message
  * @type String
@@ -333,9 +333,9 @@ TAConnection.prototype.sendCertificates = function(certificates, messageID, stat
 	var soapConnection = new SOAPConnection();
 
 	if (this.isCVCA) {
-		var ns = new Namespace("uri:EAC-PKI-CVCA-Protocol/" + this.version);
-	} else {
 		var ns = new Namespace("uri:EAC-PKI-DV-Protocol/" + this.version);
+	} else {
+		var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/" + this.version);
 	}
 
 	var ns1 = new Namespace("uri:eacBT/" + this.version);
@@ -365,7 +365,7 @@ TAConnection.prototype.sendCertificates = function(certificates, messageID, stat
 	if (certificates) {
 		for (var i = 0; i < certificates.length; i++) {
 			var cvc = certificates[i];
-			list.certificate += <ns1:certificate xmlns:ns1={ns1}>{cvc.getBytes().toString(BASE64)}</ns1:certificate>
+			list.certificate += <ns1:certificate xmlns:ns1={ns1}>{cvc.toString(BASE64)}</ns1:certificate>
 		}
 	}
 
@@ -390,6 +390,40 @@ TAConnection.prototype.sendCertificates = function(certificates, messageID, stat
 
 	this.lastReturnCode = response.Result.ns1::returnCode.toString();
 	return this.lastReturnCode;
+}
+
+
+
+/**
+ * Convert a list of certificates in binary format to a list of CVC objects
+ *
+ * @param {ByteString[]} certlist the list of certificates
+ * @type CVC[]
+ * @return the list of certificate objects
+ */
+TAConnection.toCVCList = function(certlist) {
+	var certs = [];
+	for each (var cvcbin in certlist) {
+		certs.push(new CVC(cvcbin));
+	}
+	return certs;
+}
+
+
+
+/**
+ * Convert a list of certificate objects into a list of certificates in binary format
+ *
+ * @param {CVC[]} certlist the list of certificate objects
+ * @type ByteString[]
+ * @return the list of certificates
+ */
+TAConnection.fromCVCList = function(certlist) {
+	var certs = [];
+	for each (var cvc in certlist) {
+		certs.push(cvc.getBytes());
+	}
+	return certs;
 }
 
 

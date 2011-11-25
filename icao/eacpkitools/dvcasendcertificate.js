@@ -60,9 +60,7 @@ var certfile = prompt("Select certificate", "certfilename", "c:/data", "*.cvcert
 
 var certbin = CVCertificateStore.loadBinaryFile(certfile);
 
-var cert = new CVC(certbin);
-
 var dc = new TAConnection(url, false);
 
-dc.sendCertificates([cert], "Synchronous", "ok_cert_available");
+dc.sendCertificates([certbin], "Synchronous", "ok_cert_available");
 

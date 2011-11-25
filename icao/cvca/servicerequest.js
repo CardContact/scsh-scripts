@@ -77,6 +77,12 @@ ServiceRequest.SPOC_GET_CA_CERTIFICATES						= "SPOC.GetCACertificates";
 ServiceRequest.SPOC_REQUEST_CERTIFICATE						= "SPOC.RequestCertificate";
 ServiceRequest.SPOC_FORWARD_REQUEST_CERTIFICATE				= "SPOC.ForwardRequestCertificate";
 
+ServiceRequest.TERM_GET_CA_CERTIFICATES						= "TERM.GetCACertificates";
+ServiceRequest.TERM_REQUEST_CERTIFICATE						= "TERM.RequestCertificate";
+
+ServiceRequest.CVCA_SEND_CERTIFICATE						= "CVCA.SendCertificate";
+ServiceRequest.DVCA_SEND_CERTIFICATE						= "DVCA.SendCertificate";
+
 /**
  * Returns true if this is a certificate request
  *

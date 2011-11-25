@@ -73,7 +73,8 @@ HTTPTester.prototype.call = function(relativeurl, expectedResult) {
 		throw new GPError("HTTPTester", GPError.DEVICE_ERROR, 0, "Server error " + c.responseCode);
 	}
 	
-	var x = new XML(content);
+	var html = content.match(/<html>[\s\S]*<\/html>/);
+	var x = new XML(html);
 	var result = x..div.(@id == "content").p.toString();
 
 	if ((typeof(expectedResult) != "undefined") && (result != expectedResult)) {

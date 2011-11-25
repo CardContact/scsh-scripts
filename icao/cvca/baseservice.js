@@ -150,6 +150,61 @@ BaseService.prototype.newMessageID = function() {
 
 
 /**
+ * Check certificate request syntax
+ *
+ * @param {ByteString} req the request in binary format
+ * @returns the decoded request or null in case of error
+ * @type CVC
+ */
+BaseService.prototype.checkRequestSyntax = function(reqbin) {
+	try	{
+		var reqtlv = new ASN1(reqbin);
+		var req = new CVC(reqtlv);
+	}
+	catch(e) {
+		GPSystem.trace("Error decoding ASN1 structure of request: " + e);
+		return null;
+	}
+	
+	return req;
+}
+
+
+
+/**
+ * Check certificate request inner signature
+ *
+ * @param {ServiceRequest} sr the service request
+ * @returns true if all checks passed or false and update in statusInfo
+ * @type boolean
+ */
+BaseService.prototype.checkRequestInnerSignature = function(sr) {
+	var req = sr.getCertificateRequest();
+	
+	// Check inner signature
+	try	{
+		var puk = req.getPublicKey();
+	}
+	catch(e) {
+		sr.addMessage("FAILED - Invalid public key encoding detected (in " + e.fileName + "#" + e.lineNumber + ")" + e);
+		sr.setStatusInfo(ServiceRequest.FAILURE_SYNTAX);
+		return false;
+	}
+	sr.addMessage("Passed - Valid public key encoding");
+
+	if (!req.verifyWith(this.crypto, puk)) {
+		sr.addMessage("FAILED - Inner signature is invalid or content is tampered with");
+		sr.setStatusInfo(ServiceRequest.FAILURE_INNER_SIGNATURE);
+		return false;
+	}
+	sr.addMessage("Passed - Inner signature is valid");
+
+	return true;
+}
+
+
+
+/**
  * A queue for service requests
  *
  * @param {Number} capacity the maximum number of entries in the queue
@@ -235,3 +290,6 @@ ServiceQueue.prototype.getEntryByIndex = function(index) {
 ServiceQueue.prototype.getEntryByMessageID = function(msgid) {
 	return this.map[msgid];
 }
+
+
+

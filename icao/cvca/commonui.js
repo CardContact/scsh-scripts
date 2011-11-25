@@ -90,7 +90,7 @@ CommonUI.prototype.generateTemplate = function(url) {
 				</div>
 				<div id="main">
 					<div id="content"/>
-					<p class="copyright">(c) Copyright 2003 - 2010 <a href="http://www.cardcontact.de">CardContact</a> Software &amp; System Consulting, Minden, Germany</p>
+					<p class="copyright">(c) Copyright 2003 - 2011 <a href="http://www.cardcontact.de">CardContact</a> Software &amp; System Consulting, Minden, Germany</p>
 				</div>
 			</body>
 		</html>
@@ -124,6 +124,7 @@ CommonUI.prototype.sendPage = function(req, res, url, page) {
 	c.div = bml;
 	
 	res.setContentType("text/html");
+	res.print('<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">\n');
 	res.print(t.toXMLString());
 }
 
@@ -373,6 +374,16 @@ CommonUI.prototype.renderServiceRequestListPage = function(srlist, isout, url) {
 		var messageID = sr.getMessageID();
 		if  (!messageID) {
 			messageID = "Synchronous";
+			finalStatus = "Completed";
+		} else {
+			var finalStatus = sr.getFinalStatusInfo();
+			if (!finalStatus) {
+				if (isout) {
+					finalStatus = "Not yet received";
+				} else {
+					finalStatus = "Not yet send";
+				}
+			}
 		}
 			
 		if (sr.isCertificateRequest()) {
@@ -389,15 +400,6 @@ CommonUI.prototype.renderServiceRequestListPage = function(srlist, isout, url) {
 		var status = sr.getStatusInfo();
 		if (!status) {
 			status = "Undefined";
-		}
-		
-		var finalStatus = sr.getFinalStatusInfo();
-		if (!finalStatus) {
-			if (isout) {
-				finalStatus = "Not yet received";
-			} else {
-				finalStatus = "Not yet send";
-			}
 		}
 		
 		t.tr += <tr>
@@ -528,6 +530,7 @@ CommonUI.prototype.serveRefreshPage = function(req, res, url, statusMessage) {
 	c.div = <p>{statusMessage}</p>
 	
 	res.setContentType("text/html");
+	res.print('<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">\n');
 	res.print(page.toXMLString());
 }
 

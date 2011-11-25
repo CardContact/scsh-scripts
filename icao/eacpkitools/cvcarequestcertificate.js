@@ -69,12 +69,12 @@ cc.verbose = true;
 var certlist = cc.getCACertificates();
 
 print(req);
-var certs = cc.requestCertificate(req);
+var certs = cc.requestCertificate(req.getBytes());
 
 var dir = reqfile.substr(0, reqfile.lastIndexOf("/") + 1);
 
 for (var i = 0; i < certs.length; i++) {
-	var cvc = certs[i];
+	var cvc = new CVC(certs[i]);
 	print(cvc);
 	var filename = dir + cvc.getCHR().toString() + ".cvcert";
 	CVCertificateStore.saveBinaryFile(filename, cvc.getBytes());

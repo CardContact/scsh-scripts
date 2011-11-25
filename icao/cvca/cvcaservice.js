@@ -132,7 +132,7 @@ CVCAService.prototype.setDVCertificatePolicy = function(policy, chrregex) {
  * @return the service port that can be registered with the SOAP Server
  */
 CVCAService.prototype.getTR3129ServicePort = function() {
-	return new TR3129ServicePort(this);
+	return new CVCATR3129ServicePort(this);
 }
 
 
@@ -224,61 +224,6 @@ CVCAService.prototype.getDVCertificatePolicyForCHR = function(chr) {
 		}
 	}
 	return this.dVCertificatePolicy;
-}
-
-
-
-/**
- * Check certificate request syntax
- *
- * @param {ByteString} req the request in binary format
- * @returns the decoded request or null in case of error
- * @type CVC
- */
-CVCAService.prototype.checkRequestSyntax = function(reqbin) {
-	try	{
-		var reqtlv = new ASN1(reqbin);
-		var req = new CVC(reqtlv);
-	}
-	catch(e) {
-		GPSystem.trace("Error decoding ASN1 structure of request: " + e);
-		return null;
-	}
-	
-	return req;
-}
-
-
-
-/**
- * Check certificate request inner signature
- *
- * @param {ServiceRequest} sr the service request
- * @returns true if all checks passed or false and update in statusInfo
- * @type boolean
- */
-CVCAService.prototype.checkRequestInnerSignature = function(sr) {
-	var req = sr.getCertificateRequest();
-	
-	// Check inner signature
-	try	{
-		var puk = req.getPublicKey();
-	}
-	catch(e) {
-		sr.addMessage("FAILED - Invalid public key encoding detected (in " + e.fileName + "#" + e.lineNumber + ")" + e);
-		sr.setStatusInfo(ServiceRequest.FAILURE_SYNTAX);
-		return false;
-	}
-	sr.addMessage("Passed - Valid public key encoding");
-
-	if (!req.verifyWith(this.crypto, puk)) {
-		sr.addMessage("FAILED - Inner signature is invalid or content is tampered with");
-		sr.setStatusInfo(ServiceRequest.FAILURE_INNER_SIGNATURE);
-		return false;
-	}
-	sr.addMessage("Passed - Inner signature is valid");
-
-	return true;
 }
 
 
@@ -622,13 +567,15 @@ CVCAService.prototype.sendCertificates = function(serviceRequest) {
 	if (serviceRequest.getType().substr(0, 4) == "SPOC") {
 		var con = new SPOCConnection(serviceRequest.getResponseURL());
 		var callerID = this.name.substr(0, 2);
-		var result = con.sendCertificates(serviceRequest.getCertificateList(), callerID, serviceRequest.getMessageID(), serviceRequest.getStatusInfo());
+		var certbin = SPOCConnection.fromCVCList(serviceRequest.getCertificateList());
+		var result = con.sendCertificates(certbin, callerID, serviceRequest.getMessageID(), serviceRequest.getStatusInfo());
 		serviceRequest.setSOAPRequest(con.request);
 		serviceRequest.setSOAPResponse(con.response);
 	} else {
-		var con = new TAConnection(serviceRequest.getResponseURL());
+		var con = new TAConnection(serviceRequest.getResponseURL(), true);
 		con.version = this.version;
-		var result = con.sendCertificates(serviceRequest.getCertificateList(), serviceRequest.getMessageID(), serviceRequest.getStatusInfo());
+		var certbin = TAConnection.fromCVCList(serviceRequest.getCertificateList());
+		var result = con.sendCertificates(certbin, serviceRequest.getMessageID(), serviceRequest.getStatusInfo());
 		serviceRequest.setSOAPRequest(con.request);
 		serviceRequest.setSOAPResponse(con.response);
 	}
@@ -680,7 +627,7 @@ CVCAService.prototype.getCACertificatesFromSPOC = function(country) {
 		for (var i = 0; i < list.length; i++) {
 			str += list[i].toString() + "\n";
 		}
-		sr.setMessage(str);
+		sr.addMessage(str);
 	}
 	return sr.getStatusInfo();
 }
@@ -795,7 +742,7 @@ CVCAService.prototype.forwardRequestToSPOC = function(relatedsr) {
 	relatedsr.addMessage("Request - forwarded to SPOC (" + country + ") in message " + msgid);
 	var con = new SPOCConnection(spoc.url);
 	var callerID = this.name.substr(0, 2);
-	var list = con.requestCertificate(sr.getCertificateRequest(), callerID, sr.getMessageID());
+	var list = con.requestCertificate(sr.getCertificateRequest().getBytes(), callerID, sr.getMessageID());
 	con.close();
 
 	if (!list) {
@@ -951,7 +898,6 @@ CVCAService.prototype.processRequest = function(index) {
 				sr.setCertificateList(certlist);
 			} else {
 				GPSystem.trace("Request " + req + " failed secondary check");
-				sr.setStatusInfo(response);
 			}
 		} else if (sr.getStatusInfo() == ServiceRequest.OK_REQUEST_FORWARDED) {
 			if (this.cvca.isOperational() && !sr.getCertificateRequest().isAuthenticatedRequest()) {
@@ -1051,7 +997,7 @@ CVCAService.prototype.getCACertificatesFromSPOCs = function() {
  * 
  * <p>See BSI-TR-03129 at www.bsi.bund.de for the specification of the CVCA/SPOC web service</p>
  */
-function TR3129ServicePort(service) {
+function CVCATR3129ServicePort(service) {
 	this.service = service;
 	this.version = "1.1";
 }
@@ -1066,7 +1012,7 @@ function TR3129ServicePort(service) {
  * @type XML
  * @return the complete SOAP response body
  */
-TR3129ServicePort.prototype.generateResponse = function(type, sr) {
+CVCATR3129ServicePort.prototype.generateResponse = function(type, sr) {
 	var ns = new Namespace("uri:EAC-PKI-CVCA-Protocol/" + this.version);
 	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
@@ -1110,7 +1056,7 @@ TR3129ServicePort.prototype.generateResponse = function(type, sr) {
  * @type XML
  * @return the SOAP response body
  */
-TR3129ServicePort.prototype.GetCACertificates = function(soapBody) {
+CVCATR3129ServicePort.prototype.GetCACertificates = function(soapBody) {
 	var ns = new Namespace("uri:EAC-PKI-CVCA-Protocol/" + this.version);
 	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
@@ -1143,7 +1089,7 @@ TR3129ServicePort.prototype.GetCACertificates = function(soapBody) {
  * @type XML
  * @return the SOAP response body
  */
-TR3129ServicePort.prototype.RequestCertificate = function(soapBody) {
+CVCATR3129ServicePort.prototype.RequestCertificate = function(soapBody) {
 	var ns = new Namespace("uri:EAC-PKI-CVCA-Protocol/" + this.version);
 	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
@@ -1179,7 +1125,7 @@ TR3129ServicePort.prototype.RequestCertificate = function(soapBody) {
  * @type XML
  * @return the SOAP response body
  */
-TR3129ServicePort.prototype.RequestForeignCertificate = function(soapBody) {
+CVCATR3129ServicePort.prototype.RequestForeignCertificate = function(soapBody) {
 	var ns = new Namespace("uri:EAC-PKI-CVCA-Protocol/" + this.version);
 	var ns1 = new Namespace("uri:eacBT/" + this.version);
 
