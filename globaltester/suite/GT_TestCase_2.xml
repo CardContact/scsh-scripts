@@ -35,6 +35,7 @@
 	
 	<testscript><![CDATA[
 		print("Section testscript executing...");
+		print("Parameter _mrz : " + _mrz);
 	]]></testscript>
 
 	<postconditions>

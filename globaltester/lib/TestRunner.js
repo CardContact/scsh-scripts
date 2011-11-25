@@ -404,7 +404,6 @@ function TestCaseRunner(testGroupRunner, testCase) {
 // Action listener for context menu
 //
 TestCaseRunner.prototype.actionListener = function(source, actionName) {
-	print("Action " + actionName);
 	switch(actionName) {
 	case "select":
 		this.selected = true;
