@@ -25,7 +25,7 @@
  */
 
 
-load("cvc.js");
+load("../cvc.js");
 
 
 /**
