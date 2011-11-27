@@ -38,6 +38,7 @@
 				<exclude name="perso/**"/>
 				<exclude name="globaltester/**"/>
 				<exclude name="mifare/**"/>
+				<exclude name="apdutest/**"/>
 				<exclude name=".settings.js"/>
 			</fileset>
 
