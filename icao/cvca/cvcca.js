@@ -97,7 +97,11 @@ CVCCA.prototype.isRootCA = function() {
  */
 CVCCA.prototype.isOperational = function() {
 	var currentchr = this.certstore.getCurrentCHR(this.path);
-	return currentchr != null;
+	if (currentchr == null) {
+		return false;
+	}
+	var cvc = this.certstore.getCertificate(this.path, currentchr);
+	return !cvc.isExpired();
 }
 
 

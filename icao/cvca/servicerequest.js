@@ -47,6 +47,7 @@ function ServiceRequest(messageID, responseURL, certificateRequest) {
 }
 
 
+ServiceRequest.OK											= "ok";
 ServiceRequest.OK_CERT_AVAILABLE							= "ok_cert_available";
 ServiceRequest.OK_SYNTAX									= "ok_syntax";
 ServiceRequest.OK_RECEIVED_CORRECTLY						= "ok_received_correctly";
@@ -76,6 +77,8 @@ ServiceRequest.DVCA_REQUEST_FOREIGN_CERTIFICATE				= "DVCA.RequestForeignCertifi
 ServiceRequest.SPOC_GET_CA_CERTIFICATES						= "SPOC.GetCACertificates";
 ServiceRequest.SPOC_REQUEST_CERTIFICATE						= "SPOC.RequestCertificate";
 ServiceRequest.SPOC_FORWARD_REQUEST_CERTIFICATE				= "SPOC.ForwardRequestCertificate";
+ServiceRequest.SPOC_SEND_CERTIFICATES						= "SPOC.SendCertificates";
+ServiceRequest.SPOC_GENERAL_MESSAGE							= "SPOC.GeneralMessage";
 
 ServiceRequest.TERM_GET_CA_CERTIFICATES						= "TERM.GetCACertificates";
 ServiceRequest.TERM_REQUEST_CERTIFICATE						= "TERM.RequestCertificate";
@@ -360,6 +363,29 @@ ServiceRequest.prototype.setRelatedServiceRequest = function(relatedServiceReque
  */
 ServiceRequest.prototype.getRelatedServiceRequest = function() {
 	return this.relatedServiceRequest;
+}
+
+
+
+/**
+ * Sets the requesting node path
+ *
+ * @param {String} path the path of the node requesting a certificate
+ */
+ServiceRequest.prototype.setRequestingNodePath = function(path) {
+	this.path = path;
+}
+
+
+
+/**
+ * Gets the requesting node path
+ *
+ * @type String
+ * @return the path of the node requesting a certificate
+ */
+ServiceRequest.prototype.getRequestingNodePath = function() {
+	return this.path;
 }
 
 

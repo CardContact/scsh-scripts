@@ -364,10 +364,14 @@ CommonUI.prototype.renderServiceRequestListPage = function(srlist, isout, url) {
 		if (isout) {
 			var refurl = url + "/outrequest?index=" + i;
 		} else {
-			if (sr.isCertificateRequest()) {
-				var refurl = url + "/request?index=" + i;
+			if (sr.getType() == ServiceRequest.SPOC_GENERAL_MESSAGE) {
+				var refurl = url + "/message?index=" + i;
 			} else {
-				var refurl = url + "/getcert?index=" + i;
+				if (sr.isCertificateRequest()) {
+					var refurl = url + "/request?index=" + i;
+				} else {
+					var refurl = url + "/getcert?index=" + i;
+				}
 			}
 		}
 		

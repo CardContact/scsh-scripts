@@ -35,10 +35,88 @@
  */
 function CVCAUI(service) {
 	CommonUI.call(this, service);
+	this.currentCVCA = service.getCVCAList()[0];
 }
 
 CVCAUI.prototype = new CommonUI();
 CVCAUI.constructor = CVCAUI;
+
+
+
+/**
+ * Prepare and send a general message to the SPOC associated with the selected CVCA
+ *
+ * @param {String} msg the body of the message
+ * @param {String} cvca at least the first two letter to identify the SPOC
+ * @param {String} messageID the optional message ID of an related message
+ */
+CVCAUI.prototype.sendGeneralMessage = function(msg, cvca, messageID) {
+	var msg = msg.replace(/\+/g, " ");
+	var msg = decodeURIComponent(msg);
+
+	if (typeof(cvca) == "undefined") {
+		cvca = this.currentCVCA;
+	}
+
+	return this.service.sendGeneralMessage(cvca.substr(0, 2), "Message from " + cvca + " send " + Date(), msg, messageID);
+}
+
+
+
+/**
+ * Serves a details page inbound general messages.
+ *
+ * <p>The URL processed has the format <caname>/message/<queueindex></p>
+ *
+ * @param {HttpRequest} req the request object
+ * @param {HttpResponse} req the response object
+ * @param {String[]} url array of URL path elements
+ */
+CVCAUI.prototype.handleGeneralMessageDetails = function(req, res, url) {
+
+	var op = CertStoreBrowser.parseQueryString(req.queryString);
+	
+	var index = parseInt(op.index);
+	var sr = this.service.getInboundRequest(index);
+	
+	if (typeof(op.action) != "undefined") {
+		switch(op.action) {
+		case "delete":
+			this.service.deleteInboundRequest(index);
+			this.serveRefreshPage(req, res, url);
+			break;
+		case "sendmessage":
+			var status = this.sendGeneralMessage(op.message, op.callerID, op.messageID);
+			this.serveRefreshPage(req, res, url, status);
+			break;
+		default:
+			sr.setStatusInfo(op.action);
+			var status = this.service.processRequest(index);
+			this.serveRefreshPage(req, res, url, status);
+		}
+	} else {
+		var page = this.renderServiceRequestPage(sr);
+
+		var actions = <ul/>
+		
+		actions.li += <li><a href={"message?index=" + op.index + "&action=delete"}>Delete</a> request</li>
+
+		var div = page.div.(@id == "actions");
+		div.h2 = <h2>Possible Actions</h2>
+		
+		div.h2 += 	<form action="" method="get">
+						<input name="action" type="hidden" value="sendmessage"/>
+						<input name="messageID" type="hidden" value={sr.getMessageID()}/>
+						<input name="callerID" type="hidden" value={sr.getCallerID()}/>
+						<input name="message" size="75" value="Enter message..."/>
+						<button type="submit">Respond</button>
+					</form>
+
+		div.h2 += actions;
+
+		this.sendPage(req, res, url, page);
+	}
+}
 
 
 
@@ -132,47 +210,91 @@ CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 	var page =
 		<div>
 			<h1>CVCA Service {status}</h1>
+			<form action="" method="get">
+				Select CVCA
+				<input name="op" type="hidden" value="changecvca"/>
+				<select name="cvca" size="1">
+				</select>
+				<button type="submit">Change View</button>
+			</form>
 			<div id="activechain"/>
 			<div id="outboundrequests"/>
 			<div id="inboundrequests"/>
 			<h2>Possible actions:</h2>
-			<form action="" method="get">
-				Public Key Specification
-				<input name="op" type="hidden" value="change"/>
-				<select name="keyspec" size="1">
-				</select>
-				<button type="submit">Change</button>
-			</form>
+			<div id="action"/>
 			<ul>
 			</ul>
 			<p><a href={url[0] + "/holderlist?path=" + this.service.path }>Browse Document Verifier...</a></p>
 		</div>
 	
-	var l = page.form.select;
-	for (var i = 0; i < CVCAService.KeySpecification.length; i++) {
-		var o = CVCAService.KeySpecification[i];
-		if (this.service.currentKeySpec == o.id) {
-			l.option += <option value={o.id} selected="selected">{o.name}</option>
+	var l = page.form.select.(@name=="cvca");
+	var cvcalist = this.service.getCVCAList();
+	
+	for each (var holderId in cvcalist) {
+		if (this.currentCVCA == holderId) {
+			l.option += <option selected="selected">{holderId}</option>
 		} else {
-			l.option += <option value={o.id}>{o.name}</option>
+			l.option += <option>{holderId}</option>
 		}
 	}
+
+	if (this.currentCVCA == this.service.name) {
+		var form =	<form action="" method="get">
+						Public Key Specification
+						<input name="op" type="hidden" value="change"/>
+						<select name="keyspec" size="1">
+						</select>
+						<button type="submit">Change</button>
+					</form>
+
+		var l = form.select;
+		for (var i = 0; i < CVCAService.KeySpecification.length; i++) {
+			var o = CVCAService.KeySpecification[i];
+			if (this.service.currentKeySpec == o.id) {
+				l.option += <option value={o.id} selected="selected">{o.name}</option>
+			} else {
+				l.option += <option value={o.id}>{o.name}</option>
+			}
+		}
+		
+		var div = page.div.(@id == "action");
+		div.appendChild(form);
 	
-	var l = page.ul;
+		var l = page.ul;
 	
-	// ToDo: Refactor to getter
-	if (this.service.cvca.isOperational()) {
-		l.li += <li><a href="?op=link">Generate link certificate without domain parameter</a></li>
-		l.li += <li><a href="?op=linkdp">Generate link certificate with domain parameter</a></li>
-		l.li += <li><a href="?op=linkdp10">Generate 10 link certificates with domain parameter</a></li>
+		if (this.service.isOperational()) {
+			l.li += <li><a href="?op=link">Generate link certificate without domain parameter</a></li>
+			l.li += <li><a href="?op=linkdp">Generate link certificate with domain parameter</a></li>
+		} else {
+			l.li += <li><a href="?op=linkdp">Generate root certificate</a></li>
+		}
+		l.li += <li><a href="?op=getcacertificates">Get CA certificates of registered SPOCs</a></li>
 	} else {
-		l.li += <li><a href="?op=linkdp">Generate root certificate</a></li>
+/*
+		var form =	<form action="" method="get">
+						Message
+						<textarea name="op" type="hidden" value="message" cols="50" rows="10">
+						Enter message here
+						</textarea>
+						<button type="submit">Send</button>
+					</form>
+*/
+		var form =	<form action="" method="get">
+						<input name="op" type="hidden" value="sendmessage"/>
+						<input name="message" size="75" value="Enter message..."/>
+						<button type="submit">Send to SPOC</button>
+					</form>
+
+		var div = page.div.(@id == "action");
+		div.appendChild(form);
+	
+		var l = page.ul;
+	
+		l.li += <li><a href={ "?op=getcacertificates&cvca=" + this.currentCVCA }>Get CA certificate via SPOC</a></li>
 	}
 	
-	l.li += <li><a href="?op=getcacertificates">Get CA certificates of registered SPOCs</a></li>
 
-	// ToDo: Refactor to getter
-	var certlist = this.service.cvca.getCertificateList();
+	var certlist = this.service.getCertificateList(this.currentCVCA);
 	
 	if (certlist.length > 0) {
 		var t = <table class="content"/>;
@@ -264,6 +386,9 @@ CVCAUI.prototype.handleInquiry = function(req, res) {
 		case "request":
 			this.handleRequestCertificateRequestDetails(req, res, url);
 			break;
+		case "message":
+			this.handleGeneralMessageDetails(req, res, url);
+			break;
 		case "outrequest":
 			this.handleOutboundRequestDetails(req, res, url);
 			break;
@@ -277,6 +402,10 @@ CVCAUI.prototype.handleInquiry = function(req, res) {
 			var operation = CertStoreBrowser.parseQueryString(req.queryString);
 
 			switch(operation.op) {
+			case "changecvca":
+				this.currentCVCA = operation.cvca;
+				this.serveStatusPage(req, res, url);
+				break;
 			case "change":
 				this.service.changeKeySpecification(operation.keyspec);
 				this.serveStatusPage(req, res, url);
@@ -296,7 +425,15 @@ CVCAUI.prototype.handleInquiry = function(req, res) {
 				this.serveRefreshPage(req, res, url);
 				break;
 			case "getcacertificates":
-				var status = this.service.getCACertificatesFromSPOCs();
+				if (typeof(operation.cvca) == "undefined") {
+					var status = this.service.getCACertificatesFromSPOCs();
+				} else {
+					var status = this.service.getCACertificatesFromSPOC(operation.cvca.substr(0, 2));
+				}
+				this.serveRefreshPage(req, res, url, status);
+				break;
+			case "sendmessage":
+				var status = this.sendGeneralMessage(operation.message, operation.cvca);
 				this.serveRefreshPage(req, res, url, status);
 				break;
 			default:

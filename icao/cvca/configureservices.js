@@ -35,7 +35,7 @@ var datadir = "c:/data/eacpki";
 
 
 
-var bookmarkservicelist = ["CVCA", "DVCA", "TCC", "VT", "CVCA-FU" ];
+var bookmarkservicelist = ["CVCA", "DVCA", "TCC", "CVCA-FU" ];
 
 function createBookmarks(ui, myself)  {
 	for (var i = 0; i < bookmarkservicelist.length; i++) {
@@ -50,7 +50,7 @@ function createBookmarks(ui, myself)  {
 // --- CVCA section ---
 
 // Create an CVCA service
-var cvca = new CVCAService(datadir +  "/cvca", "UTCVCA");
+var cvca = new CVCAService(datadir +  "/cvca", "/UTCVCA");
 
 // The policy used to issue self-signed root certificates
 var rootPolicy = { certificateValidityDays: 6,
@@ -155,7 +155,7 @@ SOAPServer.registerService("spoc-fu", cvca.getSPOCServicePort(), cvcaui);
 
 // Create a DVCA service
 
-var dvca = new DVCAService(datadir + "/dvca", "UTDVCA", "UTCVCA", url + "/se/cvca");
+var dvca = new DVCAService(datadir + "/dvca", "/UTCVCA/UTDVCA", url + "/se/cvca");
 // var dvca = new DVCAService(datadir + "/dvca", "UTDVCA", "UTCVCA");
 dvca.setSendCertificateURL(url + "/se/dvca");
 
@@ -206,18 +206,4 @@ tcc.setSendCertificateURL(url + "/se/tcc");
 var tccui = new TCCUI(tcc);
 createBookmarks(tccui, "TCC");
 
-SOAPServer.registerService("tcc", tcc, tccui);
-
-
-
-// --- VTerm section ---
-
-// Create a virtual terminal service
-var vt = new VTermService(datadir + "/vt", "/UTCVCA/UTDVCA", url + "/se/dvca");
-vt.setSendCertificateURL(url + "/se/vt");
-
-// Create GUI
-var vtui = new VTermUI(vt);
-createBookmarks(vtui, "VT");
-
-SOAPServer.registerService("vt", vt, vtui);
+SOAPServer.registerService("tcc", tcc.getTR3129ServicePort(), tccui);

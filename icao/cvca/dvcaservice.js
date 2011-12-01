@@ -29,23 +29,25 @@
 /**
  * Create a DVCA instance with web services
  *
- * @param {String} path the path to the certificate store
- * @param {String} name the holder name (Country code plus holder mnemonic) for this instance
- * @param {String} parent the holder name of the parent CA
+ * @param {String} certstorepath the path to the certificate store
+ * @param {String} path the PKI path for the domestic part of this service (e.g. "/UTCVCA/UTDVCA")
  * @param {String} parentURL the URL of the parent CA's webservice
  */ 
-function DVCAService(path, name, parent, parentURL) {
+function DVCAService(certstorepath, path, parentURL) {
 	BaseService.call(this);
 
-	this.name = name;
 	this.type = "DVCA";
+	this.path = path;
+
+	var pe = path.substr(1).split("/");
+	assert(pe.length == 2);
 	
-	this.parent = parent;
+	this.parent = pe[0];
+	this.name = pe[1];
+	
 	this.parentURL = parentURL;
 	
-	this.ss = new CVCertificateStore(path);
-	this.dvca = new CVCCA(this.crypto, this.ss, name, parent);
-	this.path = this.dvca.path;
+	this.ss = new CVCertificateStore(certstorepath);
 	this.terminalCertificatePolicies = [];
 	this.version = "1.1";
 	this.rsaKeySize = 1536;
@@ -86,18 +88,6 @@ DVCAService.prototype.setRSAKeySize = function(keysize) {
 
 
 /**
- * Sets the key specification for generating requests
- *
- * @param {Key} keyparam a key object containing key parameters (e.g. EC Curve)
- * @param {ByteString} algorithm the terminal authentication algorithm object identifier
- */
-DVCAService.prototype.setKeySpec = function(keyparam, algorithm) {
-	this.dvca.setKeySpec(keyparam, algorithm);
-}
-
-
-
-/**
  * Sets the policy for issuing terminal certificates
  *
  * @param {Object} policy policy object as defined for CVCCA.prototype.generateCertificate()
@@ -117,30 +107,10 @@ DVCAService.prototype.setTerminalCertificatePolicy = function(policy, chrregex) 
  * Sets the naming scheme to by used when requesting foreign certificates.
  *
  * <p>With DVCAService.MnemonicAndCountryCode the country code of the foreign CVCA is appended to the holder mnemonic.</p>
- * <p>With DVCAService.CountryCodeAndSequence the counter code is stored in the first two digits of the sequence number.</p>
+ * <p>With DVCAService.CountryCodeAndSequence the country code is stored in the first two digits of the sequence number.</p>
  */
 DVCAService.prototype.setNamingScheme = function(namingscheme) {
 	this.namingscheme = namingscheme;
-}
-
-
-
-/**
- * Return a DVCA associated with the given CVCA
- *
- * @param {String} cvcaHolderID the holderID of the supported CVCA
- * @type CVCCA
- * @return the CVCCA object
- */
-DVCAService.prototype.getCVCCA = function(cvcaHolderID) {
-	var path = this.getPathFor(cvcaHolderID);
-
-	var cvcca = new CVCCA(this.crypto, this.ss, null, null, path);
-
-	if ((cvcaHolderID != this.parent) && (this.namingscheme != DVCAService.MnemonicAndCountryCode)) {
-		cvcca.setCountryCodeForSequence(cvcaHolderID.substr(0, 2));
-	}
-	return cvcca;
 }
 
 
@@ -213,13 +183,44 @@ DVCAService.prototype.getCVCAList = function() {
  */
 DVCAService.prototype.getPathFor = function(cvcaHolderId) {
 	var name = this.name;
-	print(cvcaHolderId);
 	
 	if ((cvcaHolderId != this.parent) && (this.namingscheme == DVCAService.MnemonicAndCountryCode)) {
 		name += cvcaHolderId.substr(0, 2);
 	}
 
 	return "/" + cvcaHolderId + "/" + name;
+}
+
+
+
+/**
+ * Return a CVC-CA for the given path
+ *
+ * @param {String} path full path of the CVCCA instance
+ * @type CVCCA
+ * @return the CVCCA object
+ */
+DVCAService.prototype.getCVCCAForPath = function(path) {
+	var cvcca = new CVCCA(this.crypto, this.ss, null, null, path);
+	return cvcca;
+}
+
+
+
+/**
+ * Return a CVC-CA associated with the given CVCA
+ *
+ * @param {String} cvcaHolderID the holderID of the supported CVCA
+ * @type CVCCA
+ * @return the CVCCA object
+ */
+DVCAService.prototype.getCVCCA = function(cvcaHolderID) {
+	var path = this.getPathFor(cvcaHolderID);
+	var cvcca = this.getCVCCAForPath(path);
+	if ((cvcaHolderID != this.parent) && (this.namingscheme != DVCAService.MnemonicAndCountryCode)) {
+		cvcca.setCountryCodeForSequence(cvcaHolderID.substr(0, 2));
+	}
+	return cvcca;
 }
 
 
@@ -288,7 +289,7 @@ DVCAService.prototype.checkRequestParameter = function(sr) {
 	var req = sr.getCertificateRequest();
 
 	var chr = req.getCAR();
-	var path = this.dvca.path;
+	var path = this.path;
 	
 	if (chr) {
 		var path = this.resolvePathForDVCA(chr);
@@ -371,7 +372,7 @@ DVCAService.prototype.checkRequestOuterSignature = function(sr) {
 	}
 	
 	var chr = req.getCAR();
-	var path = this.dvca.path;
+	var path = this.path;
 	
 	if (chr) {
 		var path = this.resolvePathForDVCA(chr);
@@ -501,22 +502,64 @@ DVCAService.prototype.checkPolicy = function(sr, callback) {
  * Issue certificate for subordinate terminal
  *
  * @param {CVC} req the request
- * @returns the certificate
+ * @returns the certificate and the list of missing certificates unless the CAR in the request matches the current CHR of the CA
  * @type CVC
  */
 DVCAService.prototype.issueCertificate = function(req) {
 
 	var policy = this.getTerminalCertificatePolicyForCHR(req.getCHR());
-	var cert = this.dvca.generateCertificate(req, policy);
 
-	this.dvca.storeCertificate(cert );
+	var car = req.getCAR();
+	var path = this.path;
+	
+	if (car) {
+		var path = this.resolvePathForDVCA(car);
+	}
 
-	GPSystem.trace("DVCAService - Issued certificate: ");
-	GPSystem.trace(cert.getASN1());
-	return cert;
+	var cvcca = this.getCVCCAForPath(path);
+	if (!cvcca.isOperational()) {
+		throw new GPError("DVCAService", GPError.INVALID_DATA, 0, "DVCA is not operational");
+	}
+	
+	var cert = cvcca.generateCertificate(req, policy);
+
+	cvcca.storeCertificate(cert);
+
+	var certlist = [];
+	
+	var chr = this.ss.getCurrentCHR(path);
+
+	if ((car == null) || !car.equals(chr)) {
+		certlist = this.getCACertificateList();
+	}
+	
+	certlist.push(cert);
+	return certlist;
 }
 
 
+
+/**
+ * Return the current certificate list for the DVCA instance related to the requested CVCA
+ *
+ * @type CVC[]
+ * @return the list of CV certificates from the self-signed root to the DV
+ */
+DVCAService.prototype.getCACertificateList = function() {
+	var cvcas = this.getCVCAList();
+	var certlist = [];
+	for each (var cvca in cvcas) {
+		var cvcca = this.getCVCCA(cvca);
+		if (cvcca.isOperational()) {
+			certlist = certlist.concat(cvcca.getCertificateList());
+		}
+	}
+	return certlist;
+}
+
+
+
+// UI Interface operations
 
 /**
  * Return the current certificate list for the DVCA instance related to the requested CVCA
@@ -533,53 +576,6 @@ DVCAService.prototype.getCertificateList = function(cvcaHolderId) {
 
 
 /**
- * Determine the list of certificates to send to the client as part of the certificate request response
- *
- * @param {CVC} req the request
- * @returns the certificate list
- * @type CVC[]
- */
-DVCAService.prototype.determineCertificateList = function(req) {
-	var car = req.getCAR();
-	var chr = this.ss.getCurrentCHR(this.path);
-	
-	if ((car != null) && car.equals(chr)) {
-		return [];
-	}
-	
-	return this.dvca.getCertificateList();
-}
-
-
-
-/**
- * Import certificates
- *
- * @param {CVC[]} certlist the list of certificates
- *
- */
-DVCAService.prototype.importCertificates = function(certlist, foreignCAR) {
-	if (typeof(foreignCAR) != "undefined") {
-		var pkr = new PublicKeyReference(foreignCAR);
-		var cvcca = this.getCVCCA(pkr.getHolder());
-		var list = cvcca.importCertificates(certlist);
-	} else {
-		var list = this.dvca.importCertificates(certlist);
-	}
-
-	if (list.length > 0) {
-		print("Warning: Could not import the following certificates");
-		for (var i = 0; i < list.length; i++) {
-			print(list[i]);
-		}
-	}
-}
-
-
-
-// UI Interface operations
-
-/**
  * Process request and send certificates
  *
  * @param {Number} index the index into the work queue identifying the request
@@ -593,9 +589,7 @@ DVCAService.prototype.processRequest = function(index) {
 			
 			sr.addMessage("Starting secondary check");
 			if (this.checkRequestSemantics(sr)) {		// Still valid
-				var certlist = this.determineCertificateList(req);
-				var cert = this.issueCertificate(req);
-				certlist.push(cert);
+				var certlist = this.issueCertificate(req);
 				sr.setCertificateList(certlist);
 			} else {
 				GPSystem.trace("Request " + req + " failed secondary check");
@@ -603,7 +597,7 @@ DVCAService.prototype.processRequest = function(index) {
 		}
 	} else {								// GetCertificates
 		if (sr.getStatusInfo().substr(0, 3) == "ok_") {
-			sr.setCertificateList(this.dvca.getCertificateList());
+			sr.setCertificateList(this.getCACertificateList());
 		}
 	}
 
@@ -758,8 +752,8 @@ DVCAService.prototype.sendCertificates = function(serviceRequest) {
 	con.version = this.version;
 	var list = TAConnection.fromCVCList(serviceRequest.getCertificateList());
 	var result = con.sendCertificates(list, serviceRequest.getMessageID(), serviceRequest.getStatusInfo());
-	serviceRequest.setSOAPRequest(con.request);
-	serviceRequest.setSOAPResponse(con.response);
+	serviceRequest.setSOAPRequest(con.getLastRequest());
+	serviceRequest.setSOAPResponse(con.getLastResponse());
 	serviceRequest.setFinalStatusInfo(result);
 	serviceRequest.addMessage("Completed");
 }
@@ -781,6 +775,9 @@ DVCAService.prototype.requestCertificateFromCVCA = function(sr) {
 	} else {
 		var certlist = con.requestCertificate(sr.getCertificateRequest().getBytes());
 	}
+
+	sr.setSOAPRequest(con.getLastRequest());
+	sr.setSOAPResponse(con.getLastResponse());
 
 	con.close();
 
@@ -806,6 +803,9 @@ DVCAService.prototype.requestCertificateFromForeignCVCA = function(sr) {
 	} else {
 		var certlist = con.requestForeignCertificate(sr.getCertificateRequest().getBytes(), sr.getForeignCAR());
 	}
+
+	sr.setSOAPRequest(con.getLastRequest());
+	sr.setSOAPResponse(con.getLastResponse());
 
 	con.close();
 
@@ -833,7 +833,7 @@ DVCAService.prototype.processGetCACertificates = function(sr, callback) {
 	if (callback) {
 		sr.setStatusInfo(ServiceRequest.OK_SYNTAX);
 	} else {
-		sr.setCertificateList(this.dvca.getCertificateList());
+		sr.setCertificateList(this.getCACertificateList());
 		sr.setStatusInfo(ServiceRequest.OK_CERT_AVAILABLE);
 	}
 }
@@ -865,11 +865,7 @@ DVCAService.prototype.processRequestCertificate = function(sr, callback) {
 	// Check basic semantics of request
 	this.checkRequestSemantics(sr);
 	if (this.checkPolicy(sr, callback)) {						// Synchronous processing approved by policy ?
-		var certlist = this.determineCertificateList(req);
-
-		var cert = this.issueCertificate(req);
-		// Add certificate list to response
-		certlist.push(cert);
+		var certlist = this.issueCertificate(req);
 		sr.setCertificateList(certlist);
 		sr.setFinalStatusInfo(sr.getStatusInfo());		// Nothing else will happen
 		sr.addMessage("Completed");

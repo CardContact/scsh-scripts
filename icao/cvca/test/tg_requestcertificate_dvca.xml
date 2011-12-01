@@ -127,20 +127,11 @@
 	this.t.call("tcc?op=update", "ok_cert_available");
 
 	this.log(" TCC synchronous request for domestic initial certificate");
-	this.t.call("tcc?op=initial", "failure_synchronous_processing_not_possible");
+	this.t.call("tcc?op=initial&cvca=UTCVCA&holderID=UTTERM", "failure_synchronous_processing_not_possible");
 
 	this.log(" TCC asynchronous request for domestic initial certificate");
-	this.t.call("tcc?op=initialasync", "ok_syntax");
+	this.t.call("tcc?op=initialasync&cvca=UTCVCA&holderID=UTTERM", "ok_syntax");
 	this.t.call("dvca/request?index=-1&action=ok_cert_available", "ok_received_correctly");
-
-	this.log(" VT synchronous GetCACertificates");
-	this.t.call("vt?op=update", "ok_cert_available");
-
-	this.log(" VT synchronous request for domestic initial certificate");
-	this.t.call("vt?op=initial&holderID=UTVT1234567", "ok_cert_available");
-
-	this.log(" VT synchronous request for domestic renewed certificate");
-	this.t.call("vt?op=renew&holderID=UTVT1234567", "ok_cert_available");
 
 		]]></Script>
 	</testcase>

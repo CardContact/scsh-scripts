@@ -83,13 +83,6 @@
 	this.t.call("tcc?op=updateasync", "ok_syntax");
 	this.t.call("dvca/getcert?index=-1&action=ok_cert_available", "ok_received_correctly");
 
-	this.log(" VT synchronous GetCACertificates");
-	this.t.call("vt?op=update", "ok_cert_available");
-
-	this.log(" VT asynchronous GetCACertificates");
-	this.t.call("vt?op=updateasync&holderID=UTVT1234567", "ok_syntax");
-	this.t.call("dvca/getcert?index=-1&action=ok_cert_available", "ok_received_correctly");
-
 		]]></Script>
 	</testcase>
 
@@ -134,13 +127,6 @@
 
 	this.log(" TCC asynchronous GetCACertificates");
 	this.t.call("tcc?op=updateasync", "ok_syntax");
-	this.t.call("dvca/getcert?index=-1&action=ok_cert_available", "ok_received_correctly");
-
-	this.log(" VT synchronous GetCACertificates");
-	this.t.call("vt?op=update", "ok_cert_available");
-
-	this.log(" VT asynchronous GetCACertificates");
-	this.t.call("vt?op=updateasync&holderID=UTVT1234567", "ok_syntax");
 	this.t.call("dvca/getcert?index=-1&action=ok_cert_available", "ok_received_correctly");
 
 		]]></Script>
@@ -190,13 +176,6 @@
 
 	this.log(" TCC asynchronous GetCACertificates");
 	this.t.call("tcc?op=updateasync", "ok_syntax");
-	this.t.call("dvca/getcert?index=-1&action=ok_cert_available", "ok_received_correctly");
-
-	this.log(" VT synchronous GetCACertificates");
-	this.t.call("vt?op=update", "ok_cert_available");
-
-	this.log(" VT asynchronous GetCACertificates");
-	this.t.call("vt?op=updateasync&holderID=UTVT1234567", "ok_syntax");
 	this.t.call("dvca/getcert?index=-1&action=ok_cert_available", "ok_received_correctly");
 
 		]]></Script>
@@ -249,13 +228,6 @@
 
 	this.log(" TCC asynchronous GetCACertificates");
 	this.t.call("tcc?op=updateasync", "ok_syntax");
-	this.t.call("dvca/getcert?index=-1&action=ok_cert_available", "ok_received_correctly");
-
-	this.log(" VT synchronous GetCACertificates");
-	this.t.call("vt?op=update", "ok_cert_available");
-
-	this.log(" VT asynchronous GetCACertificates");
-	this.t.call("vt?op=updateasync&holderID=UTVT1234567", "ok_syntax");
 	this.t.call("dvca/getcert?index=-1&action=ok_cert_available", "ok_received_correctly");
 
 		]]></Script>
@@ -314,13 +286,6 @@
 
 	this.log(" TCC asynchronous GetCACertificates");
 	this.t.call("tcc?op=updateasync", "ok_syntax");
-	this.t.call("dvca/getcert?index=-1&action=ok_cert_available", "ok_received_correctly");
-
-	this.log(" VT synchronous GetCACertificates");
-	this.t.call("vt?op=update", "ok_cert_available");
-
-	this.log(" VT asynchronous GetCACertificates");
-	this.t.call("vt?op=updateasync&holderID=UTVT1234567", "ok_syntax");
 	this.t.call("dvca/getcert?index=-1&action=ok_cert_available", "ok_received_correctly");
 
 		]]></Script>
@@ -385,13 +350,6 @@
 
 	this.log(" TCC asynchronous GetCACertificates");
 	this.t.call("tcc?op=updateasync", "ok_syntax");
-	this.t.call("dvca/getcert?index=-1&action=ok_cert_available", "ok_received_correctly");
-
-	this.log(" VT synchronous GetCACertificates");
-	this.t.call("vt?op=update", "ok_cert_available");
-
-	this.log(" VT asynchronous GetCACertificates");
-	this.t.call("vt?op=updateasync&holderID=UTVT1234567", "ok_syntax");
 	this.t.call("dvca/getcert?index=-1&action=ok_cert_available", "ok_received_correctly");
 
 		]]></Script>

@@ -30,20 +30,21 @@
  * Create a terminal control center (TCC) instance with web services
  *
  * @param {String} certstorepath the path to the certificate store
- * @param {String} path the PKI path for this service (e.g. "/UTCVCA/UTDVCA/UTTERM")
+ * @param {String} path the PKI path for the domestic part of this service (e.g. "/UTCVCA/UTDVCA/UTTERM")
  * @param {String} parentURL the URL of the parent CA's webservice
  */ 
 function TCCService(certstorepath, path, parentURL) {
 	BaseService.call(this);
 
+	this.type = "TCC";
+	this.path = path;
+
 	var pe = path.substr(1).split("/");
 	assert(pe.length == 3);
 
-	this.name = pe[2];
-	this.type = "TCC";
-	
-	this.path = path;
+	this.root = pe[0];
 	this.parent = pe[1];
+	this.name = pe[2];
 	this.parentURL = parentURL;
 	
 	this.crypto = new Crypto();
@@ -52,10 +53,15 @@ function TCCService(certstorepath, path, parentURL) {
 	this.tcc = new CVCCA(this.crypto, this.ss, this.name, this.parent, path);
 	this.version = "1.1";
 	this.rsaKeySize = 1024;
+	this.namingscheme = TCCService.CountryCodeAndSequence;
 }
 
 TCCService.prototype = new BaseService();
 TCCService.constructor = TCCService;
+
+// The TCC supports three different naming schemes for DVCA public key references using for foreign certifications.
+TCCService.ForeignCountryCode = 1;			// Place the foreign country code in the designated country code field of the CHR
+TCCService.CountryCodeAndSequence = 2;		// Place the country code in the first two digits of the sequence number (default)
 
 
 
@@ -73,7 +79,7 @@ TCCService.prototype.setSendCertificateURL = function(url) {
 /**
  * Sets the key size for certificate requests using RSA keys
  *
- * @param {Number} keysize the RSA key size i bits
+ * @param {Number} keysize the RSA key size in bits
  */
 TCCService.prototype.setRSAKeySize = function(keysize) {
 	this.rsaKeySize = keysize;
@@ -82,13 +88,139 @@ TCCService.prototype.setRSAKeySize = function(keysize) {
 
 
 /**
- * Sets the key specification for generating requests
- *
- * @param {Key} keyparam a key object containing key parameters (e.g. EC Curve)
- * @param {ByteString} algorithm the terminal authentication algorithm object identifier
+ * Obtain a service port for TR-03129 service calls
+ * 
+ * @type Object
+ * @return the service port that can be registered with the SOAP Server
  */
-TCCService.prototype.setKeySpec = function(keyparam, algorithm) {
-	this.tcc.setKeySpec(keyparam, algorithm);
+TCCService.prototype.getTR3129ServicePort = function() {
+	return new TCCTR3129ServicePort(this);
+}
+
+
+
+/**
+ * Get current holderId
+ * 
+ * @type String
+ * @return the current holderId
+ */
+TCCService.prototype.getHolderID = function() {
+	return this.name;
+}
+
+
+
+/**
+ * Set current holderId
+ * 
+ * @param {String} holderID the new HolderID
+ */
+TCCService.prototype.setHolderID = function(name) {
+	this.name = name;
+}
+
+
+
+/**
+ * Determine if TCC is operational for the given CVCA
+ *
+ * @param {String} cvcaHolderId the holder ID of the requested CVCA
+ * @type boolean
+ * @return true if operational
+ */
+TCCService.prototype.isOperational = function(cvcaHolderId) {
+	var cvcca = this.getCVCCA(cvcaHolderId, this.name);
+	return cvcca.isOperational();
+}
+
+
+
+/**
+ * Returns a list of TCCs supported by this DVCA. The domestic CVCA is always first in the list.
+ *
+ * @type String[]
+ * @return the list of CVCA holderIDs
+ */
+TCCService.prototype.getCVCAList = function() {
+	var cvcas = [];
+	cvcas.push(this.root);
+	var holders = this.ss.listHolders("/");
+	for each (var holder in holders) {
+		if (holder != this.root) {
+			cvcas.push(holder);
+		}
+	}
+	return cvcas;
+}
+
+
+
+/**
+ * Sets the naming scheme to by used when requesting foreign certificates.
+ *
+ * <p>With TCCService.CountryCodeAndSequence the country code is stored in the first two digits of the sequence number.</p>
+ * <p>With TCCService.ForeignCountryCode the country code is stored in the first two digits of the holder ID.</p>
+ *
+ * @param {String} namingscheme the selected namingscheme for foreign terminal certificates
+ */
+TCCService.prototype.setNamingScheme = function(namingscheme) {
+	this.namingscheme = namingscheme;
+}
+
+
+
+/**
+ * Returns the path for a given CVCA and terminal
+ *
+ * @param {String} cvcaHolderId the holder ID of the requested CVCA
+ * @param {String} termHolderID the holderID of the terminal
+ * @type String
+ * @return the path or null if no such CVCA known
+ */
+TCCService.prototype.getPathFor = function(cvcaHolderId, termHolderId) {
+	if ((cvcaHolderId != this.root) && (this.namingscheme == TCCService.ForeignCountryCode)) {
+		termHolderId = cvcaHolderId.substr(0, 2) + this.termHolderId.substr(2);
+	}
+
+	return "/" + cvcaHolderId + "/" + this.parent + "/" + termHolderId;
+}
+
+
+
+/**
+ * Return a CVCCA associated with the given CVCA
+ *
+ * @param {String} cvcaHolderID the holderID of the supported CVCA
+ * @param {String} termHolderID the holderID of the terminal
+ * @type CVCCA
+ * @return the CVCCA object
+ */
+TCCService.prototype.getCVCCA = function(cvcaHolderID, termHolderID) {
+	var path = this.getPathFor(cvcaHolderID, termHolderID);
+
+	var cvcca = new CVCCA(this.crypto, this.ss, null, null, path);
+
+	if ((cvcaHolderID != this.root) && (this.namingscheme == TCCService.CountryCodeAndSequence)) {
+		cvcca.setCountryCodeForSequence(cvcaHolderID.substr(0, 2));
+	}
+	return cvcca;
+}
+
+
+
+// UI Interface operations
+
+/**
+ * Return the current certificate list for the DVCA instance related to the requested CVCA
+ *
+ * @param {String} cvcaHolderId holder ID of the CVCA in question
+ * @type CVC[]
+ * @return the list of CV certificates from the self-signed root to the DV
+ */
+TCCService.prototype.getCertificateList = function(cvcaHolderId) {
+	var cvcca = this.getCVCCA(cvcaHolderId, this.name);
+	return cvcca.getCertificateList();
 }
 
 
@@ -104,21 +236,30 @@ TCCService.prototype.updateCACertificates = function(async) {
 	var msgid = null;
 	
 	if (async) {
-		msgid = this.crypto.generateRandom(2).toString(HEX);
+		msgid = this.newMessageID();
 	}
 
 	var sr = new ServiceRequest(msgid, this.myURL);
+	sr.setType(ServiceRequest.TERM_GET_CA_CERTIFICATES);
 	this.addOutboundRequest(sr);
-	
-	var certlist = this.getCACertificatesFromDVCA(sr);
-	var list = this.tcc.importCertificates(certlist);
 
-	if (list.length > 0) {
-		print("Warning: Could not import the following certificates");
-		for (var i = 0; i < list.length; i++) {
-			print(list[i]);
-		}
+	var con = new TAConnection(this.parentURL, false);
+	
+	if (async) {
+		var list = con.getCACertificates(sr.getMessageID(), sr.getResponseURL());
+	} else {
+		var list = con.getCACertificates();
 	}
+
+	sr.setSOAPRequest(con.getLastRequest());
+	sr.setSOAPResponse(con.getLastResponse());
+	
+	con.close();
+
+	sr.setStatusInfo(con.getLastReturnCode());
+	
+	this.processCertificateList(sr, list);
+	
 	return sr.getStatusInfo();
 }
 
@@ -127,122 +268,91 @@ TCCService.prototype.updateCACertificates = function(async) {
 /**
  * Renew certificate through parent CA
  *
+ * @param {Boolean} async request asynchronous processing
+ * @param {Boolean} forceinitial force request to be an initial request
+ * @param {String} cvcaHolderId the holder ID of the requested CVCA
+ * @param {String} termHolderID the holderID of the terminal
  * @type String
  * @return The return code received from the other side
  */
-TCCService.prototype.renewCertificate = function(async, forceinitial) {
+TCCService.prototype.renewCertificate = function(async, forceinitial, cvcaHolderId, termHolderId) {
 
-	var algo = this.ss.getDefaultPublicKeyOID(this.path);
+	var path = this.getPathFor(cvcaHolderId, termHolderId);
+	
+	var algo = this.ss.getDefaultPublicKeyOID(path);
 	if (CVC.isECDSA(algo)) {
-		var keyspec = this.ss.getDefaultDomainParameter(this.path);
+		var keyspec = this.ss.getDefaultDomainParameter(path);
 	} else {
 		var keyspec = new Key();
 		keyspec.setType(Key.PUBLIC);
 		keyspec.setSize(this.rsaKeySize);
 	}
 	
-	var car = this.ss.getCurrentCHR(CVCertificateStore.parentPathOf(this.path));
+	var car = this.ss.getCurrentCHR(CVCertificateStore.parentPathOf(path));
 	
-	this.tcc.setKeySpec(keyspec, algo);
+	var cvcca = this.getCVCCA(cvcaHolderId, termHolderId);
+	cvcca.setKeySpec(keyspec, algo);
 
 	// Create a new request
-	var req = this.tcc.generateRequest(car, forceinitial);
-	print("Request: " + req);
-	print(req.getASN1());
+	var req = cvcca.generateRequest(car, forceinitial);
 
 	var msgid = null;
 	
 	if (async) {
-		msgid = this.crypto.generateRandom(2).toString(HEX);
+		msgid = this.newMessageID();
 	}
 
 	var sr = new ServiceRequest(msgid, this.myURL, req);
+	sr.setType(ServiceRequest.TERM_REQUEST_CERTIFICATE);
+	sr.setRequestingNodePath(path);
 	this.addOutboundRequest(sr);
 	
-	var certlist = this.requestCertificateFromDVCA(sr);
-	
-	if (certlist.length > 0) {
-		sr.setFinalStatusInfo("" + certlist.length + " certificates received");
+	if (this.parentURL) {
+		var certlist = this.requestCertificateFromDVCA(sr);
+		
+		this.processCertificateList(sr, certlist);
+	} else {
+		sr.setStatusInfo("Local request");
 	}
-	
-	var list = this.tcc.importCertificates(certlist);
 
-	if (list.length > 0) {
-		print("Warning: Could not import the following certificates");
-		for (var i = 0; i < list.length; i++) {
-			print(list[i]);
-		}
-	}
-	
 	return sr.getStatusInfo();
 }
 
 
 
 /**
- * Import certificates
+ * Process list of certificates received from CVCA
  *
- * @param {CVC[]} certlist the list of certificates
- *
+ * @param {ServiceRequest} sr the service request
+ * @param {ByteString[]} list the certificate list
+ * @type String
+ * @return The return code received from the other side
  */
-TCCService.prototype.importCertificates = function(certlist) {
-
-	var list = this.tcc.importCertificates(certlist);
-
-	if (list.length > 0) {
-		print("Warning: Could not import the following certificates");
-		for (var i = 0; i < list.length; i++) {
-			print(list[i]);
-		}
-	}
-}
-
-
-
-/**
- * Obtain a list of certificates from the parent CA using a web service
- *
- * @param {ServiceRequest} serviceRequest the underlying request
- * @returns a list of certificates
- * @type CVC[]
- */
-TCCService.prototype.getCACertificatesFromDVCA = function(sr) {
-
-	var soapConnection = new SOAPConnection(SOAPConnection.SOAP11);
-
-	var ns = new Namespace("uri:EAC-PKI-DV-Protocol/" + this.version);
-	var ns1 = new Namespace("uri:eacBT/" + this.version);
-
-	var request =
-		<ns:GetCACertificates xmlns:ns={ns} xmlns:ns1={ns1}>
-			<callbackIndicator>callback_not_possible</callbackIndicator>
-			<messageID>
-			</messageID>
-			<responseURL>
-			</responseURL>
-		</ns:GetCACertificates>;
-
-	if (sr.getMessageID()) {
-		request.callbackIndicator = "callback_possible";
-		request.messageID.ns1::messageID = sr.getMessageID();
-		request.responseURL.ns1::string = sr.getResponseURL();
-	}
-	
-	var response = soapConnection.call(this.parentURL, request);
-	
-	sr.setStatusInfo(response.Result.ns1::returnCode.toString());
+TCCService.prototype.processCertificateList = function(sr, list) {
 	var certlist = [];
-
-	if (response.Result.ns1::returnCode.toString() == ServiceRequest.OK_CERT_AVAILABLE) {
-		GPSystem.trace("Received certificates from DVCA:");
-		for each (var c in response.Result.ns1::certificateSeq.ns1::certificate) {
-			var cvc = new CVC(new ByteString(c, BASE64));
+	
+	if (list) {
+		for (var i = 0; i < list.length; i++) {
+			var cvc = new CVC(list[i]);
 			certlist.push(cvc);
 			GPSystem.trace(cvc);
 		}
+		sr.setCertificateList(certlist);
 	}
 
-	return certlist;
+	var path = sr.getRequestingNodePath();
+	if (!path) {
+		path = this.path;
+	}
+	var list = this.ss.insertCertificates2(this.crypto, certlist, true, path);
+
+	if (list.length > 0) {
+		var str = "Warning: Could not import the following certificates:\n";
+		for (var i = 0; i < list.length; i++) {
+			str += list[i].toString() + "\n";
+		}
+		sr.addMessage(str);
+	}
 }
 
 
@@ -256,48 +366,35 @@ TCCService.prototype.getCACertificatesFromDVCA = function(sr) {
  */
 TCCService.prototype.requestCertificateFromDVCA = function(sr) {
 
-	var soapConnection = new SOAPConnection(SOAPConnection.SOAP11);
-
-	var ns = new Namespace("uri:EAC-PKI-DV-Protocol/" + this.version);
-	var ns1 = new Namespace("uri:eacBT/" + this.version);
-
-	var request =
-		<ns:RequestCertificate xmlns:ns={ns} xmlns:ns1={ns1}>
-			<callbackIndicator>callback_not_possible</callbackIndicator>
-			<messageID>
-			</messageID>
-			<responseURL>
-			</responseURL>
-			<certReq>{sr.getCertificateRequest().getBytes().toString(BASE64)}</certReq>
-		</ns:RequestCertificate>
-
+	var con = new TAConnection(this.parentURL, false);
+	
 	if (sr.getMessageID()) {
-		request.callbackIndicator = "callback_possible";
-		request.messageID.ns1::messageID = sr.getMessageID();
-		request.responseURL.ns1::string = sr.getResponseURL();
+		var certlist = con.requestCertificate(sr.getCertificateRequest().getBytes(), sr.getMessageID(), sr.getResponseURL());
+	} else {
+		var certlist = con.requestCertificate(sr.getCertificateRequest().getBytes());
 	}
 
-	try	{
-		var response = soapConnection.call(this.parentURL, request);
-	}
-	catch(e) {
-		GPSystem.trace("SOAP call to " + this.parentURL + " failed : " + e);
-		throw new GPError("TCCService", GPError.DEVICE_ERROR, 0, "RequestCertificate failed with : " + e);
-	}
+	sr.setSOAPRequest(con.getLastRequest());
+	sr.setSOAPResponse(con.getLastResponse());
 
-	sr.setStatusInfo(response.Result.ns1::returnCode.toString());
-	var certlist = [];
+	con.close();
 
-	if (response.Result.ns1::returnCode.substr(0, 3) == "ok_") {
-		GPSystem.trace("Received certificates from DVCA:");
-		for each (var c in response.Result.ns1::certificateSeq.ns1::certificate) {
-			var cvc = new CVC(new ByteString(c, BASE64));
-			certlist.push(cvc);
-			GPSystem.trace(cvc);
-		}
-	}
-
+	sr.setStatusInfo(con.getLastReturnCode());
 	return certlist;
+}
+
+
+
+// ---- TR-03129 Service ------------------------------------------------------
+
+/**
+ * The TR-03129 Service port class
+ * 
+ * <p>See BSI-TR-03129 at www.bsi.bund.de for the specification of the TCC web service</p>
+ */
+function TCCTR3129ServicePort(service) {
+	this.service = service;
+	this.version = "1.1";
 }
 
 
@@ -309,7 +406,7 @@ TCCService.prototype.requestCertificateFromDVCA = function(sr) {
  * @returns the soapBody of the response
  * @type XML
  */
-TCCService.prototype.SendCertificates = function(soapBody) {
+TCCTR3129ServicePort.prototype.SendCertificates = function(soapBody) {
 	
 	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/" + this.version);
 	var ns1 = new Namespace("uri:eacBT/" + this.version);
@@ -322,7 +419,7 @@ TCCService.prototype.SendCertificates = function(soapBody) {
 		var msgid = soapBody.messageID.ns1::messageID.toString();
 	}
 	
-	var sr = this.getOutboundRequestByMessageId(msgid);
+	var sr = this.service.getOutboundRequestByMessageId(msgid);
 	if (sr) {
 		sr.setStatusInfo(statusInfo);
 		var returnCode = ServiceRequest.OK_RECEIVED_CORRECTLY;
@@ -332,7 +429,7 @@ TCCService.prototype.SendCertificates = function(soapBody) {
 			GPSystem.trace("Received certificates from DVCA:");
 			for each (var c in soapBody.certificateSeq.ns1::certificate) {
 				try	{
-					var cvc = new CVC(new ByteString(c, BASE64));
+					var cvc = new ByteString(c, BASE64);
 				}
 				catch(e) {
 					GPSystem.trace("Error decoding certificate: " + e);
@@ -343,7 +440,7 @@ TCCService.prototype.SendCertificates = function(soapBody) {
 				GPSystem.trace(cvc);
 			}
 
-			this.importCertificates(certlist);
+			this.service.processCertificateList(sr, certlist);
 		}
 		sr.setFinalStatusInfo(returnCode);
 	} else {
@@ -371,7 +468,7 @@ TCCService.prototype.SendCertificates = function(soapBody) {
  * @returns the soapBody of the response
  * @type XML
  */
-TCCService.prototype.GetCertificateChain = function(soapBody) {
+TCCTR3129ServicePort.prototype.GetCertificateChain = function(soapBody) {
 
 	// Create empty response
 	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/" + this.version);
@@ -396,7 +493,7 @@ TCCService.prototype.GetCertificateChain = function(soapBody) {
 	}
 	
 	if (returnCode == ServiceRequest.OK_CERT_AVAILABLE) {
-		var cl = this.tcc.getCertificateList(chr);
+		var cl = this.service.tcc.getCertificateList(chr);
 		if (cl == null) {
 			var returnCode = ServiceRequest.FAILURE_CAR_UNKNOWN;
 		} else {
@@ -435,7 +532,7 @@ TCCService.prototype.GetCertificateChain = function(soapBody) {
  * @returns the soapBody of the response
  * @type XML
  */
-TCCService.prototype.GetTASignature = function(soapBody) {
+TCCTR3129ServicePort.prototype.GetTASignature = function(soapBody) {
 
 	// Create empty response
 	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/" + this.version);
@@ -465,11 +562,11 @@ TCCService.prototype.GetTASignature = function(soapBody) {
 	}
 
 	if (returnCode == ServiceRequest.OK_SIGNATURE_AVAILABLE) {
-		var prk = this.tcc.certstore.getPrivateKey(this.path, chr);
+		var prk = this.service.tcc.certstore.getPrivateKey(this.path, chr);
 		if (prk == null) {
 			var returnCode = ServiceRequest.FAILURE_CHR_UNKNOWN;
 		} else {
-			var cvc = this.tcc.certstore.getCertificate(this.path, chr);
+			var cvc = this.service.tcc.certstore.getCertificate(this.path, chr);
 			
 			// ToDo: Check expiration of certificate
 			

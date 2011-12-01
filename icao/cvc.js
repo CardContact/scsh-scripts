@@ -581,6 +581,20 @@ CVC.prototype.isCountersignedRequest = function() {
 
 
 /**
+ * Determine if this certificate is expired
+ *
+ * @returns true, if certificate is expired
+ * @type Boolean
+ */
+CVC.prototype.isExpired = function() {
+	var now = new Date();
+	now.setHours(12, 0, 0, 0);
+	return (now.valueOf() > this.getCXD().valueOf());
+}
+
+
+
+/**
  * Verify certificate signature with public key
  *
  * @param {Key} puk the public key

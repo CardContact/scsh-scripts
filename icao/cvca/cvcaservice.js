@@ -31,18 +31,23 @@
  * 
  * @class Class implementing a CVCA web service according to TR-03129
  * @constructor
- * @param {path} path the file system path on the server containing the certificate store
- * @param {name} name the holder name for this CA
+ * @param {String} certstorepath the path to the certificate store
+ * @param {String} path the PKI path for the domestic part of this service (e.g. "/UTCVCA")
  */
-function CVCAService(path, name) {
+function CVCAService(certstorepath, path) {
 	BaseService.call(this);
-
-	this.name = name;
 	this.type = "CVCA";
 
-	this.ss = new CVCertificateStore(path);
-	this.cvca = new CVCCA(this.crypto, this.ss, name, name);
-	this.path = this.cvca.path;
+	if (path.substr(0, 1) == "/") {
+		this.path = path;
+		this.name = path.substr(1);
+	} else {
+		this.path = "/" + path;
+		this.name = path;
+	}
+
+	this.ss = new CVCertificateStore(certstorepath);
+	this.cvca = new CVCCA(this.crypto, this.ss, this.name, this.name);
 	this.dVCertificatePolicies = [];
 	this.version = "1.1";
 	this.changeKeySpecification("brainpoolP256r1withSHA256");
@@ -138,6 +143,18 @@ CVCAService.prototype.getTR3129ServicePort = function() {
 
 
 /**
+ * Returns true if this CVCA is operational.
+ *
+ * @returns true if this CVCA is operational
+ * @type boolean
+ */
+CVCAService.prototype.isOperational = function() {
+	return this.cvca.isOperational();
+}
+
+
+
+/**
  * Obtain a service port for SPOC service calls
  * 
  * @type Object
@@ -205,6 +222,26 @@ CVCAService.prototype.isHolderIDofSPOC = function(country, holderID) {
 		}
 	}
 	return false;
+}
+
+
+
+/**
+ * Returns a list of CVCAs known at this CVCA. Our own is always first in the list.
+ *
+ * @type String[]
+ * @return the list of CVCA holderIDs
+ */
+CVCAService.prototype.getCVCAList = function() {
+	var cvcas = [];
+	cvcas.push(this.name);
+	var holders = this.ss.listHolders("/");
+	for each (var holder in holders) {
+		if (holder != this.name) {
+			cvcas.push(holder);
+		}
+	}
+	return cvcas;
 }
 
 
@@ -379,9 +416,7 @@ CVCAService.prototype.checkRequestOuterSignature = function(sr) {
 		}
 		sr.addMessage("Passed - Outer signature provided by " + outerCAR + " is valid");
 		
-		var now = new Date();
-		now.setHours(12, 0, 0, 0);
-		if (now.valueOf() > cvc.getCXD().valueOf()) {
+		if (cvc.isExpired()) {
 			sr.addMessage("FAILED - Certificate " + outerCAR +" for verification of outer signature is expired");
 			sr.setStatusInfo(ServiceRequest.FAILURE_EXPIRED);
 			return false;
@@ -875,6 +910,20 @@ CVCAService.prototype.processSPOCRequestCertificate = function(sr) {
 // ---- GUI handling ----------------------------------------------------------
 
 /**
+ * Return the current certificate list for the CVCA requested instance
+ *
+ * @param {String} cvcaHolderId holder ID of the CVCA in question
+ * @type CVC[]
+ * @return the list of CV certificates from the self-signed root to the DV
+ */
+CVCAService.prototype.getCertificateList = function(cvcaHolderId) {
+	var cvcca = new CVCCA(this.crypto, this.ss, null, null, "/" + cvcaHolderId);
+	return cvcca.getCertificateList();
+}
+
+
+
+/**
  * Process request and send certificates
  *
  * @param {Number} index the index into the work queue identifying the request or -1 to return the last entry
@@ -986,6 +1035,45 @@ CVCAService.prototype.getCACertificatesFromSPOCs = function() {
 		var result = this.getCACertificatesFromSPOC(this.spoclist[i].country);
 	}
 	return result;
+}
+
+
+
+/**
+ * Send a message to the SPOC
+ *
+ * @param {String} country the two letter country code
+ * @param {String} subject the subject of the message
+ * @param {String} body the body of the message
+ * @param {String} msgid the messageID of the related message or undefined
+ * @type String
+ * @return the returnCode from the remote system
+ */
+CVCAService.prototype.sendGeneralMessage = function(country, subject, body, msgid) {
+	var spoc = this.spocmap[country];
+
+	if (!spoc) {
+		throw new GPError("CVCAService", GPError.INVALID_DATA, 0, "No SPOC found for " + country);
+	}
+	
+	if (typeof(msgid) == "undefined") {
+		msgid = this.newMessageID();
+	}
+
+	var sr = new ServiceRequest(msgid, spoc.url);
+	sr.setType(ServiceRequest.SPOC_GENERAL_MESSAGE);
+	this.addOutboundRequest(sr);
+	
+	sr.setMessage("Subject: " + subject + "\n\n" + body);
+
+	var con = new SPOCConnection(spoc.url);
+	var callerID = this.name.substr(0, 2);
+	var list = con.generalMessage(callerID, msgid, subject, body);
+	con.close();
+
+	sr.setStatusInfo(con.getLastReturnCode());
+	sr.setFinalStatusInfo(con.getLastReturnCode());
+	return sr.getStatusInfo();
 }
 
 
@@ -1295,6 +1383,7 @@ SPOCServicePort.prototype.SendCertificatesRequest = function(soapBody) {
 
 	if (statusInfo == ServiceRequest.NEW_CERT_AVAILABLE_NOTIFICATION) {
 		var sr = new ServiceRequest();
+		sr.setType(ServiceRequest.SPOC_SEND_CERTIFICATES);
 		this.service.addInboundRequest(sr);
 	} else {
 		var msgid = soapBody.ns::messageID.toString();
@@ -1349,6 +1438,46 @@ SPOCServicePort.prototype.SendCertificatesRequest = function(soapBody) {
 		<csn:SendCertificatesResponse xmlns:csn={ns}>
 			<csn:result>{returnCode}</csn:result>
 		</csn:SendCertificatesResponse>
+
+	return response;
+}
+
+
+
+/**
+ * Implements GeneralMessage web service from CSN_369791 (SPOC)
+ *
+ * @param {XML} soapBody the SOAP request body
+ * @type XML
+ * @return the SOAP response body
+ */
+SPOCServicePort.prototype.GeneralMessageRequest = function(soapBody) {
+
+	var ns = new Namespace("http://namespaces.unmz.cz/csn369791");
+
+	var callerID = soapBody.ns::callerID.toString();
+	var msgid = soapBody.ns::messageID.toString();
+
+	var sr = new ServiceRequest(msgid);
+	sr.setType(ServiceRequest.SPOC_GENERAL_MESSAGE);
+	sr.setSOAPRequest(soapBody);
+	sr.setCallerID(callerID);
+	var subject = soapBody.ns::subject.toString();
+	var body = soapBody.ns::body.toString();
+	
+	sr.setMessage("Subject: " + subject + "\n\n" + body);
+	this.service.addInboundRequest(sr);
+
+	var returnCode = ServiceRequest.OK;
+	sr.setStatusInfo(returnCode);
+	sr.setFinalStatusInfo(returnCode);
+	
+	var response =
+		<csn:GeneralMessageResponse xmlns:csn={ns}>
+			<csn:result>{returnCode}</csn:result>
+		</csn:GeneralMessageResponse>
+
+	sr.setSOAPResponse(response);
 
 	return response;
 }

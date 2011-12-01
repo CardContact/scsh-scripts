@@ -82,6 +82,30 @@ TAConnection.prototype.getLastReturnCode = function() {
 
 
 /**
+ * Gets the last request
+ *
+ * @returns the last request
+ * @type XML
+ */
+TAConnection.prototype.getLastRequest = function() {
+	return this.request;
+}
+
+
+
+/**
+ * Gets the last response
+ *
+ * @returns the last response
+ * @type XML
+ */
+TAConnection.prototype.getLastResponse = function() {
+	return this.response;
+}
+
+
+
+/**
  * Close the connector and release allocated resources
  */
 TAConnection.prototype.close = function() {
