@@ -18,4 +18,5 @@
     <EF fid="0F" type="T" format="asn1" name="EF.DG15 (Active authentication public key info)" />
     <EF fid="10" type="T" format="asn1" name="EF.DG16 (Person to notify)" />
     <EF fid="1D" type="T" format="asn1" name="EF.SOD" />
+    <EF fid="1C" type="T" format="asn1" name="EF.CVCA" />
 </FileStructure>    

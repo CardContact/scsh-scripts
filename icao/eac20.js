@@ -244,6 +244,40 @@ EAC20.prototype.readCardSecurity = function() {
 
 
 /**
+ * Read EF.ChipSecurity and process security infos
+ */
+EAC20.prototype.readChipSecurity = function() {
+	var cs = new CardFile(this.mf, ":011B");
+	var csbin = cs.readBinary();
+	var cstlv = new ASN1(csbin);
+	GPSystem.trace("EF.ChipSecurity:");
+	GPSystem.trace(cstlv);
+	
+	var cms = new CMSSignedData(csbin);
+
+	var certs = cms.getSignedDataCertificates();
+
+	GPSystem.trace("EF.ChipSecurity Certificates:");
+	for (var i = 0; i < certs.length; i++) {
+		GPSystem.trace(certs[i]);
+	}
+
+	print("DocSigner Signature is " + (cms.isSignerInfoSignatureValid(0) ? "valid" : "not valid"));
+
+	var data = cms.getSignedContent();
+
+//	print(data);
+
+	var cstlv = new ASN1(data);
+
+//	print(cstlv);
+	
+	this.processSecurityInfos(cstlv, true);
+}
+
+
+
+/**
  * Return the list of PACEInfo objects
  *
  * @return the list of PACEInfo objects read from the card, indexed by the parameterId
