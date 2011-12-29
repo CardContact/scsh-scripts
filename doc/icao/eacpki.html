@@ -49,6 +49,11 @@
 <p>EAC-PKIs are used for Machine Readable Travel Documents (MRTD), some national identification cards and electronic
    drivers licenses. As the name implies, it is used to control which terminal is allowed to access certain data
    on the chip embedded in an identification document.</p>
+<p>The test setup described in this document stores private keys in PKCS#8 files on the server disk. It you are
+   looking for a more secure key store for your EAC keys, take a look at the 
+   <a href="http://www.cardcontact.de/products/SmartCard-HSM_V1.0.pdf">SmartCard-HSM</a>.</p>
+<p>Development of the upcoming version has nearly finished. The new version is a complete rewrite in order to
+   support RSA and full cross-border certification using the Single Point Of Contact (SPOC) protocol.</p>
 <h2>Overview</h2>
 <p>An EAC-PKI consists of a three layer PKI:</p>
 <ol>
