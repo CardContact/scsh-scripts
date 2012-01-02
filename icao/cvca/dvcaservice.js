@@ -740,6 +740,26 @@ DVCAService.prototype.renewCertificate = function(async, forceinitial, cvca) {
 
 
 
+/**
+ * Handle a manually submitted certificate request
+ *
+ * @param {String} forCVCA the CVCA holder id this request is directed at
+ * @param {ByteString} req the binary certicate request
+ * @type String
+ * @return the result processing the request
+ */
+DVCAService.prototype.processUploadedCertificateRequest = function(forCVCA, req) {
+	var sr = new ServiceRequest();
+	
+	sr.setType(ServiceRequest.TERM_REQUEST_CERTIFICATE);
+	sr.setRawCertificateRequest(req);
+	
+	this.processRequestCertificate(sr, true);
+	return sr.getStatusInfo();
+}
+
+
+
 // Outbound webservices
 
 /**
@@ -748,13 +768,18 @@ DVCAService.prototype.renewCertificate = function(async, forceinitial, cvca) {
  * @param {ServiceRequest} serviceRequest the underlying request
  */
 DVCAService.prototype.sendCertificates = function(serviceRequest) {
-	var con = new TAConnection(serviceRequest.getResponseURL(), true);
-	con.version = this.version;
-	var list = TAConnection.fromCVCList(serviceRequest.getCertificateList());
-	var result = con.sendCertificates(list, serviceRequest.getMessageID(), serviceRequest.getStatusInfo());
-	serviceRequest.setSOAPRequest(con.getLastRequest());
-	serviceRequest.setSOAPResponse(con.getLastResponse());
-	serviceRequest.setFinalStatusInfo(result);
+	if (serviceRequest.getResponseURL()) {
+		var con = new TAConnection(serviceRequest.getResponseURL(), true);
+		con.version = this.version;
+		var list = TAConnection.fromCVCList(serviceRequest.getCertificateList());
+		var result = con.sendCertificates(list, serviceRequest.getMessageID(), serviceRequest.getStatusInfo());
+		serviceRequest.setSOAPRequest(con.getLastRequest());
+		serviceRequest.setSOAPResponse(con.getLastResponse());
+		serviceRequest.setFinalStatusInfo(result);
+	} else {
+		serviceRequest.addMessage("Could not send certificate due to missing response URL");
+	}
+	
 	serviceRequest.addMessage("Completed");
 }
 

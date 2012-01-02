@@ -599,22 +599,26 @@ CVCAService.prototype.compileCertificateList = function(ouronly) {
  * @param {ServiceRequest} serviceRequest the underlying request
  */
 CVCAService.prototype.sendCertificates = function(serviceRequest) {
-	if (serviceRequest.getType().substr(0, 4) == "SPOC") {
-		var con = new SPOCConnection(serviceRequest.getResponseURL());
-		var callerID = this.name.substr(0, 2);
-		var certbin = SPOCConnection.fromCVCList(serviceRequest.getCertificateList());
-		var result = con.sendCertificates(certbin, callerID, serviceRequest.getMessageID(), serviceRequest.getStatusInfo());
-		serviceRequest.setSOAPRequest(con.request);
-		serviceRequest.setSOAPResponse(con.response);
+	if (serviceRequest.getResponseURL()) {
+		if (serviceRequest.getType().substr(0, 4) == "SPOC") {
+			var con = new SPOCConnection(serviceRequest.getResponseURL());
+			var callerID = this.name.substr(0, 2);
+			var certbin = SPOCConnection.fromCVCList(serviceRequest.getCertificateList());
+			var result = con.sendCertificates(certbin, callerID, serviceRequest.getMessageID(), serviceRequest.getStatusInfo());
+			serviceRequest.setSOAPRequest(con.request);
+			serviceRequest.setSOAPResponse(con.response);
+		} else {
+			var con = new TAConnection(serviceRequest.getResponseURL(), true);
+			con.version = this.version;
+			var certbin = TAConnection.fromCVCList(serviceRequest.getCertificateList());
+			var result = con.sendCertificates(certbin, serviceRequest.getMessageID(), serviceRequest.getStatusInfo());
+			serviceRequest.setSOAPRequest(con.request);
+			serviceRequest.setSOAPResponse(con.response);
+		}
+		serviceRequest.setFinalStatusInfo(result);
 	} else {
-		var con = new TAConnection(serviceRequest.getResponseURL(), true);
-		con.version = this.version;
-		var certbin = TAConnection.fromCVCList(serviceRequest.getCertificateList());
-		var result = con.sendCertificates(certbin, serviceRequest.getMessageID(), serviceRequest.getStatusInfo());
-		serviceRequest.setSOAPRequest(con.request);
-		serviceRequest.setSOAPResponse(con.response);
+		serviceRequest.addMessage("Could not send certificate due to missing response URL");
 	}
-	serviceRequest.setFinalStatusInfo(result);
 	serviceRequest.addMessage("Completed");
 }
 
@@ -1073,6 +1077,32 @@ CVCAService.prototype.sendGeneralMessage = function(country, subject, body, msgi
 
 	sr.setStatusInfo(con.getLastReturnCode());
 	sr.setFinalStatusInfo(con.getLastReturnCode());
+	return sr.getStatusInfo();
+}
+
+
+
+/**
+ * Handle a manually submitted certificate request
+ *
+ * @param {String} forCVCA the CVCA holder id this request is directed at
+ * @param {ByteString} req the binary certicate request
+ * @type String
+ * @return the result processing the request
+ */
+CVCAService.prototype.processUploadedCertificateRequest = function(forCVCA, req) {
+	var sr = new ServiceRequest();
+	
+	if (forCVCA == this.name) {
+		sr.setType(ServiceRequest.DVCA_REQUEST_CERTIFICATE);
+	} else {
+		sr.setType(ServiceRequest.DVCA_REQUEST_FOREIGN_CERTIFICATE);
+		sr.setForeignCAR(forCVCA + "00000");
+	}
+
+	sr.setRawCertificateRequest(req);
+	
+	this.processRequestCertificate(sr, true);
 	return sr.getStatusInfo();
 }
 

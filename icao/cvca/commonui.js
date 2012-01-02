@@ -106,8 +106,6 @@ CommonUI.prototype.generateTemplate = function(url) {
  * @param {HttpResponse} req the response object
  * @param {String[]} url the array of URL elements
  * @param {XML} page the page contents
- * @returns the HTML page template
- * @type XML
  */
 CommonUI.prototype.sendPage = function(req, res, url, page) {
 	var t = this.generateTemplate(url);

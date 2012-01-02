@@ -84,8 +84,8 @@ DVCAUI.prototype.handleRequestCertificateInboundRequestDetails = function(req, r
 		
 		var actions = <ul/>
 		
+		CommonUI.addAction(actions, "request", op.index, ServiceRequest.OK_CERT_AVAILABLE);
 		if (sr.getMessageID()) {
-			CommonUI.addAction(actions, "request", op.index, ServiceRequest.OK_CERT_AVAILABLE);
 			CommonUI.addAction(actions, "request", op.index, ServiceRequest.FAILURE_SYNTAX);
 			CommonUI.addAction(actions, "request", op.index, ServiceRequest.FAILURE_INNER_SIGNATURE);
 			CommonUI.addAction(actions, "request", op.index, ServiceRequest.FAILURE_OUTER_SIGNATURE);
@@ -104,6 +104,43 @@ DVCAUI.prototype.handleRequestCertificateInboundRequestDetails = function(req, r
 		var div = page.div.(@id == "request");
 		div.h2 += <a href={url[url.length - 1] + "?" + req.queryString + "&action=download"}>Download...</a>
 
+		var certlist = sr.getCertificateList();
+		if (certlist && (certlist.length > 0)) {
+			var cvc = certlist[certlist.length - 1];
+			var div = page.div.(@id == "certificates");
+			div.h2 += <a href={"cvc?path=/" + this.currentCVCA + "/" + cvc.getCAR().getHolder() + "/" + cvc.getCHR().getHolder() + "&chr=" + cvc.getCHR() + "&op=download"}>Download...</a>
+		}
+
+		this.sendPage(req, res, url, page);
+	}
+}
+
+
+
+/**
+ * Handle a page to upload DVCA certificate requests
+ * @param {HttpRequest} req the request object
+ * @param {HttpResponse} req the response object
+ * @param {String[]} url array of URL path elements
+ */
+DVCAUI.prototype.handleRequestUpload = function(req, res, url) {
+	if (req.method == "POST") {
+		var req = req.parameters.cvreq;
+		assert(req instanceof ByteString);
+		if (req.length > 0) {
+			var status = this.service.processUploadedCertificateRequest(this.currentCVCA, req);
+		} else {
+			var status = "Empty upload";
+		}
+		this.serveRefreshPage(req, res, url, status);
+	} else {
+		page =	<div>
+					<p>Select a binary encoded certificate request for upload.</p>
+					<form action="" method="post" enctype="multipart/form-data">
+						<input type="file" name="cvreq" size="65"/>
+					<input type="submit" value="Upload"/>
+					</form>
+				</div>
 		this.sendPage(req, res, url, page);
 	}
 }
@@ -144,6 +181,7 @@ DVCAUI.prototype.serveStatusPage = function(req, res, url) {
 				<li><a href={"?op=initialasync&cvca=" + this.currentCVCA}>Request initial certificate asynchronously</a></li>
 				<li><a href={"?op=renew&cvca=" + this.currentCVCA}>Renew certificate synchronously</a></li>
 				<li><a href={"?op=renewasync&cvca=" + this.currentCVCA}>Renew certificate asynchronously</a></li>
+				<li><a href={url[0] + "/upload"}>Upload terminal certificate request</a></li>
 			</ul>
 			<p><a href={url[0] + "/holderlist?path=" + this.service.getPathFor(this.currentCVCA) }>Browse Terminals...</a></p>
 		</div>
@@ -263,6 +301,9 @@ DVCAUI.prototype.handleInquiry = function(req, res) {
 			break;
 		case "outrequest":
 			this.handleOutboundRequestDetails(req, res, url);
+			break;
+		case "upload":
+			this.handleRequestUpload(req, res, url);
 			break;
 		default:
 			res.setStatus(HttpResponse.SC_NOT_FOUND);

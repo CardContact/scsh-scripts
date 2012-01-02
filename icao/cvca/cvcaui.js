@@ -161,12 +161,12 @@ CVCAUI.prototype.handleRequestCertificateRequestDetails = function(req, res, url
 
 		var actions = <ul/>
 		
+		if (sr.getType() == ServiceRequest.DVCA_REQUEST_FOREIGN_CERTIFICATE) {
+			CommonUI.addAction(actions, "request", op.index, ServiceRequest.OK_REQUEST_FORWARDED);
+		} else {
+			CommonUI.addAction(actions, "request", op.index, ServiceRequest.OK_CERT_AVAILABLE);
+		}
 		if (sr.getMessageID()) {
-			if (sr.getType() == ServiceRequest.DVCA_REQUEST_FOREIGN_CERTIFICATE) {
-				CommonUI.addAction(actions, "request", op.index, ServiceRequest.OK_REQUEST_FORWARDED);
-			} else {
-				CommonUI.addAction(actions, "request", op.index, ServiceRequest.OK_CERT_AVAILABLE);
-			}
 			CommonUI.addAction(actions, "request", op.index, ServiceRequest.FAILURE_SYNTAX);
 			CommonUI.addAction(actions, "request", op.index, ServiceRequest.FAILURE_INNER_SIGNATURE);
 			CommonUI.addAction(actions, "request", op.index, ServiceRequest.FAILURE_OUTER_SIGNATURE);
@@ -179,7 +179,7 @@ CVCAUI.prototype.handleRequestCertificateRequestDetails = function(req, res, url
 			CommonUI.addAction(actions, "request", op.index, ServiceRequest.FAILURE_INTERNAL_ERROR);
 		}
 
-		actions.li += <li><a href={"getcert?index=" + op.index + "&action=delete"}>Delete</a> request</li>
+		actions.li += <li><a href={"request?index=" + op.index + "&action=delete"}>Delete</a> request</li>
 
 		var div = page.div.(@id == "actions");
 		div.h2 = <h2>Possible Actions</h2>
@@ -188,6 +188,43 @@ CVCAUI.prototype.handleRequestCertificateRequestDetails = function(req, res, url
 		var div = page.div.(@id == "request");
 		div.h2 += <a href={url[url.length - 1] + "?" + req.queryString + "&action=download"}>Download...</a>
 
+		var certlist = sr.getCertificateList();
+		if (certlist && (certlist.length > 0)) {
+			var cvc = certlist[certlist.length - 1];
+			var div = page.div.(@id == "certificates");
+			div.h2 += <a href={"cvc?path=/" + cvc.getCAR().getHolder() + "/" + cvc.getCHR().getHolder() + "&chr=" + cvc.getCHR() + "&op=download"}>Download...</a>
+		}
+
+		this.sendPage(req, res, url, page);
+	}
+}
+
+
+
+/**
+ * Handle a page to upload DVCA certificate requests
+ * @param {HttpRequest} req the request object
+ * @param {HttpResponse} req the response object
+ * @param {String[]} url array of URL path elements
+ */
+CVCAUI.prototype.handleRequestUpload = function(req, res, url) {
+	if (req.method == "POST") {
+		var req = req.parameters.cvreq;
+		assert(req instanceof ByteString);
+		if (req.length > 0) {
+			var status = this.service.processUploadedCertificateRequest(this.currentCVCA, req);
+		} else {
+			var status = "Empty upload";
+		}
+		this.serveRefreshPage(req, res, url, status);
+	} else {
+		page =	<div>
+					<p>Select a binary encoded certificate request for upload.</p>
+					<form action="" method="post" enctype="multipart/form-data">
+						<input type="file" name="cvreq" size="60"/>
+					<input type="submit" value="Upload"/>
+					</form>
+				</div>
 		this.sendPage(req, res, url, page);
 	}
 }
@@ -292,7 +329,7 @@ CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 	
 		l.li += <li><a href={ "?op=getcacertificates&cvca=" + this.currentCVCA }>Get CA certificate via SPOC</a></li>
 	}
-	
+	l.li += <li><a href={url[0] + "/upload"}>Upload DVCA certificate request</a></li>
 
 	var certlist = this.service.getCertificateList(this.currentCVCA);
 	
@@ -391,6 +428,9 @@ CVCAUI.prototype.handleInquiry = function(req, res) {
 			break;
 		case "outrequest":
 			this.handleOutboundRequestDetails(req, res, url);
+			break;
+		case "upload":
+			this.handleRequestUpload(req, res, url);
 			break;
 		default:
 			res.setStatus(HttpResponse.SC_NOT_FOUND);
