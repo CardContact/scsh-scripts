@@ -219,9 +219,41 @@ CVCAUI.prototype.handleRequestUpload = function(req, res, url) {
 		this.serveRefreshPage(req, res, url, status);
 	} else {
 		page =	<div>
+					<h1>DVCA Certificate Request Upload</h1>
 					<p>Select a binary encoded certificate request for upload.</p>
 					<form action="" method="post" enctype="multipart/form-data">
 						<input type="file" name="cvreq" size="60"/>
+					<input type="submit" value="Upload"/>
+					</form>
+				</div>
+		this.sendPage(req, res, url, page);
+	}
+}
+
+
+
+/**
+ * Handle a page to upload CVCA certificates
+ * @param {HttpRequest} req the request object
+ * @param {HttpResponse} req the response object
+ * @param {String[]} url array of URL path elements
+ */
+CVCAUI.prototype.handleCertificateUpload = function(req, res, url) {
+	if (req.method == "POST") {
+		var cvcert = req.parameters.cvcert;
+		assert(cvcert instanceof ByteString);
+		if (cvcert.length > 0) {
+			var status = this.service.processUploadedCertificate(this.currentCVCA, cvcert);
+		} else {
+			var status = "Empty upload";
+		}
+		this.serveRefreshPage(req, res, url, status);
+	} else {
+		page =	<div>
+					<h1>CVCA Certificate Upload</h1>
+					<p>Select a binary encoded certificate for upload.</p>
+					<form action="" method="post" enctype="multipart/form-data">
+						<input type="file" name="cvcert" size="60"/>
 					<input type="submit" value="Upload"/>
 					</form>
 				</div>
@@ -329,7 +361,8 @@ CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 	
 		l.li += <li><a href={ "?op=getcacertificates&cvca=" + this.currentCVCA }>Get CA certificate via SPOC</a></li>
 	}
-	l.li += <li><a href={url[0] + "/upload"}>Upload DVCA certificate request</a></li>
+	l.li += <li><a href={url[0] + "/uploadcertificate"}>Upload CVCA certificate</a></li>
+	l.li += <li><a href={url[0] + "/uploadrequest"}>Upload DVCA certificate request</a></li>
 
 	var certlist = this.service.getCertificateList(this.currentCVCA);
 	
@@ -351,7 +384,7 @@ CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 			var cvc = certlist[i];
 			var selfsigned = cvc.getCHR().equals(cvc.getCAR());
 			var refurl = url[0] + "/cvc?" + 
-							"path=" + this.service.path + "&" +
+							"path=/" + this.currentCVCA + "&" +
 							"chr=" + cvc.getCHR().toString() + "&" +
 							"selfsigned=" + selfsigned;
 			t.tr += <tr>
@@ -429,8 +462,11 @@ CVCAUI.prototype.handleInquiry = function(req, res) {
 		case "outrequest":
 			this.handleOutboundRequestDetails(req, res, url);
 			break;
-		case "upload":
+		case "uploadrequest":
 			this.handleRequestUpload(req, res, url);
+			break;
+		case "uploadcertificate":
+			this.handleCertificateUpload(req, res, url);
 			break;
 		default:
 			res.setStatus(HttpResponse.SC_NOT_FOUND);

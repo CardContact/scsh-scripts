@@ -385,6 +385,46 @@ TCCService.prototype.requestCertificateFromDVCA = function(sr) {
 
 
 
+/**
+ * Handle a manually submitted certificate
+ *
+ * @param {String} forCVCA the CVCA holder id this certificate is most likely for
+ * @param {ByteString} cert the binary certicate
+ * @type String
+ * @return the result processing the request
+ */
+TCCService.prototype.processUploadedCertificate = function(forCVCA, cert) {
+	var sr = new ServiceRequest();
+	sr.setType(ServiceRequest.DVCA_SEND_CERTIFICATE);
+	this.addInboundRequest(sr);
+	
+	try	{
+		var cvc = new CVC(cert);
+	}
+	catch(e) {
+		GPSystem.trace("Error decoding certificate: " + e);
+		sr.addMessage("Error decoding certificate: " + e);
+		sr.setStatusInfo(ServiceRequest.FAILURE_SYNTAX);
+		return sr.getStatusInfo();
+	}
+
+	var certlist = [cvc];
+	sr.setCertificateList(certlist);
+
+	var unprocessed = this.ss.insertCertificates2(this.crypto, certlist, true, "/" + forCVCA);
+	if (unprocessed.length > 0) {
+		sr.addMessage("FAILED - The following certificates could not be processed:");
+		for each (var cvc in unprocessed) {
+			sr.addMessage(cvc.toString());
+		}
+	}
+	
+	sr.setStatusInfo(ServiceRequest.OK);
+	return sr.getStatusInfo();
+}
+
+
+
 // ---- TR-03129 Service ------------------------------------------------------
 
 /**
