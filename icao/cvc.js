@@ -566,6 +566,23 @@ CVC.prototype.isAuthenticatedRequest = function() {
 
 
 /**
+ * Determine if this is a certificate request
+ *
+ * @returns true, if certificate request
+ * @type Boolean
+ */
+CVC.prototype.isCertificateRequest = function() {
+	if (isAuthenticatedRequest()) {
+		return true;
+	}
+	
+	var ced = this.getCED();
+	return ced == null;
+}
+
+
+
+/**
  * Determine if this is a countersigned authenticated request
  *
  * @returns true, if countersigned authenticated request
