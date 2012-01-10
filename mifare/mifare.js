@@ -94,11 +94,13 @@ Mifare.crc8 = function(data) {
 /**
  * Read UID using Get Data command as defined in PCSC Part 3, chapter 3.2.2.1.3
  *
+ * <p>FEIG readers require Le='04' to automatically switch to Mifare if the card supports both T=CL and Mifare.</p>
+ * 
  * @type ByteString
  * @return the 4 byte UID
  */
 Mifare.prototype.getUID = function() {
-	return this.card.sendApdu(0xFF, 0xCA, 0x00, 0x00, 0, [0x9000]);
+	return this.card.sendApdu(0xFF, 0xCA, 0x00, 0x00, 4, [0x9000]);
 }
 
 
