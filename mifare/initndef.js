@@ -21,7 +21,7 @@
  *  along with OpenSCDP; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
- * @fileoverview Example to initialize an application directory on a Mifare 1K card
+ * @fileoverview Example to initialize an NDEF application directory on a Mifare 1K card
  */
 
 load("mifare.js");
