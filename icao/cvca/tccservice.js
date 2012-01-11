@@ -29,11 +29,11 @@
 /**
  * Create a terminal control center (TCC) instance with web services
  *
- * @param {String} certstorepath the path to the certificate store
+ * @param {String} certstore the path to the certificate store or the store itself
  * @param {String} path the PKI path for the domestic part of this service (e.g. "/UTCVCA/UTDVCA/UTTERM")
  * @param {String} parentURL the URL of the parent CA's webservice
  */ 
-function TCCService(certstorepath, path, parentURL) {
+function TCCService(certstore, path, parentURL) {
 	BaseService.call(this);
 
 	this.type = "TCC";
@@ -49,8 +49,11 @@ function TCCService(certstorepath, path, parentURL) {
 	
 	this.crypto = new Crypto();
 	
-	this.ss = new CVCertificateStore(certstorepath);
-	this.tcc = new CVCCA(this.crypto, this.ss, this.name, this.parent, path);
+	if (typeof(certstore) == "string") {
+		this.ss = new CVCertificateStore(certstore);
+	} else {
+		this.ss = certstore;
+	}
 	this.version = "1.1";
 	this.rsaKeySize = 1024;
 	this.namingscheme = TCCService.CountryCodeAndSequence;
@@ -199,7 +202,7 @@ TCCService.prototype.getPathFor = function(cvcaHolderId, termHolderId) {
 TCCService.prototype.getCVCCA = function(cvcaHolderID, termHolderID) {
 	var path = this.getPathFor(cvcaHolderID, termHolderID);
 
-	var cvcca = new CVCCA(this.crypto, this.ss, null, null, path);
+	var cvcca = new CVCCA(this.ss.getCrypto(), this.ss, null, null, path);
 
 	if ((cvcaHolderID != this.root) && (this.namingscheme == TCCService.CountryCodeAndSequence)) {
 		cvcca.setCountryCodeForSequence(cvcaHolderID.substr(0, 2));

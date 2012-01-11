@@ -494,7 +494,7 @@ EAC2CVCertificateGenerator.prototype.generateCVCertificate = function(signingKey
 	var signature = this.crypto.sign(signingKey, mech, body.getBytes());
 
 	if (CVC.isECDSA(outertaOID)) {
-		var keylen = signingKey.getComponent(Key.ECC_P).length;
+		var keylen = signingKey.getSize() >> 3;
 		var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature, keylen));
 	} else {
 		var signatureValue = new ASN1("Signature", 0x5F37, signature);

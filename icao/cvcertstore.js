@@ -142,7 +142,6 @@ CVCertificateStore.saveXMLFile = function(filename, xml) {
 	fw.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
 	fw.write(xml.toXMLString());
 	fw.close();
-
 }
 
 
@@ -193,6 +192,21 @@ CVCertificateStore.checkPath = function(path) {
 		(path.indexOf("~") >= 0)) {
 		throw new GPError("CVCertificateStore", GPError.INVALID_ARGUMENTS, 0, "Path \"" + path + "\" contains illegal characters");
 	}
+}
+
+
+
+/**
+ * Return a suitable crypto object. This may be overwritten by derived classes
+ *
+ * @type Crypto
+ * @return the Crypto object
+ */
+CVCertificateStore.prototype.getCrypto = function() {
+	if (this.crypto == undefined) {
+		this.crypto = new Crypto();
+	}
+	return this.crypto;
 }
 
 

@@ -29,11 +29,11 @@
 /**
  * Create a DVCA instance with web services
  *
- * @param {String} certstorepath the path to the certificate store
+ * @param {String} certstore the path to the certificate store or the certificate store itself
  * @param {String} path the PKI path for the domestic part of this service (e.g. "/UTCVCA/UTDVCA")
  * @param {String} parentURL the URL of the parent CA's webservice
  */ 
-function DVCAService(certstorepath, path, parentURL) {
+function DVCAService(certstore, path, parentURL) {
 	BaseService.call(this);
 
 	this.type = "DVCA";
@@ -47,7 +47,11 @@ function DVCAService(certstorepath, path, parentURL) {
 	
 	this.parentURL = parentURL;
 	
-	this.ss = new CVCertificateStore(certstorepath);
+	if (typeof(certstore) == "string") {
+		this.ss = new CVCertificateStore(certstore);
+	} else {
+		this.ss = certstore;
+	}
 	this.terminalCertificatePolicies = [];
 	this.version = "1.1";
 	this.rsaKeySize = 1536;
@@ -201,7 +205,7 @@ DVCAService.prototype.getPathFor = function(cvcaHolderId) {
  * @return the CVCCA object
  */
 DVCAService.prototype.getCVCCAForPath = function(path) {
-	var cvcca = new CVCCA(this.crypto, this.ss, null, null, path);
+	var cvcca = new CVCCA(this.ss.getCrypto(), this.ss, null, null, path);
 	return cvcca;
 }
 

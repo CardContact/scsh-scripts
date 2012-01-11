@@ -304,7 +304,7 @@ EAC2CVRequestGenerator.prototype.generateCVRequest = function(privateKey) {
 	var mech = CVC.getSignatureMech(this.taOID);
 	var signature = this.crypto.sign(privateKey, mech, body.getBytes());
 	if (CVC.isECDSA(this.taOID)) {
-		var keylen = privateKey.getComponent(Key.ECC_P).length;
+		var keylen = privateKey.getSize() >> 3;
 		var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature, keylen));
 	} else {
 		var signatureValue = new ASN1("Signature", 0x5F37, signature);
@@ -340,7 +340,7 @@ EAC2CVRequestGenerator.signAuthenticatedCVRequest = function(crypto, request, au
 	var signature = crypto.sign(authenticationKey, mech, signatureInput);
 
 	if (CVC.isECDSA(outertaOID)) {
-		var keylen = authenticationKey.getComponent(Key.ECC_P).length;
+		var keylen = authenticationKey.getSize() >> 3;
 		var signatureValue = new ASN1("Signature", 0x5F37, ECCUtils.unwrapSignature(signature, keylen));
 	} else {
 		var signatureValue = new ASN1("Signature", 0x5F37, signature);

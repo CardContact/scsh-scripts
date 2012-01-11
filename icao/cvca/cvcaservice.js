@@ -31,10 +31,10 @@
  * 
  * @class Class implementing a CVCA web service according to TR-03129
  * @constructor
- * @param {String} certstorepath the path to the certificate store
+ * @param {String} certstore the path to the certificate store or the certificate store itself
  * @param {String} path the PKI path for the domestic part of this service (e.g. "/UTCVCA")
  */
-function CVCAService(certstorepath, path) {
+function CVCAService(certstore, path) {
 	BaseService.call(this);
 	this.type = "CVCA";
 
@@ -46,8 +46,13 @@ function CVCAService(certstorepath, path) {
 		this.name = path;
 	}
 
-	this.ss = new CVCertificateStore(certstorepath);
-	this.cvca = new CVCCA(this.crypto, this.ss, this.name, this.name);
+	if (typeof(certstore) == "string") {
+		this.ss = new CVCertificateStore(certstore);
+		this.cvca = new CVCCA(this.crypto, this.ss, this.name, this.name);
+	} else {
+		this.ss = certstore;
+		this.cvca = new CVCCA(this.ss.getCrypto(), this.ss, this.name, this.name);
+	}
 	this.dVCertificatePolicies = [];
 	this.version = "1.1";
 	this.changeKeySpecification("brainpoolP256r1withSHA256");
@@ -67,10 +72,10 @@ CVCAService.KeySpecification = [
 	{ id: "brainpoolP512r1withSHA512", name: "brainpoolP512r1 with SHA-512", oid: CVC.id_TA_ECDSA_SHA_512, curve: new ByteString("brainpoolP512r1", OID), keysize: 0 },
 	{ id: "RSA2048V15withSHA1", name: "RSA 2048 PKCS#1 V1.5 with SHA-1", oid: CVC.id_TA_RSA_v1_5_SHA_1, curve: null, keysize: 2048 },
 	{ id: "RSA2048V15withSHA256", name: "RSA 2048 PKCS#1 V1.5 with SHA-256", oid: CVC.id_TA_RSA_v1_5_SHA_256, curve: null, keysize: 2048 },
-//	{ id: "RSA2048V15withSHA512", name: "RSA 2048 PKCS#1 V1.5 with SHA-512", oid: CVC.id_TA_RSA_v1_5_SHA_512, curve: null, keysize: 2048 },
+	{ id: "RSA2048V15withSHA512", name: "RSA 2048 PKCS#1 V1.5 with SHA-512", oid: CVC.id_TA_RSA_v1_5_SHA_512, curve: null, keysize: 2048 },
 	{ id: "RSA2048PSSwithSHA1", name: "RSA 2048 PSS with SHA-1", oid: CVC.id_TA_RSA_PSS_SHA_1, curve: null, keysize: 2048 },
-	{ id: "RSA2048PSSwithSHA256", name: "RSA 2048 PSS with SHA-256", oid: CVC.id_TA_RSA_PSS_SHA_256, curve: null, keysize: 2048 }
-//	{ id: "RSA2048PSSwithSHA512", name: "RSA 2048 PSS with SHA-512", oid: CVC.id_TA_RSA_PSS_SHA_512, curve: null, keysize: 2048 },
+	{ id: "RSA2048PSSwithSHA256", name: "RSA 2048 PSS with SHA-256", oid: CVC.id_TA_RSA_PSS_SHA_256, curve: null, keysize: 2048 },
+	{ id: "RSA2048PSSwithSHA512", name: "RSA 2048 PSS with SHA-512", oid: CVC.id_TA_RSA_PSS_SHA_512, curve: null, keysize: 2048 }
 ];
 
 CVCAService.KeySpecificationMap = [];

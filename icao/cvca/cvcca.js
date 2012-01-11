@@ -151,6 +151,25 @@ CVCCA.prototype.setCountryCodeForSequence = function(countryseq) {
  * @type CVC
  */
 CVCCA.prototype.generateRequest = function(car, forceinitial, signinitial) {
+	if (this.certstore.sc != undefined) {
+		return this.generateRequestHSM(car, forceinitial, signinitial);
+	} else {
+		return this.generateRequestPKCS8(car, forceinitial, signinitial);
+	}
+}
+
+
+
+/**
+ * Generate a certificate request using a PKCS#8 based private key
+ *
+ * @param {PublicKeyReference} car the CA at which this request is addressed
+ * @param {boolean} forceInitial force an initial request, even if a current certificate is available
+ * @param {boolean} signinitial sign with initial key (sequence = 00000)
+ * @return the certificate request
+ * @type CVC
+ */
+CVCCA.prototype.generateRequestPKCS8 = function(car, forceinitial, signinitial) {
 
 	// Obtain key parameter
 
@@ -212,6 +231,25 @@ CVCCA.prototype.generateRequest = function(car, forceinitial, signinitial) {
 	
 	req = new CVC(req);
 	
+	this.certstore.storeRequest(this.path, req);
+	
+	return req;
+}
+
+
+
+/**
+ * Generate a certificate request using a SmartCard-HSM based private key
+ *
+ * @param {PublicKeyReference} car the CA at which this request is addressed
+ * @param {boolean} forceInitial force an initial request, even if a current certificate is available
+ * @param {boolean} signinitial sign with initial key (sequence = 00000)
+ * @return the certificate request
+ * @type CVC
+ */
+CVCCA.prototype.generateRequestHSM = function(car, forceinitial, signinitial) {
+
+	var req = this.certstore.generateRequest(this.path, car, forceinitial, signinitial, this.keyspec, this.taAlgorithmIdentifier);
 	this.certstore.storeRequest(this.path, req);
 	
 	return req;
@@ -335,6 +373,8 @@ CVCCA.prototype.generateCertificate = function(req, policy) {
 	generator.setIncludeDomainParameters(policy.includeDomainParameter);
 	generator.setExtensions(policy.extensions);
 	var prk = this.certstore.getPrivateKey(this.path, car);
+	
+	print(prk);
 	var cvc = generator.generateCVCertificate(prk, signingTAAlgorithmIdentifier);
 	
 	return cvc;
