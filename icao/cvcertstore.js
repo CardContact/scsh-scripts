@@ -630,7 +630,7 @@ CVCertificateStore.prototype.getCertificateChain = function(path, tochr, fromcar
 
 
 /**
- * List certificates stored for given PKI element
+ * List certificates stored for given PKI element sorted by CHR
  *
  * @param {String} path the relative path of the PKI element (e.g. "/UTCVCA1/UTDVCA1/UTTERM")
  * @returns a list of certificates, possibly empty
@@ -655,6 +655,7 @@ CVCertificateStore.prototype.listCertificates = function(path) {
 			result.push(cvc);
 		}
 	}
+	result.sort(function(a,b) { return a.getCHR().toString() < b.getCHR().toString() ? -1 : (a.getCHR().toString() > b.getCHR().toString() ? 1 : 0) } );
 	return result;
 }
 
