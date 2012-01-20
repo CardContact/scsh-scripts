@@ -581,15 +581,12 @@ CVCAService.prototype.determineCertificateList = function(req) {
 CVCAService.prototype.compileCertificateList = function(ouronly) {
 	var certlist = this.cvca.getCertificateList();
 	if (!ouronly) {
-		for each (var spoc in this.spoclist) {
-			for each (var holderId in spoc.holderIDs) {
-				var path = "/" + holderId;
-				print("HolderID: " + holderId);
-				var chr = this.ss.getCurrentCHR(path);
-				print("Current chr: " + chr);
-				if (chr != null) {
-					certlist = certlist.concat(this.ss.getCertificateChain(path, chr));
-				}
+		var cvcalist = this.getCVCAList();
+		for (var i = 1; i < cvcalist.length; i++) {
+			var path = "/" + cvcalist[i];
+			var chr = this.ss.getCurrentCHR(path);
+			if (chr != null) {
+				certlist = certlist.concat(this.ss.getCertificateChain(path, chr));
 			}
 		}
 	}
@@ -776,6 +773,10 @@ CVCAService.prototype.forwardRequestToSPOC = function(relatedsr) {
 	var country = relatedsr.getForeignCAR().substr(0, 2);
 	var spoc = this.spocmap[country];
 
+	if (!spoc) {
+		throw new GPError("CVCAService", GPError.INVALID_DATA, 0, "No SPOC found for " + country + ". Please add in configureservices.js");
+	}
+	
 	msgid = this.newMessageID();
 
 	var sr = new ServiceRequest(msgid, spoc.url, relatedsr.getCertificateRequest());
@@ -1062,7 +1063,7 @@ CVCAService.prototype.sendGeneralMessage = function(country, subject, body, msgi
 	var spoc = this.spocmap[country];
 
 	if (!spoc) {
-		throw new GPError("CVCAService", GPError.INVALID_DATA, 0, "No SPOC found for " + country);
+		throw new GPError("CVCAService", GPError.INVALID_DATA, 0, "No SPOC found for " + country + ". Please add in configureservices.js");
 	}
 	
 	if (typeof(msgid) == "undefined") {
