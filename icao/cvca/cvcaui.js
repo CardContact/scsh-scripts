@@ -332,8 +332,12 @@ CVCAUI.prototype.serveStatusPage = function(req, res, url) {
 		var l = page.ul;
 	
 		if (this.service.isOperational()) {
-			l.li += <li><a href="?op=link">Generate link certificate without domain parameter</a></li>
-			l.li += <li><a href="?op=linkdp">Generate link certificate with domain parameter</a></li>
+			if (this.service.currentKeySpec.substr(0, 3) == "RSA") {
+				l.li += <li><a href="?op=link">Generate link certificate</a></li>
+			} else {
+				l.li += <li><a href="?op=link">Generate link certificate without domain parameter</a></li>
+				l.li += <li><a href="?op=linkdp">Generate link certificate with domain parameter</a></li>
+			}
 		} else {
 			l.li += <li><a href="?op=linkdp">Generate root certificate</a></li>
 		}

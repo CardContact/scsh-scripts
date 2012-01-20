@@ -276,7 +276,7 @@
 	this.t.call("cvca-fu?op=change&keyspec=brainpoolP256r1withSHA256");
 
 	this.log(" Generate link certificate");
-	this.t.call("cvca-fu?op=link", "Operation completed");
+	this.t.call("cvca-fu?op=linkdp", "Operation completed");
 
 	this.log(" SPOC asynchronous GetCACertificates");
 	this.t.call("cvca?op=getcacertificates", "ok_reception_ack");

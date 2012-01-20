@@ -58,6 +58,7 @@ function CVCAService(certstore, path) {
 	this.changeKeySpecification("brainpoolP256r1withSHA256");
 	this.spoclist = [];
 	this.spocmap = [];
+	this.lock = new java.util.concurrent.locks.ReentrantLock();
 }
 
 CVCAService.prototype = new BaseService();
@@ -1006,31 +1007,48 @@ CVCAService.prototype.changeKeySpecification = function(newSpec) {
  * @param {boolean} withDP true to include domain parameter in certificate
  */
 CVCAService.prototype.generateLinkCertificate = function(withDP) {
-	// Create a new request
-	var req = this.cvca.generateRequest(null, false);
-	print("Link/Root certificate request: " + req);
-	print(req.getASN1());
+	if (!withDP) {			// Missing domain parameter in link only allowed if algorithm does not change
+		var chr = this.ss.getCurrentCHR(this.path);
+		if (chr) {
+			var algo = this.ss.getDefaultPublicKeyOID(this.path);
+			var s = CVCAService.KeySpecificationMap[this.currentKeySpec];
+			if (CVC.isECDSA(s.oid) && !algo.equals(s.oid)) {
+				throw new GPError("CVCAService", GPError.INVALID_DATA, 0, "Can not generate link certificate without domain parameter if algorithm changes");
+			}
+		}
+	}
 	
-	if (this.cvca.isOperational()) {
-		this.linkCertificatePolicy.includeDomainParameter = withDP;
+	try	{
+		this.lock.lock();
+		// Create a new request
+		var req = this.cvca.generateRequest(null, false);
+		print("Link/Root certificate request: " + req);
+		print(req.getASN1());
+	
+		if (this.cvca.isOperational()) {
+			this.linkCertificatePolicy.includeDomainParameter = withDP;
 
-		// Create link certificate based on request
-		var cert = this.cvca.generateCertificate(req, this.linkCertificatePolicy);
-		print("Link certificate: " + cert);
+			// Create link certificate based on request
+			var cert = this.cvca.generateCertificate(req, this.linkCertificatePolicy);
+			print("Link certificate: " + cert);
+			print(cert.getASN1());
+
+			// Import certificate into store, making it the most current certificate
+		
+			this.cvca.importCertificate(cert);
+		}
+	
+		// Create root certificate based on request
+		var cert = this.cvca.generateCertificate(req, this.rootCertificatePolicy);
+		print("Root certificate: " + cert);
 		print(cert.getASN1());
 
 		// Import certificate into store, making it the most current certificate
-		
 		this.cvca.importCertificate(cert);
 	}
-	
-	// Create root certificate based on request
-	var cert = this.cvca.generateCertificate(req, this.rootCertificatePolicy);
-	print("Root certificate: " + cert);
-	print(cert.getASN1());
-
-	// Import certificate into store, making it the most current certificate
-	this.cvca.importCertificate(cert);
+	finally {
+		this.lock.unlock();
+	}
 }
 
 
