@@ -850,7 +850,7 @@ CVCAService.prototype.processRequestForeignCertificate = function(sr, callback) 
 		}
 
 		if (sr.getStatusInfo() == ServiceRequest.OK_RECEPTION_ACK) {
-			if (callback != "callback_possible") {
+			if (!callback) {
 				// The SPOC accepted the request for asychronous processing, but the calling DVCA does not
 				// support asynchronous callback. In this case the certificate request is lost the the foreign
 				// CVCA.
