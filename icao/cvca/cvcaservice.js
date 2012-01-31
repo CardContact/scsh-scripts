@@ -721,6 +721,8 @@ CVCAService.prototype.processSPOCGetCACertificates = function(sr) {
 	} else {
 		sr.setCertificateList(this.compileCertificateList(true));
 		sr.setStatusInfo(ServiceRequest.OK_CERT_AVAILABLE);
+		sr.setFinalStatusInfo(ServiceRequest.OK_CERT_AVAILABLE);
+		sr.addMessage("Completed");
 	}
 }
 
@@ -905,7 +907,8 @@ CVCAService.prototype.processSPOCRequestCertificate = function(sr) {
 
 		var cert = this.issueCertificate(req);
 		// Add certificate list to response
-		certlist.push(cert);
+//		certlist.push(cert);
+		certlist.splice(0, 0, cert);
 		sr.setCertificateList(certlist);
 		sr.setFinalStatusInfo(sr.getStatusInfo());		// Nothing else will happen
 		sr.addMessage("Completed");
@@ -952,9 +955,11 @@ CVCAService.prototype.processRequest = function(index) {
 
 			sr.addMessage("Starting secondary check");
 			if (this.checkRequestSemantics(sr)) {		// Still valid
+				sr.setStatusInfo(ServiceRequest.OK_CERT_AVAILABLE);
 				var certlist = this.determineCertificateList(req);
 				var cert = this.issueCertificate(req);
-				certlist.push(cert);
+				certlist.splice(0, 0, cert);
+//				certlist.push(cert);
 				sr.setCertificateList(certlist);
 			} else {
 				GPSystem.trace("Request " + req + " failed secondary check");
@@ -1363,12 +1368,12 @@ SPOCServicePort.prototype.generateResponse = function(type, sr) {
 	var certlist = sr.getCertificateList();
 	if (certlist && (certlist.length > 0)) {
 		var response =
-			<csn:RequestCertificateResponse xmlns:csn={ns}>
+			<csn:{type} xmlns:csn={ns}>
 				<!--Optional:-->
 				<csn:certificateSequence>
 				</csn:certificateSequence>
 				<csn:result>{sr.getStatusInfo()}</csn:result>
-			</csn:RequestCertificateResponse>
+			</csn:{type}>
 	
 		var list = response.ns::certificateSequence;
 
@@ -1378,9 +1383,9 @@ SPOCServicePort.prototype.generateResponse = function(type, sr) {
 		}
 	} else {
 		var response =
-			<csn:RequestCertificateResponse xmlns:csn={ns}>
+			<csn:{type} xmlns:csn={ns}>
 				<csn:result>{sr.getStatusInfo()}</csn:result>
-			</csn:RequestCertificateResponse>
+			</csn:{type}>
 	}
 	return response;
 }
@@ -1520,7 +1525,7 @@ SPOCServicePort.prototype.SendCertificatesRequest = function(soapBody) {
 			sr.addMessage("SendCertificates - Forwarding " + certlist.length + " certificates from SPOC in response to DVCA message " + relatedsr.getMessageID());
 			relatedsr.addMessage("SendCertificates - Forwarding to DVCA " + certlist.length + " certificates from SPOC (" + callerID + ") in response to message " + sr.getMessageID());
 			this.service.sendCertificates(relatedsr);
-			returnCode = relatedsr.getFinalStatusInfo();
+//			returnCode = relatedsr.getFinalStatusInfo();
 		}
 		sr.setFinalStatusInfo(returnCode);
 	} else {

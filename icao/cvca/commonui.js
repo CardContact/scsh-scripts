@@ -405,7 +405,7 @@ CommonUI.prototype.renderServiceRequestListPage = function(srlist, isout, url) {
 		}
 		
 		t.tr += <tr>
-					<td><a href={refurl}>{messageID.substr(0, 21)}</a></td>
+					<td><a href={refurl}>{messageID.substr(0, 14)}</a></td>
 					<td>{reqstr}</td>
 					<td>{status.substr(0, 21)}</td>
 					<td>{finalStatus.substr(0, 21)}</td>

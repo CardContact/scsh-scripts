@@ -58,7 +58,7 @@ CVCAUI.prototype.sendGeneralMessage = function(msg, cvca, messageID) {
 		cvca = this.currentCVCA;
 	}
 
-	return this.service.sendGeneralMessage(cvca.substr(0, 2), "Message from " + cvca + " send " + Date(), msg, messageID);
+	return this.service.sendGeneralMessage(cvca.substr(0, 2), "Message from " + this.service.name + " send " + Date(), msg, messageID);
 }
 
 
@@ -143,6 +143,7 @@ CVCAUI.prototype.handleRequestCertificateRequestDetails = function(req, res, url
 			this.serveRefreshPage(req, res, url);
 			break;
 		case "download":
+			var certreq = sr.getCertificateRequest();
 			var reqbin = certreq.getBytes();
 			res.setContentType("application/octet-stream");
 			res.setContentLength(reqbin.length);
@@ -190,7 +191,7 @@ CVCAUI.prototype.handleRequestCertificateRequestDetails = function(req, res, url
 
 		var certlist = sr.getCertificateList();
 		if (certlist && (certlist.length > 0)) {
-			var cvc = certlist[certlist.length - 1];
+			var cvc = certlist[0];			// First certificate is of DV by definition
 			var div = page.div.(@id == "certificates");
 			div.h2 += <a href={"cvc?path=/" + cvc.getCAR().getHolder() + "/" + cvc.getCHR().getHolder() + "&chr=" + cvc.getCHR() + "&op=download"}>Download...</a>
 		}
