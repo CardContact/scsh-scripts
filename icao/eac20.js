@@ -545,16 +545,27 @@ EAC20.prototype.verifyCertificateChain = function(cvcchain) {
  *
  * @param {Key} termkey the terminal private key
  * @param {ASN1} auxdata auxiliary data (tag '67') to be included in terminal authentication
+ * @param {Crypto} crypto optional alternative crypto provider (e.g. for key in SmartCard-HSM)
  */
-EAC20.prototype.performTerminalAuthentication = function(termkey, auxdata) {
+EAC20.prototype.performTerminalAuthentication = function(termkey, auxdata, crypto) {
 	var signatureInput = this.performTerminalAuthenticationSetup(auxdata);
 	
-	var signature = this.crypto.sign(termkey, Crypto.ECDSA_SHA256, signatureInput);
+	if (crypto == undefined) {
+		var crypto = this.crypto;
+	}
+	var signature = crypto.sign(termkey, Crypto.ECDSA_SHA256, signatureInput);
 
 	GPSystem.trace("Signature (Encoded):");
 	GPSystem.trace(signature);
 
-	signature = ECCUtils.unwrapSignature(signature, termkey.getComponent(Key.ECC_P).length);
+	var keysize = termkey.getSize();
+	if (keysize < 0) {
+		keysize = termkey.getComponent(Key.ECC_P).length;
+	} else {
+		keysize >>= 3;
+	}
+
+	signature = ECCUtils.unwrapSignature(signature, keysize);
 	GPSystem.trace("Signature (Encoded):");
 	GPSystem.trace(signature);
 
