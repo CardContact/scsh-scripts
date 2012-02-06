@@ -190,7 +190,7 @@ EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
  *
  */
 EAC20.prototype.readCardInfo = function() {
-	var mf = new CardFile(card, ":3F00");
+	var mf = new CardFile(this.card, ":3F00");
 	this.mf = mf;
 	
 	var ci = new CardFile(mf, ":011C");
@@ -396,13 +396,13 @@ EAC20.prototype.performPACE = function(parameterId, pwdid, pwd, chat) {
 		crt.append(chat.getBytes());
 	}
 
-	card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x22, 0xC1, 0xA4, crt.toByteString(), [0x9000, 0x63C2, 0x63C1, 0x63C0, 0x6283 ]);
+	this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x22, 0xC1, 0xA4, crt.toByteString(), [0x9000, 0x63C2, 0x63C1, 0x63C0, 0x6283 ]);
 
 
 	// General Authenticate
 	var dado = new ASN1(0x7C);
 
-	dadobin = card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO|Card.RENC, 0x10, 0x86, 0x00, 0x00, dado.getBytes(), 0, [0x9000]);
+	dadobin = this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO|Card.RENC, 0x10, 0x86, 0x00, 0x00, dado.getBytes(), 0, [0x9000]);
 
 	var dado = new ASN1(dadobin);
 	assert(dado.tag == 0x7C);
@@ -419,7 +419,7 @@ EAC20.prototype.performPACE = function(parameterId, pwdid, pwd, chat) {
 
 	var dado = new ASN1(0x7C, new ASN1(0x81, mappingData));
 
-	dadobin = card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO|Card.RENC, 0x10, 0x86, 0x00, 0x00, dado.getBytes(), 0, [0x9000]);
+	dadobin = this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO|Card.RENC, 0x10, 0x86, 0x00, 0x00, dado.getBytes(), 0, [0x9000]);
 
 	var dado = new ASN1(dadobin);
 	assert(dado.tag == 0x7C);
@@ -433,7 +433,7 @@ EAC20.prototype.performPACE = function(parameterId, pwdid, pwd, chat) {
 
 	var dado = new ASN1(0x7C, new ASN1(0x83, ephemeralPublicKeyIfd));
 
-	dadobin = card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO|Card.RENC, 0x10, 0x86, 0x00, 0x00, dado.getBytes(), 0, [0x9000]);
+	dadobin = this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO|Card.RENC, 0x10, 0x86, 0x00, 0x00, dado.getBytes(), 0, [0x9000]);
 
 	var dado = new ASN1(dadobin);
 	assert(dado.tag == 0x7C);
@@ -451,7 +451,7 @@ EAC20.prototype.performPACE = function(parameterId, pwdid, pwd, chat) {
 
 	var dado = new ASN1(0x7C, new ASN1(0x85, authToken));
 
-	dadobin = card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO|Card.RENC, 0x00, 0x86, 0x00, 0x00, dado.getBytes(), 0, [0x9000, 0x63C2, 0x63C1, 0x63C0, 0x6283 ]);
+	dadobin = this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO|Card.RENC, 0x00, 0x86, 0x00, 0x00, dado.getBytes(), 0, [0x9000, 0x63C2, 0x63C1, 0x63C0, 0x6283 ]);
 
 	var dado = new ASN1(dadobin);
 	GPSystem.trace(dado);
@@ -478,7 +478,7 @@ EAC20.prototype.performPACE = function(parameterId, pwdid, pwd, chat) {
 	if (pace.verifyAuthenticationToken(authTokenDO.value)) {
 		GPSystem.trace("Authentication token valid");
 
-		sm = new IsoSecureChannel(crypto, IsoSecureChannel.SSC_SYNC_ENC_POLICY);
+		sm = new IsoSecureChannel(this.crypto, IsoSecureChannel.SSC_SYNC_ENC_POLICY);
 		sm.setEncKey(pace.kenc);
 		sm.setMacKey(pace.kmac);
 		sm.setMACSendSequenceCounter(new ByteString("00000000000000000000000000000000", HEX));
@@ -675,7 +675,7 @@ EAC20.prototype.performChipAuthentication = function() {
 
 	var dado = new ASN1(0x7C, new ASN1(0x80, ephemeralPublicKeyIfd));
 
-	var dadobin = card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO|Card.RENC, 0x00, 0x86, 0x00, 0x00, dado.getBytes(), 0, [0x9000]);
+	var dadobin = this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO|Card.RENC, 0x00, 0x86, 0x00, 0x00, dado.getBytes(), 0, [0x9000]);
 	
 //	print(dadobin);
 
@@ -697,7 +697,7 @@ EAC20.prototype.performChipAuthentication = function() {
 	if (result) {
 		GPSystem.trace("Authentication token valid");
 
-		var sm = new IsoSecureChannel(crypto, IsoSecureChannel.SSC_SYNC_ENC_POLICY);
+		var sm = new IsoSecureChannel(this.crypto, IsoSecureChannel.SSC_SYNC_ENC_POLICY);
 		sm.setEncKey(this.ca.kenc);
 		sm.setMacKey(this.ca.kmac);
 		sm.setMACSendSequenceCounter(new ByteString("00000000000000000000000000000000", HEX));
@@ -735,7 +735,7 @@ EAC20.prototype.performRestrictedIdentification = function(keyId, sectorPublicKe
 
 //	print("GA Input: " + dado.getBytes());
 	
-	var dadobin = card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO|Card.RENC, 0x00, 0x86, 0x00, 0x00, dado.getBytes(), 65535, [0x9000]);
+	var dadobin = this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO|Card.RENC, 0x00, 0x86, 0x00, 0x00, dado.getBytes(), 65535, [0x9000]);
 	
 //	print(dadobin);
 
