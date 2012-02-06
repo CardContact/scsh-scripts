@@ -218,7 +218,7 @@ CVCAService.prototype.getSPOC = function(country) {
  * @return The holderID is related to the SPOC
  */
 CVCAService.prototype.isHolderIDofSPOC = function(country, holderID) {
-	var spoc = this.spocmap[country];
+	var spoc = this.getSPOC(country);
 	if (!spoc) {
 		return false;
 	}
@@ -635,7 +635,11 @@ CVCAService.prototype.sendCertificates = function(serviceRequest) {
  * @return the returnCode from the remote system
  */
 CVCAService.prototype.getCACertificatesFromSPOC = function(country) {
-	var spoc = this.spocmap[country];
+	var spoc = this.getSPOC(country);
+
+	if (!spoc) {
+		throw new GPError("CVCAService", GPError.INVALID_DATA, 0, "No SPOC found for " + country + ". Please add setup in configureservices.js");
+	}
 
 	msgid = this.newMessageID();
 
@@ -711,7 +715,7 @@ CVCAService.prototype.processSPOCGetCACertificates = function(sr) {
 	var spoc = this.getSPOC(callerID);
 	if (!spoc) {
 		sr.setStatusInfo(ServiceRequest.FAILURE_REQUEST_NOT_ACCEPTED);
-		sr.setMessage("No SPOC for callerID " + callerID + " known");
+		sr.setMessage("No SPOC for callerID " + callerID + " known. Missing in configure.js ?");
 		return;
 	}
 	sr.setResponseURL(spoc.url);
@@ -774,10 +778,10 @@ CVCAService.prototype.processRequestCertificate = function(sr, callback) {
  */
 CVCAService.prototype.forwardRequestToSPOC = function(relatedsr) {
 	var country = relatedsr.getForeignCAR().substr(0, 2);
-	var spoc = this.spocmap[country];
+	var spoc = this.getSPOC(country);
 
 	if (!spoc) {
-		throw new GPError("CVCAService", GPError.INVALID_DATA, 0, "No SPOC found for " + country + ". Please add in configureservices.js");
+		throw new GPError("CVCAService", GPError.INVALID_DATA, 0, "No SPOC found for " + country + ". Please add setup in configureservices.js");
 	}
 	
 	msgid = this.newMessageID();
@@ -842,7 +846,13 @@ CVCAService.prototype.processRequestForeignCertificate = function(sr, callback) 
 	// Check basic semantics of request
 	this.checkRequestSemantics(sr);
 	if (this.checkPolicy(sr, callback)) {
-		this.forwardRequestToSPOC(sr);
+		try	{
+			this.forwardRequestToSPOC(sr);
+		}
+		catch(e) {
+			sr.addMessage(e);
+			sr.setStatusInfo(ServiceRequest.OK_RECEPTION_ACK);
+		}
 
 		var certlist = sr.getCertificateList();
 		if (certlist) {
@@ -1083,10 +1093,10 @@ CVCAService.prototype.getCACertificatesFromSPOCs = function() {
  * @return the returnCode from the remote system
  */
 CVCAService.prototype.sendGeneralMessage = function(country, subject, body, msgid) {
-	var spoc = this.spocmap[country];
+	var spoc = this.getSPOC(country);
 
 	if (!spoc) {
-		throw new GPError("CVCAService", GPError.INVALID_DATA, 0, "No SPOC found for " + country + ". Please add in configureservices.js");
+		throw new GPError("CVCAService", GPError.INVALID_DATA, 0, "No SPOC found for " + country + ". Please add setup in configureservices.js");
 	}
 	
 	if (typeof(msgid) == "undefined") {
