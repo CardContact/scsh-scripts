@@ -201,12 +201,15 @@ ChipAuthenticationDomainParameterInfo.prototype.toString = function() {
  */
 function ChipAuthentication(crypto, algo, domparam) {
 	this.crypto = crypto;
-	this.algo = algo.toString(OID);
+	this.algo = algo;
 	this.domparam = domparam;
 	this.includeDPinAuthToken = false;
 	
 //	print(ECCUtils.ECParametersToString(domparam));
 }
+
+
+ChipAuthentication.id_CA_ECDH_3DES_CBC_CBC = (new ByteString("id-CA-ECDH-3DES-CBC-CBC", OID));
 
 
 
@@ -231,13 +234,14 @@ ChipAuthentication.prototype.deriveKey = function(input, counter, nonce) {
 
 	var key = new Key();
 
-	var digest = this.crypto.digest(Crypto.SHA_1, input);
-	key.setComponent(Key.AES, digest.left(16));
-	
-/*	
-	if (this.algo == PACE.id_PACE_ECDH_GM_3DES_CBC_CBC) {
+	if (this.algo.equals(ChipAuthentication.id_CA_ECDH_3DES_CBC_CBC)) {
 		var digest = this.crypto.digest(Crypto.SHA_1, input);
 		key.setComponent(Key.DES, digest.left(16));
+	} else {
+		var digest = this.crypto.digest(Crypto.SHA_1, input);
+		key.setComponent(Key.AES, digest.left(16));
+	}
+/*
 	} else if (this.algo == PACE.id_PACE_ECDH_GM_AES_CBC_CMAC_128) {
 		var digest = this.crypto.digest(Crypto.SHA_1, input);
 		key.setComponent(Key.AES, digest.left(16));
@@ -298,7 +302,7 @@ ChipAuthentication.prototype.performKeyAgreement = function(publicKey, nonce) {
 	if (publicKey.byteAt(0) != 0x04) 
 		throw new GPError("ChipAuthentication", GPError.INVALID_DATA, 0, "Public key must start with '04'");
 
-	if (!(nonce instanceof ByteString))
+	if ((nonce != undefined) && !(nonce instanceof ByteString))
 		throw new GPError("ChipAuthentication", GPError.INVALID_TYPE, 0, "nonce must be of type ByteString");
 
 	var l = (publicKey.length - 1) >> 1;
@@ -324,7 +328,7 @@ ChipAuthentication.prototype.performKeyAgreement = function(publicKey, nonce) {
  * @type Boolean
  */
 ChipAuthentication.prototype.verifyAuthenticationToken = function(authToken) {
-	var t = PACE.encodePublicKey(this.algo, this.pukCA, this.includeDPinAuthToken);
+	var t = PACE.encodePublicKey(this.algo.toString(OID), this.pukCA, this.includeDPinAuthToken);
 	GPSystem.trace("Authentication Token:");
 	GPSystem.trace(t);
 	

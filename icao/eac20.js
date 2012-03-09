@@ -49,6 +49,14 @@ function EAC20(crypto, card) {
 	
 	// ToDo: Determine from CVCA Certificate
 	this.oidTerminalAuthentication = EAC20.id_TA_ECDSA_SHA_256;
+	
+	this.PACEInfos = new Array();
+	this.PACEDPs = new Array();
+
+	this.CAInfos = new Array();
+	this.CADPs = new Array();
+
+	this.isEAC111 = false;
 }
 
 
@@ -98,6 +106,7 @@ EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
 //			print("TA : " + o);
 		} else if (oid.value.equals(id_PK_ECDH)) {
 //			print("CA Public Key: " + o);
+			this.cAPublicKeyObject = o;
 			this.cAPublicKey = o.get(1).get(1).value.bytes(1);
 //			print(this.cAPublicKey);
 		} else if (oid.value.startsWith(id_PACE) == id_PACE.length) {
@@ -186,23 +195,45 @@ EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
 
 
 /**
+ * Select LDS, marking this a EAC 1.11 session
+ *
+ * @param {Boolean} useEAC2 use EAC2.x instead of EAC1.x
+ */
+EAC20.prototype.selectLDS = function(useEAC2) {
+	this.df = new CardFile(this.card, "#A0000002471001");
+	if (!useEAC2) {
+		this.isEAC111 = true;
+	}
+}
+
+
+
+/**
+ * Read EF.DG14 and process security infos
+ *
+ */
+EAC20.prototype.readDG14 = function() {
+
+	var ci = new CardFile(this.getDF(), ":010E");
+	var cibin = ci.readBinary();
+	var citlv = new ASN1(cibin);
+	print(citlv);
+	
+	this.processSecurityInfos(citlv.get(0), false);
+}
+
+
+
+/**
  * Read EF.CardInfo and process security infos
  *
  */
 EAC20.prototype.readCardInfo = function() {
-	var mf = new CardFile(this.card, ":3F00");
-	this.mf = mf;
-	
-	var ci = new CardFile(mf, ":011C");
+
+	var ci = new CardFile(this.getDF(), ":011C");
 	var cibin = ci.readBinary();
 	var citlv = new ASN1(cibin);
 //	print(citlv);
-	
-	this.PACEInfos = new Array();
-	this.PACEDPs = new Array();
-
-	this.CAInfos = new Array();
-	this.CADPs = new Array();
 	
 	this.processSecurityInfos(citlv, false);
 }
@@ -213,7 +244,7 @@ EAC20.prototype.readCardInfo = function() {
  * Read EF.CardSecurity and process security infos
  */
 EAC20.prototype.readCardSecurity = function() {
-	var cs = new CardFile(this.mf, ":011D");
+	var cs = new CardFile(this.getDF(), ":011D");
 	var csbin = cs.readBinary();
 	var cstlv = new ASN1(csbin);
 	GPSystem.trace("EF.CardSecurity:");
@@ -247,7 +278,7 @@ EAC20.prototype.readCardSecurity = function() {
  * Read EF.ChipSecurity and process security infos
  */
 EAC20.prototype.readChipSecurity = function() {
-	var cs = new CardFile(this.mf, ":011B");
+	var cs = new CardFile(this.getDF(), ":011B");
 	var csbin = cs.readBinary();
 	var cstlv = new ASN1(csbin);
 	GPSystem.trace("EF.ChipSecurity:");
@@ -326,13 +357,101 @@ EAC20.prototype.getCADomainParameterInfos = function() {
 
 
 /**
- * Return the MF access object with the associated secure channel
+ * Return the MF access object with the associated secure channel. Deprecated use getDF instead
  *
  * @return the MF card file object
  * @type CardFile
  */
 EAC20.prototype.getMF = function() {
-	return this.mf;
+	return this.df;
+}
+
+
+
+/**
+ * Return the DF access object with the associated secure channel
+ *
+ * @return the DF card file object
+ * @type CardFile
+ */
+EAC20.prototype.getDF = function() {
+	if (typeof(this.df) == "undefined") {
+		this.df = new CardFile(this.card, ":3F00");
+	}
+	return this.df;
+}
+
+
+
+/**
+ * Perform BAC using the provided Kenc and Kmac values.
+ *
+ * @param {Key} kenc the key Kenc
+ * @param {Key} kmac the key Kmac
+ */
+EAC20.prototype.performBAC = function(kenc, kmac) {
+
+	// GET CHALLENGE
+	var rndicc = this.card.sendApdu(0x00, 0x84, 0x00, 0x00, 0x08, [0x9000]);
+
+	var rndifd = this.crypto.generateRandom(8);
+	var kifd = this.crypto.generateRandom(16);
+
+	var plain = rndifd.concat(rndicc).concat(kifd);
+
+	var cryptogram = this.crypto.encrypt(kenc, Crypto.DES_CBC, plain, new ByteString("0000000000000000", HEX));
+
+	var mac = this.crypto.sign(kmac, Crypto.DES_MAC_EMV, cryptogram.pad(Crypto.ISO9797_METHOD_2));
+
+	// EXTERNAL AUTHENTICATE
+	var autresp = this.card.sendApdu(0x00, 0x82, 0x00, 0x00, cryptogram.concat(mac), 0);
+	
+	if (this.card.SW != 0x9000) {
+		print("Mutual authenticate failed with " + this.card.SW.toString(16) + " \"" + this.card.SWMSG + "\". MRZ correct ?");
+		throw new GPError("EAC20", GPError.CRYPTO_FAILED, 0, "Card did not accept MAC in BAC establishment");
+	}
+	
+	cryptogram = autresp.bytes(0, 32);
+	mac = autresp.bytes(32, 8);
+
+	if (!this.crypto.verify(kmac, Crypto.DES_MAC_EMV, cryptogram.pad(Crypto.ISO9797_METHOD_2), mac)) {
+		throw new GPError("EAC20", GPError.CRYPTO_FAILED, 0, "Card MAC did not verify correctly");
+	}
+
+	plain = this.crypto.decrypt(kenc, Crypto.DES_CBC, cryptogram, new ByteString("0000000000000000", HEX));
+
+	if (!plain.bytes(0, 8).equals(rndicc)) {
+		throw new GPError("EAC20", GPError.CRYPTO_FAILED, 0, "Card response does not contain matching RND.ICC");
+	}
+
+	if (!plain.bytes(8, 8).equals(rndifd)) {
+		throw new GPError("EAC20", GPError.CRYPTO_FAILED, 0, "Card response does not contain matching RND.IFD");
+	}
+
+	var kicc = plain.bytes(16, 16);
+	keyinp = kicc.xor(kifd);
+
+	var hashin = keyinp.concat(new ByteString("00000001", HEX));
+	var kencval = this.crypto.digest(Crypto.SHA_1, hashin);
+	kencval = kencval.bytes(0, 16);
+	var kenc = new Key();
+	kenc.setComponent(Key.DES, kencval);
+
+	var hashin = keyinp.concat(new ByteString("00000002", HEX));
+	var kmacval = this.crypto.digest(Crypto.SHA_1, hashin);
+	kmacval = kmacval.bytes(0, 16);
+	var kmac = new Key();
+	kmac.setComponent(Key.DES, kmacval);
+
+	var ssc = rndicc.bytes(4, 4).concat(rndifd.bytes(4, 4));
+
+	this.sm = new IsoSecureChannel(crypto);
+	this.sm.setEncKey(kenc);
+	this.sm.setMacKey(kmac);
+	this.sm.setSendSequenceCounter(ssc);
+
+	this.df.setCredential(CardFile.ALL, Card.ALL, this.sm);
+	this.card.setCredential(this.sm);
 }
 
 
@@ -349,9 +468,6 @@ EAC20.prototype.getMF = function() {
  * @param {Number} pwdid one of EAC20.ID_MRZ, EAC20.ID_CAN, EAC20.ID_PIN, EAC20.ID_PUK
  * @param {ByteString} pwd the PACE password
  * @param {ASN1} chat the CHAT data object with tag 7F4C or null
- *
- * @return the secure channel established by PACE
- * @type IsoSecureChannel
  */
 EAC20.prototype.performPACE = function(parameterId, pwdid, pwd, chat) {
 
@@ -482,7 +598,7 @@ EAC20.prototype.performPACE = function(parameterId, pwdid, pwd, chat) {
 		sm.setEncKey(pace.kenc);
 		sm.setMacKey(pace.kmac);
 		sm.setMACSendSequenceCounter(new ByteString("00000000000000000000000000000000", HEX));
-		this.mf.setCredential(CardFile.ALL, Card.ALL, sm);
+		this.df.setCredential(CardFile.ALL, Card.ALL, sm);
 		this.card.setCredential(sm);
 	}
 	this.sm = sm;
@@ -625,6 +741,53 @@ EAC20.prototype.performTerminalAuthenticationFinal = function(signature) {
 
 
 /**
+ * Perform chip authentication in version 1 and establish a secure channel
+ *
+ * @return true, if chip authentication was successfull
+ * @type boolean
+ */
+EAC20.prototype.performChipAuthenticationV1 = function() {
+
+	var cainfo = this.CAInfos[0];
+	if (typeof(cainfo) == "undefined") {
+		throw new GPError("EAC20", GPError.INVALID_DATA, 0, "Unknown keyId " + keyId + " for ChipAuthenticationInfo");
+	}
+	this.cainfo = cainfo;
+
+	var domainParameter = ECCUtils.decodeECParameters(this.cAPublicKeyObject.get(1).get(0).get(1));
+
+	this.ca = new ChipAuthentication(this.crypto, cainfo.protocol, domainParameter);
+
+	this.ca.generateEphemeralCAKeyPair();
+
+	var bb = new ByteBuffer();
+	bb.append(new ASN1(0x91, this.ca.getEphemeralPublicKey()).getBytes());
+	
+	if (typeof(this.cainfo.keyId) != "undefined") {
+		bb.append(new ByteString("8401", HEX));
+		bb.append(this.cainfo.keyId);
+	}
+	
+	var msedata = bb.toByteString();
+	GPSystem.trace("Manage SE data:");
+	GPSystem.trace(msedata);
+	this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x22, 0x41, 0xA6, msedata, [0x9000]);
+	
+	this.ca.performKeyAgreement(this.cAPublicKey);
+	
+	var sm = new IsoSecureChannel(this.crypto);
+	sm.setEncKey(this.ca.kenc);
+	sm.setMacKey(this.ca.kmac);
+	sm.setSendSequenceCounter(new ByteString("0000000000000000", HEX));
+
+	this.df.setCredential(CardFile.ALL, Card.ALL, sm);
+	this.card.setCredential(sm);
+	this.sm = sm;
+}
+
+
+
+/**
  * Prepare chip authentication by generating the ephemeral key pair
  *
  * @param {Number} keyId the key identifier to be used for chip authentication
@@ -651,12 +814,12 @@ EAC20.prototype.prepareChipAuthentication = function(keyId) {
 
 
 /**
- * Perform chip authentication and establish a secure channel
+ * Perform chip authentication in version 2 and establish a secure channel
  *
  * @return true, if chip authentication was successfull
  * @type boolean
  */
-EAC20.prototype.performChipAuthentication = function() {
+EAC20.prototype.performChipAuthenticationV2 = function() {
 
 	var bb = new ByteBuffer();
 	bb.append(new ASN1(0x80, this.cainfo.protocol).getBytes());
@@ -701,11 +864,27 @@ EAC20.prototype.performChipAuthentication = function() {
 		sm.setEncKey(this.ca.kenc);
 		sm.setMacKey(this.ca.kmac);
 		sm.setMACSendSequenceCounter(new ByteString("00000000000000000000000000000000", HEX));
-		this.mf.setCredential(CardFile.ALL, Card.ALL, sm);
+		this.df.setCredential(CardFile.ALL, Card.ALL, sm);
 		this.card.setCredential(sm);
 		this.sm = sm;
 	}
 	return result;
+}
+
+
+
+/**
+ * Perform chip authentication and establish a secure channel
+ *
+ * @return true, if chip authentication was successfull
+ * @type boolean
+ */
+EAC20.prototype.performChipAuthentication = function() {
+	if (this.isEAC111) {
+		return this.performChipAuthenticationV1();
+	} else {
+		return this.performChipAuthenticationV2();
+	}
 }
 
 
