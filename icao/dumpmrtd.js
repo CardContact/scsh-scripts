@@ -87,10 +87,18 @@ function savePicture(dg2) {
 	// Save picture to .jpeg file
 	var tlv = new ASN1(dg2);
 	var bin = tlv.get(0).get(1).get(1).value;
-	var offset = bin.find(new ByteString("FFD8", HEX));
 	
+	// Try finding a JPEG 2000 picture
+	var offset = bin.find(new ByteString("0000000C6A5020200D0A870A", HEX));
+
 	if (offset >= 0) {
-		writeFileOnDisk("face.jpg", bin.bytes(offset));
+		writeFileOnDisk("face.jp2", bin.bytes(offset2));
+    } else {
+		var offset = bin.find(new ByteString("FFD8", HEX));
+	
+		if (offset >= 0) {
+			writeFileOnDisk("face.jpg", bin.bytes(offset));
+		}
 	}
 }
 
