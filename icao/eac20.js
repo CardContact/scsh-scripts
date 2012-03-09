@@ -214,7 +214,7 @@ EAC20.prototype.selectLDS = function(useEAC2) {
  */
 EAC20.prototype.readDG14 = function() {
 
-	var ci = new CardFile(this.getDF(), ":010E");
+	var ci = new CardFile(this.getDF(), ":0E");
 	var cibin = ci.readBinary();
 	var citlv = new ASN1(cibin);
 	print(citlv);
