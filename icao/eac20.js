@@ -157,11 +157,12 @@ EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
 				print("ChipAuthenticationDomainParameterInfo : " + o);
 				
 				var cadpi = new ChipAuthenticationDomainParameterInfo(o);
-//				print(cadpi);
+				print(cadpi);
 				
 				var id = cadpi.keyId;
 				
 				if (typeof(id) == "undefined") {
+					print("Using default key id 0");
 					id = 0;
 				}
 				
@@ -174,11 +175,13 @@ EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
 				print("ChipAuthenticationInfo : " + o);
 
 				var cai = new ChipAuthenticationInfo(o);
-//				print(cai);
+				print(cai);
 				
 				var id = cai.keyId;
+				print(id);				
 				
 				if (typeof(id) == "undefined") {
+					print("Using default key id 0");
 					id = 0;
 				}
 				
@@ -860,14 +863,18 @@ EAC20.prototype.performChipAuthenticationV2 = function() {
 	if (result) {
 		GPSystem.trace("Authentication token valid");
 
-		var sm = new IsoSecureChannel(this.crypto, IsoSecureChannel.SSC_SYNC_ENC_POLICY);
+		var sm = new IsoSecureChannel(this.crypto);
 		sm.setEncKey(this.ca.kenc);
 		sm.setMacKey(this.ca.kmac);
-		sm.setMACSendSequenceCounter(new ByteString("00000000000000000000000000000000", HEX));
+		sm.setMACSendSequenceCounter(new ByteString("0000000000000000", HEX));
 		this.df.setCredential(CardFile.ALL, Card.ALL, sm);
 		this.card.setCredential(sm);
 		this.sm = sm;
+	} else {
+		GPSystem.trace("Authentication token invalid");
 	}
+	
+	
 	return result;
 }
 
