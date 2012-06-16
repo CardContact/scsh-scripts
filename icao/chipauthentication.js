@@ -328,7 +328,7 @@ ChipAuthentication.prototype.performKeyAgreement = function(publicKey, nonce) {
  * @type Boolean
  */
 ChipAuthentication.prototype.verifyAuthenticationToken = function(authToken) {
-	var t = PACE.encodePublicKey(this.algo.toString(OID), this.pukCA, this.includeDPinAuthToken);
+	var t = ChipAuthentication.encodePublicKey(this.algo.toString(OID), this.pukCA, this.includeDPinAuthToken);
 	GPSystem.trace("Authentication Token:");
 	GPSystem.trace(t);
 	
@@ -340,4 +340,62 @@ ChipAuthentication.prototype.verifyAuthenticationToken = function(authToken) {
 		return at.left(8).equals(authToken);
 	}
 }
+
+
+
+/**
+ * Strips leading zeros of a ByteString
+ *
+ * @param {ByteString} value the ByteString value
+ * @return the stripped ByteString object, may be an empty ByteString
+ * @type ByteString
+ */
+ChipAuthentication.stripLeadingZeros = function(value) {
+	var i = 0;
+	for (; (i < value.length) && (value.byteAt(i) == 0); i++);
+	
+	return value.right(value.length - i);
+}
+
+
+
+/**
+ * Encode an ECC public key in the format defined by the EAC 2.0 specification
+ *
+ * @param {String} oid the object identifier to encode
+ * @param {Key} key the EC public key
+ * @param {Boolean} withDP true to encode domain parameter as well
+ */
+ChipAuthentication.encodePublicKey = function(oid, key, withDP) {
+
+	var t = new ASN1("ecPublicKey", 0x7F49);
+	t.add(new ASN1("objectIdentifier", ASN1.OBJECT_IDENTIFIER, new ByteString(oid, OID)));
+	if (withDP) {
+		t.add(new ASN1("primeModulus", 0x81, key.getComponent(Key.ECC_P)));
+		t.add(new ASN1("firstCoefficient", 0x82, key.getComponent(Key.ECC_A)));
+		t.add(new ASN1("secondCoefficient", 0x83, key.getComponent(Key.ECC_B)));
+
+		var point = new ByteString("04", HEX);
+		point = point.concat(key.getComponent(Key.ECC_GX));
+		point = point.concat(key.getComponent(Key.ECC_GY));
+		t.add(new ASN1("basePoint", 0x84, point));
+		
+		t.add(new ASN1("orderOfTheBasePoint", 0x85, key.getComponent(Key.ECC_N)));
+	}
+	var point = new ByteString("04", HEX);
+	point = point.concat(key.getComponent(Key.ECC_QX));
+	point = point.concat(key.getComponent(Key.ECC_QY));
+	t.add(new ASN1("publicPoint", 0x86, point));
+
+	if (withDP) {
+		var cofactor = key.getComponent(Key.ECC_H);
+		cofactor = ChipAuthentication.stripLeadingZeros(cofactor);
+		
+		t.add(new ASN1("cofactor", 0x87, cofactor));
+	}
+	
+	return t;
+}
+
+
 
