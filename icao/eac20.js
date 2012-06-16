@@ -154,15 +154,15 @@ EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
 		} else if (oid.value.startsWith(id_CA) == id_CA.length) {
 			if (oid.value.equals(id_CA_DH) ||
 				oid.value.equals(id_CA_ECDH)) {
-				print("ChipAuthenticationDomainParameterInfo : " + o);
+//				print("ChipAuthenticationDomainParameterInfo : " + o);
 				
 				var cadpi = new ChipAuthenticationDomainParameterInfo(o);
-				print(cadpi);
+//				print(cadpi);
 				
 				var id = cadpi.keyId;
 				
 				if (typeof(id) == "undefined") {
-					print("Using default key id 0");
+//					print("Using default key id 0");
 					id = 0;
 				}
 				
@@ -172,16 +172,16 @@ EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
 				
 				this.CADPs[id] = cadpi;
 			} else {
-				print("ChipAuthenticationInfo : " + o);
+//				print("ChipAuthenticationInfo : " + o);
 
 				var cai = new ChipAuthenticationInfo(o);
-				print(cai);
+//				print(cai);
 				
 				var id = cai.keyId;
-				print(id);				
+//				print(id);
 				
 				if (typeof(id) == "undefined") {
-					print("Using default key id 0");
+//					print("Using default key id 0");
 					id = 0;
 				}
 				
@@ -220,7 +220,7 @@ EAC20.prototype.readDG14 = function() {
 	var ci = new CardFile(this.getDF(), ":0E");
 	var cibin = ci.readBinary();
 	var citlv = new ASN1(cibin);
-	print(citlv);
+//	print(citlv);
 	
 	this.processSecurityInfos(citlv.get(0), false);
 }
@@ -863,10 +863,17 @@ EAC20.prototype.performChipAuthenticationV2 = function() {
 	if (result) {
 		GPSystem.trace("Authentication token valid");
 
-		var sm = new IsoSecureChannel(this.crypto);
-		sm.setEncKey(this.ca.kenc);
-		sm.setMacKey(this.ca.kmac);
-		sm.setMACSendSequenceCounter(new ByteString("0000000000000000", HEX));
+		if (this.ca.algo.equals(ChipAuthentication.id_CA_ECDH_3DES_CBC_CBC)) {
+			var sm = new IsoSecureChannel(this.crypto);
+			sm.setEncKey(this.ca.kenc);
+			sm.setMacKey(this.ca.kmac);
+			sm.setMACSendSequenceCounter(new ByteString("0000000000000000", HEX));
+		} else {
+			var sm = new IsoSecureChannel(this.crypto, IsoSecureChannel.SSC_SYNC_ENC_POLICY);
+			sm.setEncKey(this.ca.kenc);
+			sm.setMacKey(this.ca.kmac);
+			sm.setMACSendSequenceCounter(new ByteString("00000000000000000000000000000000", HEX));
+		}
 		this.df.setCredential(CardFile.ALL, Card.ALL, sm);
 		this.card.setCredential(sm);
 		this.sm = sm;

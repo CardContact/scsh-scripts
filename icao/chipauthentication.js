@@ -332,11 +332,12 @@ ChipAuthentication.prototype.verifyAuthenticationToken = function(authToken) {
 	GPSystem.trace("Authentication Token:");
 	GPSystem.trace(t);
 	
-	// TODO: Determine the used MAC (AES_CMAC vs. DES_MAC_EMV) in a dynamic way
-	// var at = this.crypto.sign(this.kmac, Crypto.AES_CMAC, t.getBytes());
-	var at = this.crypto.sign(this.kmac, Crypto.DES_MAC_EMV, t.getBytes());
-	
-	// return at.left(8).equals(authToken);
-	return at.equals(authToken);
+	if (this.algo.equals(ChipAuthentication.id_CA_ECDH_3DES_CBC_CBC)) {
+		var at = this.crypto.sign(this.kmac, Crypto.DES_MAC_EMV, t.getBytes());
+		return at.equals(authToken);
+	} else {
+		var at = this.crypto.sign(this.kmac, Crypto.AES_CMAC, t.getBytes());
+		return at.left(8).equals(authToken);
+	}
 }
 
