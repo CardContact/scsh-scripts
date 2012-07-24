@@ -449,6 +449,7 @@ var hashConcat = this.crypto.digest(Crypto.SHA_1, list);
 	
 //Step 7: Compare recovered hash with generated hash
 var hashSDAD = decryptedSDAD.bytes(decryptedSDAD.length - 21, 20);
+assert(hashConcat.equals(hashSDAD));
 print("DDA was successful");	
 }
 </pre>
