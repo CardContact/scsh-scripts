@@ -351,6 +351,7 @@ DataAuthentication.prototype.dynamicDataAuthentication = function(iccPublicKeyMo
 	
 	// Step 7: Compare recovered hash with generated hash
 	var hashSDAD = decryptedSDAD.bytes(decryptedSDAD.length - 21, 20);
+	assert(hashConcat.equals(hashSDAD));
 	print("<-----------------------------DDA was successful------------------------------>\n");
 }
 
