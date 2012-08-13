@@ -242,14 +242,14 @@ CVC.getSignatureMech = function(oid) {
 		return Crypto.RSA_SHA1;
 	if (oid.equals(CVC.id_TA_RSA_v1_5_SHA_256))
 		return Crypto.RSA_SHA256;
-	if (oid.equals(CVC.id_TA_RSA_v1_5_SHA_512))
-		return Crypto.RSA_SHA512;
+//	if (oid.equals(CVC.id_TA_RSA_v1_5_SHA_512))
+//		return Crypto.RSA_SHA512;
 	if (oid.equals(CVC.id_TA_RSA_PSS_SHA_1))
 		return Crypto.RSA_PSS_SHA1;
 	if (oid.equals(CVC.id_TA_RSA_PSS_SHA_256))
 		return Crypto.RSA_PSS_SHA256;
-	if (oid.equals(CVC.id_TA_RSA_PSS_SHA_512))
-		return Crypto.RSA_PSS_SHA512;
+//	if (oid.equals(CVC.id_TA_RSA_PSS_SHA_512))
+//		return Crypto.RSA_PSS_SHA512;
 	return -1;
 }
 
