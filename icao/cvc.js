@@ -202,6 +202,8 @@ CVC.STRIGHTS = [
 ];
 CVC.idST = new ByteString("id-ST", OID);
 
+CVC.idSC_HSM = new ByteString("2B0601040181C31F030101", HEX);
+
 
 
 /** TA constants */
@@ -842,6 +844,9 @@ CVC.prototype.getType = function() {
 			str += "id-ST ";
 			trustedDV = "(accreditation body) ";
 			untrustedDV = "(certification service provider) ";
+		} else if (oid.equals(CVC.idSC_HSM)) {
+			str += "id-SC-HSM ";
+			trustedDV = "";
 		} else {
 			str += oid.toString(OID) + " ";
 		}

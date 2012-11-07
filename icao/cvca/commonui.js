@@ -186,11 +186,13 @@ CommonUI.prototype.handleCertificateDetails = function(req, res, url) {
 
 		var l = page.ul;
 		var rights = cert.getRightsAsList();
-	
-		for (var i = 0; i < rights.length; i++) {
-			l.li += <li>{rights[i]}</li>
+		
+		if (rights) {
+			for (var i = 0; i < rights.length; i++) {
+				l.li += <li>{rights[i]}</li>
+			}
 		}
-	
+		
 		this.sendPage(req, res, url, page);
 	}
 }

@@ -25,4 +25,5 @@ curl -H "X-Content-Name: tccservice.js" -T tccservice.js %URL%/admin
 curl -H "X-Content-Name: tccui.js" -T tccui.js %URL%/admin
 curl -H "X-Content-Name: vtermservice.js" -T vtermservice.js %URL%/admin
 curl -H "X-Content-Name: vtermui.js" -T vtermui.js %URL%/admin
+curl -H "X-Content-Name: hsmui.js" -T hsmui.js %URL%/admin
 curl -H "X-Content-Name: configureservices_hsm.js" -T configureservices_hsm.js %URL%/admin

@@ -35,12 +35,12 @@ var datadir = "c:/data/eacpki";
 
 // Allocate card
 var card = new Card();
+card.reset(Card.RESET_COLD);
 var sc = new SmartCardHSM(card);
-sc.verifyUserPIN(new ByteString("648219", ASCII));
 
 
 
-var bookmarkservicelist = ["CVCA", "DVCA", "TCC", "CVCA-FU" ];
+var bookmarkservicelist = ["CVCA", "DVCA", "TCC", "CVCA-FU", "HSM" ];
 
 function createBookmarks(ui, myself)  {
 	for (var i = 0; i < bookmarkservicelist.length; i++) {
@@ -216,3 +216,9 @@ var tccui = new TCCUI(tcc);
 createBookmarks(tccui, "TCC");
 
 SOAPServer.registerService("tcc", tcc.getTR3129ServicePort(), tccui);
+
+
+var hsmui = new HSMUI(sc);
+createBookmarks(hsmui, "HSM");
+
+SOAPServer.registerService("hsm", null, hsmui);
