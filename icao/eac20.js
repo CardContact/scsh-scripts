@@ -203,7 +203,12 @@ EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
  * @param {Boolean} useEAC2 use EAC2.x instead of EAC1.x
  */
 EAC20.prototype.selectLDS = function(useEAC2) {
-	this.df = new CardFile(this.card, "#A0000002471001");
+	if (this.sm) {			// If we use SAC, then we already have a PACE channel open
+		var mf = this.getDF();
+		this.df = new CardFile(mf, "#A0000002471001");
+	} else {
+		this.df = new CardFile(this.card, "#A0000002471001");
+	}
 	if (!useEAC2) {
 		this.isEAC111 = true;
 	}
