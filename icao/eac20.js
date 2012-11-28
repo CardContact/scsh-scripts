@@ -413,103 +413,70 @@ EAC20.prototype.getDF = function() {
 
 
 /**
- * Calculate a single Basic Access Control (BAC) key from the second
- * line of the Machine Readable Zone (MRZ).
+ * Calculate the hash over document number, date of birth and date of expiration from 2 or 3 line MRZ
  *
- * The function extracts the Document Number, Date of Birth and Date of Expiration
- * from the second line of the machine readable zone
- *
- * E.g. MRZ of Silver Data Set
+ * <pre>
+ * 2 line MRZ of Silver Data Set
  *   P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<
  *   L898902C<3UTO6908061F9406236ZE184226B<<<<<14
  *   '-DocNo--'   '-DoB-' '-DoE-'
  *
- * This extract is then hashed, concatenated with a key number and
- * hashed again.
- *
- * @param {Crypto} crypto Crypto object used for hashing
- * @param {String} mrz String containing the concatenation of two MRZ lines
- * @param {Number} keyno Number of key to calculate (1 for Kenc and 2 for Kmac)
- * @type Key
- * @returns the key object
- */
-EAC20.calculateBACKeyFrom2LineMRZ = function(crypto, mrz, keyno) {
-
-	// Convert to byte string
-	var strbin = new ByteString(mrz, ASCII);
-
-	// Extract Document Number, Date of Birth and Date of Expiration
-	var hash_input = strbin.bytes(44, 10);
-	hash_input = hash_input.concat(strbin.bytes(57, 7));
-	hash_input = hash_input.concat(strbin.bytes(65, 7));
-//	print("Hash Input   : " + hash_input.toString(ASCII));
-
-	// Hash input	
-	var mrz_hash = crypto.digest(Crypto.SHA_1, hash_input);
-//	print("MRZ Hash     : " + mrz_hash);
-
-	// Extract first 16 byte and append 00000001 or 00000002
-	var bb = new ByteBuffer(mrz_hash.bytes(0, 16));
-	bb.append(new ByteString("000000", HEX));
-	bb.append(keyno);
-
-	// Hash again to calculate key value	
-	var keyval = crypto.digest(Crypto.SHA_1, bb.toByteString());
-	keyval = keyval.bytes(0, 16);
-//	print("Value of Key : " + keyval);
-	var key = new Key();
-	key.setComponent(Key.DES, keyval);
-
-	return key;
-}
-
-
-
-/**
- * Calculate a single Basic Access Control (BAC) key from a 3-line
- * Machine Readable Zone (MRZ).
- *
- * The function extracts the Document Number, Date of Birth and Date of Expiration
- * from the second line of the machine readable zone
- *
- * E.g. MRZ of Silver Data Set
+ * 3 line MRZ of Silver Data Set
  *   I<UTOL898902C<3<<<<<<<<<<<<<<<
  *        '-DocNo--'
  *   6908061F9406236UTO<<<<<<<<<<<1
  *   '-DoB-' '-DoE-'
  *   ERIKSON<<ANNA<MARIA<<<<<<<<<<<
+ * </pre>
  *
- * This extract is then hashed, concatenated with a key number and
- * hashed again.
+ * @param {String} mrz 2 line or 3 line machine readable zone
+ * @type ByteString
+ * @return the SHA-1 hash over the concatenation of document number, date of birth and date of expiration
+ */
+EAC20.prototype.hashMRZ = function(mrz) {
+	// Convert to byte string
+	var strbin = new ByteString(mrz, ASCII);
+
+	if (strbin.length == 88) {			// 2 line MRZ
+		// Extract Document Number, Date of Birth and Date of Expiration
+		var hash_input = strbin.bytes(44, 10);
+		hash_input = hash_input.concat(strbin.bytes(57, 7));
+		hash_input = hash_input.concat(strbin.bytes(65, 7));
+	} else if (strbin.length == 90) {		// 3 line MRZ
+		// Extract Document Number, Date of Birth and Date of Expiration
+		var hash_input = strbin.bytes(5, 10);
+		hash_input = hash_input.concat(strbin.bytes(30, 7));
+		hash_input = hash_input.concat(strbin.bytes(38, 7));
+	} else {
+		throw new GPError("EAC20", GPError.INVALID_DATA, strbin.length, "MRZ must be either 88 or 90 character long");
+	}
+
+	// print("Hash Input   : " + hash_input.toString(ASCII));
+	var mrz_hash = this.crypto.digest(Crypto.SHA_1, hash_input);
+	// print("MRZ Hash     : " + mrz_hash);
+	return mrz_hash;
+}
+
+
+
+/**
+ * Calculate the Basic Access Control (BAC) key from the MRZ
  *
- * @param {Crypto} crypto Crypto object used for hashing
- * @param {String} mrz String containing the concatenation of three MRZ lines
+ * @param {String} mrz 2 line or 3 line machine readable zone
  * @param {Number} keyno Number of key to calculate (1 for Kenc and 2 for Kmac)
  * @type Key
  * @returns the key object
  */
-EAC20.calculateBACKeyFrom3LineMRZ = function(crypto, mrz, keyno) {
-
-	// Convert to byte string
-	var strbin = new ByteString(mrz, ASCII);
-
-	// Extract Document Number, Date of Birth and Date of Expiration
-	var hash_input = strbin.bytes(5, 10);
-	hash_input = hash_input.concat(strbin.bytes(30, 7));
-	hash_input = hash_input.concat(strbin.bytes(38, 7));
-//	print("Hash Input   : " + hash_input.toString(ASCII));
-
-	// Hash input	
-	var mrz_hash = crypto.digest(Crypto.SHA_1, hash_input);
-//	print("MRZ Hash     : " + mrz_hash);
+EAC20.prototype.calculateBACKey = function(mrz, keyno) {
+	var mrz_hash = this.hashMRZ(mrz);
 
 	// Extract first 16 byte and append 00000001 or 00000002
 	var bb = new ByteBuffer(mrz_hash.bytes(0, 16));
 	bb.append(new ByteString("000000", HEX));
 	bb.append(keyno);
 
-	// Hash again to calculate key value	
-	var keyval = crypto.digest(Crypto.SHA_1, bb.toByteString());
+	// Hash again to calculate key value
+	var keyval = this.crypto.digest(Crypto.SHA_1, bb.toByteString());
 	keyval = keyval.bytes(0, 16);
 //	print("Value of Key : " + keyval);
 	var key = new Key();
@@ -527,19 +494,19 @@ EAC20.calculateBACKeyFrom3LineMRZ = function(crypto, mrz, keyno) {
  * @param {Key} kmac the key Kmac
  */
 EAC20.prototype.performBACWithMRZ = function(mrz) {
-	if ((mrz.length != 90) && (mrz.length != 88)) {
+	if (mrz.length == 90) {
+		var idpicc = mrz.substr(5, 10);
+	} else if (mrz.length == 88) {
+		var idpicc = mrz.substr(44, 10);
+	} else {
 		throw new GPError("EAC20", GPError.INVALID_DATA, 0, "MRZ must be either 88 or 90 character long");
 	}
-	if (mrz.length == 90) {
-		var kenc = EAC20.calculateBACKeyFrom3LineMRZ(this.crypto, mrz, 1);
-		var kmac = EAC20.calculateBACKeyFrom3LineMRZ(this.crypto, mrz, 2);
-		var idpicc = mrz.substr(5, 10);
-	} else {
-		var kenc = EAC20.calculateBACKeyFrom2LineMRZ(this.crypto, mrz, 1);
-		var kmac = EAC20.calculateBACKeyFrom2LineMRZ(this.crypto, mrz, 2);
-		var idpicc = mrz.substr(44, 10);
-	}
+
 	this.setIDPICC(new ByteString(idpicc, ASCII));
+
+	var kenc = this.calculateBACKey(mrz, 1);
+	var kmac = this.calculateBACKey(mrz, 2);
+
 	this.performBAC(kenc, kmac);
 }
 
