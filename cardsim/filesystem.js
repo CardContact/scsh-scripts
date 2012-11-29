@@ -485,6 +485,7 @@ function DF(fcp) {
 	this.fidmap = new Array();
 	this.sfimap = new Array();
 	this.aidmap = new Array();
+	this.meta = new Array();
 	
 	FSNode.call(this, fcp);
 	
@@ -544,6 +545,18 @@ DF.prototype.add = function(node) {
 
 
 /**
+ * Add meta information to DF
+ *
+ * @param {String} name name of meta information
+ * @param {Object} value value of meta information
+ */
+DF.prototype.addMeta = function(name, value) {
+	this.meta[name] = value;
+}
+
+
+
+/**
  * Select a file contained in the DF using the file identifier
  *
  * @param {ByteString} the file identifier
@@ -595,6 +608,12 @@ DF.prototype.dump = function(indent) {
 	}
 	var str = indent + this.toString() + "\n";
 	
+	if (this instanceof DF) {
+		for (var i in this.meta) {
+			str += indent + "  Meta:" + i + "\n";
+		}
+	}
+	
 	for (var i = 0; i < this.childs.length; i++) {
 		var c = this.childs[i];
 		
@@ -642,8 +661,27 @@ FileSelector.prototype.getCurrentEF = function() {
 
 
 
+/**
+ * Return the current security environment
+ *
+ * @type Object
+ * @returns Object with properties VEXK, CDIK, SMRES and SMCOM containing SecurityEnvironment objects
+ */
 FileSelector.prototype.getSecurityEnvironment = function() {
 	return this.se;
+}
+
+
+
+/**
+ *
+ */
+FileSelector.prototype.getMeta = function(name) {
+	var meta = this.currentDF.meta[name];
+	if (!meta) {
+		meta = this.mf.meta[name];
+	}
+	return meta;
 }
 
 
