@@ -188,7 +188,7 @@ PACEDomainParameterInfo.prototype.toString = function() {
  * @constructor
  *
  * @param {Crypto} crypto the crypto provider
- * @param {String} algo the algorithm OID as String object
+ * @param {ByteString} algo the algorithm OID
  * @param {Key} domainparam the key object holding ECC domain parameter
  * @param {Number} version protocol version (1 or 2)
  */
@@ -202,16 +202,26 @@ function PACE(crypto, algo, domparam, version) {
 	} else {
 		this.version = 1;
 	}
-	
-//	print(ECCUtils.ECParametersToString(domparam));
-	
-	if (algo == PACE.id_PACE_ECDH_GM_3DES_CBC_CBC) {
+
+	if (this.algo == PACE.id_PACE_ECDH_GM_3DES_CBC_CBC) {
 		this.symalgo = Key.DES;
 	} else {
 		this.symalgo = Key.AES;
 	}
 
 	this.sym = Crypto.AES;
+}
+
+
+
+/**
+ * Return algorithm type
+ *
+ * @type Number
+ * @returns Either Key.DES or Key.AES
+ */
+PACE.prototype.getSymmetricAlgorithm = function() {
+	return this.symalgo;
 }
 
 
@@ -496,10 +506,14 @@ PACE.prototype.calculateAuthenticationToken = function() {
 	var t = PACE.encodePublicKey(this.algo, this.otherPuK, (this.version == 1));
 	GPSystem.trace("Authentication Token:");
 	GPSystem.trace(t);
-	
-	var at = this.crypto.sign(this.kmac, Crypto.AES_CMAC, t.getBytes());
-	
-	return at.left(8);
+
+	if (this.symalgo == Key.DES) {
+		var at = this.crypto.sign(this.kmac, Crypto.DES_MAC_EMV, t.getBytes());
+	} else {
+		var at = this.crypto.sign(this.kmac, Crypto.AES_CMAC, t.getBytes()).left(8);
+	}
+
+	return at;
 }
 
 
@@ -516,10 +530,14 @@ PACE.prototype.verifyAuthenticationToken = function(authToken) {
 	var t = PACE.encodePublicKey(this.algo, this.puk, (this.version == 1));
 	GPSystem.trace("Authentication Token:");
 	GPSystem.trace(t);
-	
-	var at = this.crypto.sign(this.kmac, Crypto.AES_CMAC, t.getBytes());
-	
-	return at.left(8).equals(authToken);
+
+	if (this.symalgo == Key.DES) {
+		var at = this.crypto.sign(this.kmac, Crypto.DES_MAC_EMV, t.getBytes());
+	} else {
+		var at = this.crypto.sign(this.kmac, Crypto.AES_CMAC, t.getBytes()).left(8);
+	}
+
+	return at.equals(authToken);
 }
 
 
