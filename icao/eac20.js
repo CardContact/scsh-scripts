@@ -46,17 +46,14 @@ function EAC20(crypto, card) {
 	this.card = card;
 	this.sm = null;
 	this.includeDPinAuthToken = false;		// Standard for PACE version >= 2
-	
-	// ToDo: Determine from CVCA Certificate
-	this.oidTerminalAuthentication = EAC20.id_TA_ECDSA_SHA_256;
-	
+
 	this.PACEInfos = new Array();
 	this.PACEDPs = new Array();
 
 	this.CAInfos = new Array();
 	this.CADPs = new Array();
+	this.CAPublicKeys = new Array();
 
-	this.isEAC111 = false;
 	this.verbose = false;
 }
 
@@ -107,17 +104,12 @@ EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
 	for (var i = 0; i < si.elements; i++) {
 		var o = si.get(i);
 		assert((o.elements >= 1) && (o.elements <= 3));
-		
+
 		var oid = o.get(0);
 		assert(oid.tag == ASN1.OBJECT_IDENTIFIER);
 		
 		if (oid.value.startsWith(id_TA) == id_TA.length) {
 			this.log("TA : " + o);
-		} else if (oid.value.equals(id_PK_ECDH)) {
-			this.log("CA Public Key: " + o);
-			this.cAPublicKeyObject = o;
-			this.cAPublicKey = o.get(1).get(1).value.bytes(1);
-			this.log(this.cAPublicKey);
 		} else if (oid.value.startsWith(id_PACE) == id_PACE.length) {
 			if (oid.value.equals(id_PACE_DH_GM) ||
 				oid.value.equals(id_PACE_ECDH_GM) ||
@@ -160,44 +152,61 @@ EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
 				}
 				this.PACEInfos[id] = pi;
 			}
+		} else if (oid.value.equals(id_PK_ECDH)) {
+			this.log("ChipAuthenticationPublicKeyInfo : " + o);
+
+			var capki = new ChipAuthenticationPublicKeyInfo(o);
+			this.log(capki);
+
+			var id = capki.keyId;
+
+			if (typeof(id) == "undefined") {
+				this.log("Using default key id 0");
+				id = 0;
+			}
+
+			if (!fromCardSecurity && (typeof(this.CAPublicKeys[id]) != "undefined")) {
+				throw new GPError("EAC20", GPError.INVALID_DATA, 0, "Duplicate keyId " + id + " for ChipAuthenticationPublicKeyInfo");
+			}
+
+			this.CAPublicKeys[id] = capki;
 		} else if (oid.value.startsWith(id_CA) == id_CA.length) {
 			if (oid.value.equals(id_CA_DH) ||
 				oid.value.equals(id_CA_ECDH)) {
 				this.log("ChipAuthenticationDomainParameterInfo : " + o);
-				
+
 				var cadpi = new ChipAuthenticationDomainParameterInfo(o);
 				this.log(cadpi);
-				
+
 				var id = cadpi.keyId;
-				
+
 				if (typeof(id) == "undefined") {
 					this.log("Using default key id 0");
 					id = 0;
 				}
-				
+
 				if (!fromCardSecurity && (typeof(this.CADPs[id]) != "undefined")) {
 					throw new GPError("EAC20", GPError.INVALID_DATA, 0, "Duplicate keyId " + id + " for ChipAuthenticationDomainParameter");
 				}
-				
+
 				this.CADPs[id] = cadpi;
 			} else {
 				this.log("ChipAuthenticationInfo : " + o);
 
 				var cai = new ChipAuthenticationInfo(o);
 				this.log(cai);
-				
+
 				var id = cai.keyId;
-				this.log(id);
-				
+
 				if (typeof(id) == "undefined") {
 					this.log("Using default key id 0");
 					id = 0;
 				}
-				
+
 				if (!fromCardSecurity && (typeof(this.CAInfos[id]) != "undefined")) {
 					throw new GPError("EAC20", GPError.INVALID_DATA, 0, "Duplicate keyId " + id + " for ChipAuthenticationInfo");
 				}
-				
+
 				this.CAInfos[id] = cai;
 			}
 		}
@@ -208,18 +217,13 @@ EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
 
 /**
  * Select LDS, marking this a EAC 1.11 session
- *
- * @param {Boolean} useEAC2 use EAC2.x instead of EAC1.x
  */
-EAC20.prototype.selectLDS = function(useEAC2) {
+EAC20.prototype.selectLDS = function() {
 	if (this.sm) {			// If we use SAC, then we already have a PACE channel open
 		var mf = this.getDF();
 		this.df = new CardFile(mf, "#A0000002471001");
 	} else {
 		this.df = new CardFile(this.card, "#A0000002471001");
-	}
-	if (!useEAC2) {
-		this.isEAC111 = true;
 	}
 }
 
@@ -290,7 +294,7 @@ EAC20.prototype.readCardSecurity = function() {
 	var cstlv = new ASN1(csbin);
 	this.log("EF.CardSecurity:");
 	this.log(cstlv);
-	
+
 	var cms = new CMSSignedData(csbin);
 
 	var certs = cms.getSignedDataCertificates();
@@ -926,10 +930,6 @@ EAC20.prototype.performTerminalAuthenticationFinal = function(signature) {
 EAC20.prototype.performChipAuthenticationV1 = function(keyid) {
 	this.log("performChipAuthenticationV1() called");
 
-	if (typeof(this.cAPublicKey) == "undefined") {
-		throw new GPError("EAC20", GPError.INVALID_DATA, 0, "No chip authentication public key object found");
-	}
-
 	if (typeof(keyid) == "undefined") {
 		keyid = 0;
 	}
@@ -939,7 +939,12 @@ EAC20.prototype.performChipAuthenticationV1 = function(keyid) {
 		throw new GPError("EAC20", GPError.INVALID_DATA, 0, "Unknown keyId " + keyId + " for ChipAuthenticationInfo");
 	}
 
-	var domainParameter = ECCUtils.decodeECParameters(this.cAPublicKeyObject.get(1).get(0).get(1));
+	var capuk = this.CAPublicKeys[keyid];
+	if (typeof(capuk) == "undefined") {
+		throw new GPError("EAC20", GPError.INVALID_DATA, 0, "Unknown keyId " + keyId + " for ChipAuthenticationPublicKeyInfo");
+	}
+
+	var domainParameter = capuk.domainParameter;
 
 	this.ca = new ChipAuthentication(this.crypto, cainfo.protocol, domainParameter);
 
@@ -958,7 +963,7 @@ EAC20.prototype.performChipAuthenticationV1 = function(keyid) {
 	this.log(msedata);
 	this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x22, 0x41, 0xA6, msedata, [0x9000]);
 
-	this.ca.performKeyAgreement(this.cAPublicKey);
+	this.ca.performKeyAgreement(capuk.publicKey);
 
 	this.log("Create DES based secure channel");
 	var sm = new IsoSecureChannel(this.crypto);
@@ -980,6 +985,8 @@ EAC20.prototype.performChipAuthenticationV1 = function(keyid) {
  */
 EAC20.prototype.prepareChipAuthentication = function(keyId) {
 	this.log("prepareChipAuthentication() called");
+
+	this.cakeyId = keyId;
 
 	var cainfo = this.CAInfos[keyId];
 	if (typeof(cainfo) == "undefined") {
@@ -1010,8 +1017,9 @@ EAC20.prototype.prepareChipAuthentication = function(keyId) {
 EAC20.prototype.performChipAuthenticationV2 = function() {
 	this.log("performChipAuthenticationV2() called");
 
-	if (typeof(this.cAPublicKey) == "undefined") {
-		throw new GPError("EAC20", GPError.INVALID_DATA, 0, "No chip authentication public key object found");
+	var capuk = this.CAPublicKeys[this.cakeyid];
+	if (typeof(capuk) == "undefined") {
+		throw new GPError("EAC20", GPError.INVALID_DATA, 0, "Unknown keyId " + this.cakeyId + " for ChipAuthenticationPublicKeyInfo");
 	}
 
 	var bb = new ByteBuffer();
@@ -1045,11 +1053,11 @@ EAC20.prototype.performChipAuthenticationV2 = function() {
 	var authTokenDO = dado.get(1);
 	assert(authTokenDO.tag == 0x82);
 	var authToken = authTokenDO.value;
-	
-	this.ca.performKeyAgreement(this.cAPublicKey, nonce);
-	
+
+	this.ca.performKeyAgreement(capuk.publicKey, nonce);
+
 	var result = this.ca.verifyAuthenticationToken(authToken);
-	
+
 	if (result) {
 		this.log("Authentication token valid");
 

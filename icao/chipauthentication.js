@@ -241,7 +241,7 @@ function ChipAuthenticationPublicKeyInfo(tlv) {
 		this.algorithm = oid.value;
 
 		if (oid.value.equals(new ByteString("standardizedDomainParameter", OID))) {
-			this.standardizedDomainParameter = algo.get(1).toUnsigned();
+			this.standardizedDomainParameter = algo.get(1).value.toUnsigned();
 			var curveoid = ChipAuthentication.standardizedDomainParameter[this.standardizedDomainParameter];
 			if (!curveoid) {
 				throw new GPError("ChipAuthenticationPublicKeyInfo", GPError.INVALID_DATA, 0, "Standardized domain parameter " + this.standardizedDomainParameter + " is unknown");
