@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="doctg.xsl" ?>
+<testgroup 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="http://www.openscdp.org/schema/testframework-1.0.xsd"
+	id="tg_case_1" arrayElement="testcase,function" arrayIndex="id,Name">
+	<name>CASE 1 APDUs</name>
+	<description>
+		<p>
+			This testgroup checks the functionality of the applet using case 1 APDUs.
+			
+		</p>
+	</description>
+	<reference>
+		<p></p>
+	</reference>
+
+<!-- Initializing the test group environment -->
+
+	<constructor Param="name, parameter">
+		<Script><![CDATA[
+			TestGroup.call(this, name, parameter);
+		]]></Script>
+	</constructor>
+
+
+	
+<!-- Setup method called before each test case is executed -->
+	<setup>
+		<Script><![CDATA[
+			var aid = new ByteString("E82B0601040181C31F0202", HEX);
+
+			this.card = new Card(_scsh3.reader);
+			this.card.reset(Card.RESET_COLD);
+
+			// Select application
+			var rsp = this.card.sendApdu(0x00, 0xA4, 0x04, 0x04, aid, 0x00, [0x9000]);
+			print(new ASN1(rsp));
+			
+		]]></Script>
+	</setup>
+
+
+	
+<!-- Teardown method called after each test case is executed -->
+	<teardown>
+		<Script><![CDATA[	
+		]]></Script>
+	</teardown>
+
+
+	
+	<testcase id="001.CASE1.SHORT">
+		<name>Case 1 Short APDU</name>
+		<description>
+			<p>.</p>
+		</description>
+		<requirement>
+			<p></p>
+		</requirement>
+		<reference>
+			<p></p>
+		</reference>
+		<Script><![CDATA[
+			
+			// Case 1
+			this.card.sendApdu(0x00, 0xF1, 0x00, 0x00, [0x9000]);
+			
+			var infoBlock = this.card.sendApdu(0x00, 0xF0, 0x00, 0x00, 0x00, [0x9000]);			
+				
+			]]></Script>
+	</testcase>	
+
+	
+	
+	<testcase id="002.CASE1.EXCEPTIONS">
+		<name>Case 1 APDU Exeptions</name>
+		<description>
+			<p>.</p>
+		</description>
+		<requirement>
+			<p></p>
+		</requirement>
+		<reference>
+			<p></p>
+		</reference>
+		<Script><![CDATA[
+			
+			this.card.sendApdu(0x00, 0xF1, 0x01, 0x00, [0x6A86]);
+			this.card.sendApdu(0x00, 0xF1, 0x00, 0x01, [0x6A86]);
+			this.card.sendApdu(0x00, 0xF1, 0x00, 0x00, new ByteString("FOO", ASCII), [0x6700]);
+			this.card.sendApdu(0x00, 0xF1, 0x00, 0x00, 0x00, [0x6700]);
+				
+			]]></Script>
+	</testcase>
+	
+</testgroup>
