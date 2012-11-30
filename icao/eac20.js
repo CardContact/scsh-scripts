@@ -216,7 +216,7 @@ EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
 
 
 /**
- * Select LDS, marking this a EAC 1.11 session
+ * Select ePass LDS Application
  */
 EAC20.prototype.selectLDS = function() {
 	if (this.sm) {			// If we use SAC, then we already have a PACE channel open
@@ -224,6 +224,20 @@ EAC20.prototype.selectLDS = function() {
 		this.df = new CardFile(mf, "#A0000002471001");
 	} else {
 		this.df = new CardFile(this.card, "#A0000002471001");
+	}
+}
+
+
+
+/**
+ * Select eID Application
+ */
+EAC20.prototype.select_eID = function() {
+	if (this.sm) {
+		var mf = this.getDF();
+		this.df = new CardFile(mf, "#E80704007F00070302");
+	} else {
+		this.df = new CardFile(this.card, "#E80704007F00070302");
 	}
 }
 
@@ -874,7 +888,7 @@ EAC20.prototype.performTerminalAuthentication = function(termkey, auxdata, crypt
 /**
  * Prepare terminal authentication by setting the required security environment
  *
- * @param {ASN1} auxdata auxiliary data (tag '67') to be included in terminal authentication
+ * @param {ByteString} auxdata auxiliary data (tag '67') to be included in terminal authentication
  */
 EAC20.prototype.performTerminalAuthenticationSetup = function(auxdata) {
 
@@ -901,7 +915,9 @@ EAC20.prototype.performTerminalAuthenticationSetup = function(auxdata) {
 	bb.append(this.idPICC);
 	bb.append(challenge);
 	bb.append(idIFD);
-	
+	if (auxdata) {
+		bb.append(auxdata);
+	}
 	var signatureInput = bb.toByteString();
 	this.log("Signature Input:");
 	this.log(signatureInput);
@@ -1082,6 +1098,21 @@ EAC20.prototype.performChipAuthenticationV2 = function() {
 	}
 	
 	return result;
+}
+
+
+
+/**
+ * Verify authenticated auxiliary data
+ *
+ * @param {ByteString} oid the object identifier for the auxiliary data provided during terminal authentication
+ * @return true, if auxiliary data was verified
+ * @type boolean
+ */
+EAC20.prototype.verifyAuxiliaryData = function(oid) {
+	var o = new ASN1(ASN1.OBJECT_IDENTIFIER, oid);
+	this.df.sendSecMsgApdu(Card.ALL, 0x80, 0x20, 0x80, 0x00, o.getBytes(), [0x9000,0x6300]);
+	return this.df.SW == 0x9000;
 }
 
 
