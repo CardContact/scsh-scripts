@@ -1017,7 +1017,7 @@ EAC20.prototype.prepareChipAuthentication = function(keyId) {
 EAC20.prototype.performChipAuthenticationV2 = function() {
 	this.log("performChipAuthenticationV2() called");
 
-	var capuk = this.CAPublicKeys[this.cakeyid];
+	var capuk = this.CAPublicKeys[this.cakeyId];
 	if (typeof(capuk) == "undefined") {
 		throw new GPError("EAC20", GPError.INVALID_DATA, 0, "Unknown keyId " + this.cakeyId + " for ChipAuthenticationPublicKeyInfo");
 	}
