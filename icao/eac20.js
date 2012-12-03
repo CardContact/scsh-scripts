@@ -470,9 +470,6 @@ EAC20.prototype.getCAKeyId = function() {
  */
 EAC20.prototype.getRIKeyId = function(authOnly) {
 	for each (var rii in this.RIInfos) {
-		print(rii);
-		print(!authOnly);
-		print(!rii.authorizedOnly);
 		if (!authOnly == !rii.authorizedOnly) {
 			return rii.keyId;
 		}
