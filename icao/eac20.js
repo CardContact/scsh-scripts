@@ -100,9 +100,6 @@ EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
 	var id_CA_DH = new ByteString("id-CA-DH", OID);
 	var id_CA_ECDH = new ByteString("id-CA-ECDH", OID);
 	var id_TA = new ByteString("id-TA", OID);
-	var id_RI = new ByteString("id-RI", OID);
-	var id_RI_DH = new ByteString("id-RI-DH", OID);
-	var id_RI_ECDH = new ByteString("id-RI-ECDH", OID);
 	
 	for (var i = 0; i < si.elements; i++) {
 		var o = si.get(i);
@@ -212,9 +209,9 @@ EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
 
 				this.CAInfos[id] = cai;
 			}
-		} else if (oid.value.startsWith(id_RI) == id_RI.length) {
-			if (oid.value.equals(id_RI_DH) ||
-				oid.value.equals(id_RI_ECDH)) {
+		} else if (oid.value.startsWith(RestrictedIdentification.id_RI) == RestrictedIdentification.id_RI.length) {
+			if (oid.value.equals(RestrictedIdentification.id_RI_DH) ||
+				oid.value.equals(RestrictedIdentification.id_RI_ECDH)) {
 				this.log("RestrictedIdentificationDomainParameterInfo : " + o);
 
 				var ridpi = new RestrictedIdentificationDomainParameterInfo(o);
@@ -458,6 +455,27 @@ EAC20.prototype.getCADomainParameterInfos = function() {
 EAC20.prototype.getCAKeyId = function() {
 	if (this.CAInfos[0].keyId) {
 		this.CAInfos[0].keyId;
+	}
+	return 0;
+}
+
+
+
+/**
+ * Return the key id of the restricted identification key
+ *
+ * @boolean authOnly return the RI key available after authentication only (to calculate the pseudonym)
+ * @return the key id
+ * @type 
+ */
+EAC20.prototype.getRIKeyId = function(authOnly) {
+	for each (var rii in this.RIInfos) {
+		print(rii);
+		print(!authOnly);
+		print(!rii.authorizedOnly);
+		if (!authOnly == !rii.authorizedOnly) {
+			return rii.keyId;
+		}
 	}
 	return 0;
 }
