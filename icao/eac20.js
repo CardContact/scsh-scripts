@@ -29,6 +29,7 @@ load("tools/eccutils.js");
 
 load("pace.js");
 load("chipauthentication.js");
+load("restrictedidentification.js");
 load("cvcertstore.js");
 
 
@@ -53,6 +54,8 @@ function EAC20(crypto, card) {
 	this.CAInfos = new Array();
 	this.CADPs = new Array();
 	this.CAPublicKeys = new Array();
+
+	this.RIInfos = new Array();
 
 	this.verbose = false;
 }
@@ -208,6 +211,37 @@ EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
 				}
 
 				this.CAInfos[id] = cai;
+			}
+		} else if (oid.value.startsWith(id_RI) == id_RI.length) {
+			if (oid.value.equals(id_RI_DH) ||
+				oid.value.equals(id_RI_ECDH)) {
+				this.log("RestrictedIdentificationDomainParameterInfo : " + o);
+
+				var ridpi = new RestrictedIdentificationDomainParameterInfo(o);
+				this.log(ridpi);
+
+				if (!fromCardSecurity && (typeof(this.RIDP) != "undefined")) {
+					throw new GPError("EAC20", GPError.INVALID_DATA, 0, "Duplicate RestrictedIdentificationDomainParameter");
+				this.RIDP = ridpi;
+				}
+			} else {
+				this.log("RestrictedIdentificationInfo : " + o);
+
+				var rii = new RestrictedIdentificationInfo(o);
+				this.log(rii);
+
+				var id = rii.keyId;
+				
+				if (typeof(id) == "undefined") {
+					this.log("Using default key id 0");
+					id = 0;
+				}
+
+				if (!fromCardSecurity && (typeof(this.RIInfos[id]) != "undefined")) {
+					throw new GPError("EAC20", GPError.INVALID_DATA, 0, "Duplicate keyId " + id + " for RestrictedIdentificationInfo");
+				}
+
+				this.RIInfos[id] = rii;
 			}
 		}
 	}
@@ -855,7 +889,7 @@ EAC20.prototype.setIDPICC = function(idPICC) {
  * Perform terminal authentication using a given terminal key
  *
  * @param {Key} termkey the terminal private key
- * @param {ASN1} auxdata auxiliary data (tag '67') to be included in terminal authentication
+ * @param {ByteString} auxdata auxiliary data (tag '67') to be included in terminal authentication
  * @param {Crypto} crypto optional alternative crypto provider (e.g. for key in SmartCard-HSM)
  */
 EAC20.prototype.performTerminalAuthentication = function(termkey, auxdata, crypto) {
