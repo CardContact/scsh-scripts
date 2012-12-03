@@ -50,6 +50,14 @@ SecurityEnvironment.prototype.addElements = function(tname, tlv) {
 		for (var i = 0; i < tlv.elements; i++) {
 			var o = tlv.get(i);
 			SecurityEnvironment.decorateCRT(o);
+			var j = 0;
+			while(j < t.elements) {
+				if (t.get(j).tag == o.tag) {
+					t.remove(j);
+				} else {
+					j++;
+				}
+			}
 			t.add(o);
 		}
 	} else {
