@@ -27,6 +27,7 @@
 
 load("apdu.js");
 load("securityenvironment.js");
+load("authenticationobject.js");
 
 
 /**
@@ -557,6 +558,22 @@ DF.prototype.addMeta = function(name, value) {
 
 
 /**
+ * Add authentication object to DF
+ *
+ * @param {String} name name of meta information
+ * @param {Object} value value of meta information
+ */
+DF.prototype.addAuthenticationObject = function(ao) {
+	assert((typeof(ao) == "object") && (ao instanceof AuthenticationObject), "Argument must be of type AuthenticationObject");
+	if (typeof(this.meta[ao.type]) == "undefined") {
+		this.meta[ao.type] = [];
+	}
+	this.meta[ao.type][ao.id] = ao;
+}
+
+
+
+/**
  * Select a file contained in the DF using the file identifier
  *
  * @param {ByteString} the file identifier
@@ -611,6 +628,13 @@ DF.prototype.dump = function(indent) {
 	if (this instanceof DF) {
 		for (var i in this.meta) {
 			str += indent + "  Meta:" + i + "\n";
+			if (typeof(this.meta[i]) == "object") {
+				for each (e in this.meta[i]) {
+					if (e instanceof AuthenticationObject) {
+						str += indent + "    " + e.toString() + "\n";
+					}
+				}
+			}
 		}
 	}
 	
@@ -640,11 +664,12 @@ function FileSelector(mf) {
 	if ((typeof(mf) != "object") && !(mf instanceof DF)) {
 		throw new GPError("FileSelector", GPError.INVALID_TYPE, APDU.SW_GENERALERROR, "Argument 1 must be of type DF");
 	}
+	
 	this.mf = mf;
-	this.currentDF = mf;
-	this.currentEF = null;
+	this.selectMF();
 	
 	this.se = { VEXK: new SecurityEnvironment(), CDIK: new SecurityEnvironment(), SMRES: new SecurityEnvironment(), SMCOM: new SecurityEnvironment()};
+	this.globalAuthenticationState = [];
 }
 
 
@@ -674,7 +699,9 @@ FileSelector.prototype.getSecurityEnvironment = function() {
 
 
 /**
+ * Return meta data associated with the current DF or MF
  *
+ * @param {String} name the meta data name
  */
 FileSelector.prototype.getMeta = function(name) {
 	var meta = this.currentDF.meta[name];
@@ -687,11 +714,50 @@ FileSelector.prototype.getMeta = function(name) {
 
 
 /**
+ * Add authenticated object to the list of authentication states for the local DF or global MF
+ *
+ * @param{boolean} global true if global state else local DF state
+ * @param{AuthenticationObject} ao the authentication object for which authentication was successfull
+ */
+FileSelector.prototype.addAuthenticationState = function(global, ao) {
+	if (global) {
+		this.globalAuthenticationState.push(ao);
+	} else {
+		this.localAuthenticationState.push(ao);
+	}
+}
+
+
+
+/**
+ * Add authenticated object to the list of authentication states for the local DF or global MF
+ *
+ * @param{boolean} global true if global state else local DF state
+ * @param{AuthenticationObject} ao the authentication object for which authentication was successfull
+ */
+FileSelector.prototype.isAuthenticated = function(global, ao) {
+	if (global) {
+		var list = this.globalAuthenticationState;
+	} else {
+		var list = this.localAuthenticationState;
+	}
+	for each (var aao in list) {
+		if (aao === ao) {
+			return true;
+		}
+	}
+	return false;
+}
+
+
+
+/**
  * Select the MF
  */
 FileSelector.prototype.selectMF = function() {
 	this.currentDF = this.mf;
 	this.currentEF = null;
+	this.localAuthenticationState = [];
 
 	return this.mf;
 }
@@ -722,6 +788,7 @@ FileSelector.prototype.selectFID = function(fid, check, df) {
 	
 	if (node.isDF()) {
 		this.currentDF = node;
+		this.localAuthenticationState = [];
 		this.currentEF = null;
 	} else {
 		this.currentEF = node;
@@ -800,6 +867,7 @@ FileSelector.prototype.processSelectAPDU = function(apdu) {
 			node = this.currentDF.getParent();
 			if (node) {
 				this.currentDF = node;
+				this.localAuthenticationState = [];
 			} else {
 				node = this.currentDF;
 			}
@@ -812,6 +880,7 @@ FileSelector.prototype.processSelectAPDU = function(apdu) {
 		}
 		this.currentDF = node;
 		this.currentEF = null;
+		this.localAuthenticationState = [];
 		break;
 	default:
 		throw new GPError("FileSelector", GPError.INVALID_DATA, APDU.SW_INCP1P2, "Incorrect parameter P1 (" + p1.toString(16) + ")");
@@ -844,7 +913,20 @@ FileSelector.prototype.processSelectAPDU = function(apdu) {
  * Return a human readable string for this object
  */
 FileSelector.prototype.toString = function() {
-	return "FileSelector: Current DF=" + this.currentDF + " / Current EF=" + this.currentEF;
+	var str = "FileSelector: Current DF=" + this.currentDF + " / Current EF=" + this.currentEF;
+	if (this.globalAuthenticationState.length > 0) {
+		str += "\nGlobally authenticated objects:";
+		for each (var aao in this.globalAuthenticationState) {
+			str += "\n" + aao.toString();
+		}
+	}
+	if (this.localAuthenticationState.length > 0) {
+		str += "\nLocally authenticated objects:";
+		for each (var aao in this.localAuthenticationState) {
+			str += "\n" + aao.toString();
+		}
+	}
+	return str;
 }
 
 
