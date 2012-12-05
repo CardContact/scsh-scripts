@@ -60,7 +60,7 @@ function RestrictedIdentificationInfo(tlv) {
 	if (tlv && (tlv instanceof ASN1)) {
 		assert(tlv.isconstructed);
 		assert(tlv.elements >= 2);
-		
+
 		var i = 0;
 		var t = tlv.get(i++);
 		assert(t.tag == ASN1.OBJECT_IDENTIFIER);
@@ -69,7 +69,7 @@ function RestrictedIdentificationInfo(tlv) {
 		var params = tlv.get(i++);
 		assert(params.tag == ASN1.SEQUENCE);
 		assert(params.elements == 3);
-		
+
 		assert(params.get(0).tag == ASN1.INTEGER);
 		this.version = params.get(0).value.toSigned();
 
@@ -78,13 +78,12 @@ function RestrictedIdentificationInfo(tlv) {
 
 		assert(params.get(2).tag == ASN1.BOOLEAN);
 		this.authorizedOnly = params.get(2).value.toSigned();
-		
+
 		if (i < tlv.elements) {
 			var t = tlv.get(i++);
 			assert(t.tag == ASN1.INTEGER);
 			this.maxKeyLen = t.value.toSigned();
 		}
-		
 	}
 }
 

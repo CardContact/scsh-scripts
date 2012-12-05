@@ -735,8 +735,7 @@ EAC20.prototype.performPACE = function(parameterId, pwdid, pwd, chat) {
 		crt.append(chat.getBytes());
 	}
 
-	this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x22, 0xC1, 0xA4, crt.toByteString(), [0x9000, 0x63C2, 0x63C1, 0x63C0, 0x6283 ]);
-
+	this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x22, 0xC1, 0xA4, crt.toByteString(), [0x9000, 0x63C2, 0x63C1 ]);
 
 	// General Authenticate
 	var dado = new ASN1(0x7C);
@@ -791,6 +790,14 @@ EAC20.prototype.performPACE = function(parameterId, pwdid, pwd, chat) {
 	var dado = new ASN1(0x7C, new ASN1(0x85, authToken));
 
 	dadobin = this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO|Card.RENC, 0x00, 0x86, 0x00, 0x00, dado.getBytes(), 0, [0x9000, 0x63C2, 0x63C1, 0x63C0, 0x6283 ]);
+
+	if ((this.card.SW & 0xFFF0) == 0x63C0) {
+		throw new GPError("EAC20", GPError.DEVICE_ERROR, this.card.SW, "Authentication failed: " + (this.card.SW & 0xF) + " tries left");
+	}
+
+	if (this.card.SW == 0x6300) {
+		throw new GPError("EAC20", GPError.DEVICE_ERROR, this.card.SW, "Authentication failed");
+	}
 
 	var dado = new ASN1(dadobin);
 	this.log(dado);
