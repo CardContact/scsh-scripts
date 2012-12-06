@@ -1,0 +1,346 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="doctg.xsl" ?>
+<testgroup 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="http://www.openscdp.org/schema/testframework-1.0.xsd"
+	id="tg_updatebinary_odd_ins" arrayElement="testcase,function" arrayIndex="id,Name">
+	<name>UPDATE BINARY Odd INS Test Group</name>
+	<description>
+		<p>This group of tests verify the implementation of the UPDATE BINARY APDU using an odd instruction byte</p>
+	</description>
+	<reference>
+		<p>ISO 7816-4</p>
+	</reference>
+
+<!-- Initializing the test group environment -->
+<!-- Enable this if you want your own constructor
+	<constructor Param="name, parameter">
+		<Script><![CDATA[
+	
+	// Call constructor of super class TestGroup and define name of test group
+	TestGroup.call(this, name, parameter);
+	
+		]]></Script>
+	</constructor>
+-->
+
+	
+<!-- Setup method called before each test case is executed -->
+	<setup>
+		<Script><![CDATA[
+
+	this.card = this.parameter.card;
+	
+	this.card.reset(Card.RESET_COLD);
+			
+		]]></Script>
+	</setup>
+
+
+	
+<!-- Teardown method called after each test case is executed -->
+	<teardown>
+		<Script><![CDATA[
+		
+//	print("TestGroup.teardown() called.");
+
+		]]></Script>
+	</teardown>
+
+
+
+	<testcase id="001UpdateBinary">
+		<name>Update region in EF</name>
+		<description>
+			<p>Update one byte at the beginning, two bytes in the middle and three bytes at the end of the file</p>
+		</description>
+		<requirement>
+			<p>The card must support valid offsets and data length value</p>
+		</requirement>
+		<reference>
+			<p>ISO 7816-4</p>
+		</reference>
+		<Script><![CDATA[
+
+	var dm = this.parameter.dataModel;
+	var ef = dm.getNode("MF/EF_01");
+	var fid = new ByteString(ef.fid, HEX);
+	var ref = new ByteString(ef.content, HEX);
+
+	var fcp = this.card.sendApdu(0x00, 0xA4, 0x00, 0x0C, fid, [0x9000]);
+
+	this.assertTrue(fcp.length == 0, "Select EF with P2='0C' returned data");
+
+	// Assert correct reference value at begin of test
+	var data = this.card.sendApdu(0x00, 0xB0, 0x00, 0x00, ref.length, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+
+	// Replace first byte
+	var ref = (new ByteString("A5", HEX)).concat(ref.bytes(1));
+	
+	var cdata = (new ASN1(0x30,
+					new ASN1(0x54, ByteString.valueOf(0)),
+					new ASN1(0x53, ref.bytes(0, 1))
+				)).value;
+	this.card.sendApdu(0x00, 0xD7, 0x00, 0x00, cdata, [0x9000]);
+
+	var data = this.card.sendApdu(0x00, 0xB0, 0x00, 0x00, ref.length, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+
+	// Replace next two bytes
+	var ref = (new ByteString("A5A5A5", HEX)).concat(ref.bytes(3));
+	
+	var cdata = (new ASN1(0x30,
+					new ASN1(0x54, ByteString.valueOf(1)),
+					new ASN1(0x53, ref.bytes(1, 2))
+				)).value;
+	this.card.sendApdu(0x00, 0xD7, 0x00, 0x00, cdata, [0x9000]);
+
+	var data = this.card.sendApdu(0x00, 0xB0, 0x00, 0x00, ref.length, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+
+	// Replace final three bytes
+	var ref = ref.left(ref.length - 3).concat(new ByteString("A5A5A5", HEX));
+
+	var cdata = (new ASN1(0x30,
+					new ASN1(0x54, ByteString.valueOf(ref.length - 3)),
+					new ASN1(0x53, ref.bytes(ref.length - 3, 3))
+				)).value;
+	this.card.sendApdu(0x00, 0xD7, 0x00, 0x00, cdata, [0x9000]);
+
+	var data = this.card.sendApdu(0x00, 0xB0, 0x00, 0x00, ref.length, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+
+	// Restore old value
+	var ref = new ByteString(ef.content, HEX);
+
+	var cdata = (new ASN1(0x30,
+					new ASN1(0x54, ByteString.valueOf(0)),
+					new ASN1(0x53, ref)
+				)).value;
+	this.card.sendApdu(0x00, 0xD7, 0x00, 0x00, cdata, [0x9000]);
+
+	var data = this.card.sendApdu(0x00, 0xB0, 0x00, 0x00, ref.length, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+
+		]]></Script>
+	</testcase>
+
+
+
+	<testcase id="002UpdateBinaryExtendFile">
+		<name>Update region beyond current end of file</name>
+		<description>
+			<p>Update data at the end of file, effectively extending the file content</p>
+		</description>
+		<requirement>
+			<p>The card must support an offset at the end of file and append data</p>
+		</requirement>
+		<reference>
+			<p>ISO 7816-4</p>
+		</reference>
+		<Script><![CDATA[
+
+	var dm = this.parameter.dataModel;
+	var ef = dm.getNode("MF/EF_01");
+	var fid = new ByteString(ef.fid, HEX);
+
+	var fcp = this.card.sendApdu(0x00, 0xA4, 0x00, 0x0C, fid, [0x9000]);
+
+	this.assertTrue(fcp.length == 0, "Select EF with P2='0C' returned data");
+
+	// Assert correct reference value at begin of test
+	var ref = this.card.sendApdu(0x00, 0xB0, 0x00, 0x00, 0, [0x9000]);
+
+	// Add one byte
+	var ref = ref.concat(new ByteString("A5", HEX));
+
+	var cdata = (new ASN1(0x30,
+					new ASN1(0x54, ByteString.valueOf(ref.length - 1)),
+					new ASN1(0x53, ref.bytes(ref.length - 1, 1))
+				)).value;
+	this.card.sendApdu(0x00, 0xD7, 0x00, 0x00, cdata, [0x9000]);
+
+	var data = this.card.sendApdu(0x00, 0xB0, 0x00, 0x00, ref.length, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+
+	// Add one byte and write across file boundary
+	var ref = ref.concat(new ByteString("A5", HEX));
+
+	var cdata = (new ASN1(0x30,
+					new ASN1(0x54, ByteString.valueOf(ref.length - 2)),
+					new ASN1(0x53, ref.bytes(ref.length - 2, 2))
+				)).value;
+	this.card.sendApdu(0x00, 0xD7, 0x00, 0x00, cdata, [0x9000]);
+
+	var data = this.card.sendApdu(0x00, 0xB0, 0x00, 0x00, ref.length, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+
+	var ref = new ByteString(ef.content, HEX);
+
+	var cdata = (new ASN1(0x30,
+					new ASN1(0x54, ByteString.valueOf(0)),
+					new ASN1(0x53, ref)
+				)).value;
+	this.card.sendApdu(0x00, 0xD7, 0x00, 0x00, cdata, [0x9000]);
+
+	var data = this.card.sendApdu(0x00, 0xB0, 0x00, 0x00, ref.length, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+
+		]]></Script>
+	</testcase>
+
+
+
+	<testcase id="011UpdateBinarySFI">
+		<name>Update region in EF using SFI file selection</name>
+		<description>
+			<p>Select file using SFI and update one byte at the beginning, two bytes in the middle and three bytes at the end of the file</p>
+		</description>
+		<requirement>
+			<p>The card must support SFI selection, valid offsets and data length value</p>
+		</requirement>
+		<reference>
+			<p>ISO 7816-4</p>
+		</reference>
+		<Script><![CDATA[
+
+	var dm = this.parameter.dataModel;
+	var ef = dm.getNode("MF/EF_01");
+	var ref = new ByteString(ef.content, HEX);
+	var sfi = parseInt(ef.sfi);
+
+	// Assert correct reference value at begin of test
+	var data = this.card.sendApdu(0x00, 0xB0, 0x80 | sfi, 0x00, ref.length, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+
+	// Replace first byte
+	var ref = (new ByteString("A5", HEX)).concat(ref.bytes(1));
+	
+	var cdata = (new ASN1(0x30,
+					new ASN1(0x54, ByteString.valueOf(0)),
+					new ASN1(0x53, ref.bytes(0, 1))
+				)).value;
+	this.card.sendApdu(0x00, 0xD7, 0x00, sfi, cdata, [0x9000]);
+
+	var data = this.card.sendApdu(0x00, 0xB0, 0x00, 0x00, ref.length, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+
+	// Replace next two bytes
+	var ref = (new ByteString("A5A5A5", HEX)).concat(ref.bytes(3));
+	
+	var cdata = (new ASN1(0x30,
+					new ASN1(0x54, ByteString.valueOf(1)),
+					new ASN1(0x53, ref.bytes(1, 2))
+				)).value;
+	this.card.sendApdu(0x00, 0xD7, 0x00, sfi, cdata, [0x9000]);
+
+	var data = this.card.sendApdu(0x00, 0xB0, 0x00, 0x00, ref.length, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+
+	// Replace final three bytes
+	var ref = ref.left(ref.length - 3).concat(new ByteString("A5A5A5", HEX));
+
+	var cdata = (new ASN1(0x30,
+					new ASN1(0x54, ByteString.valueOf(ref.length - 3)),
+					new ASN1(0x53, ref.bytes(ref.length - 3, 3))
+				)).value;
+	this.card.sendApdu(0x00, 0xD7, 0x00, sfi, cdata, [0x9000]);
+
+	var data = this.card.sendApdu(0x00, 0xB0, 0x00, 0x00, ref.length, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+
+	// Restore old value
+	var ref = new ByteString(ef.content, HEX);
+
+	var cdata = (new ASN1(0x30,
+					new ASN1(0x54, ByteString.valueOf(0)),
+					new ASN1(0x53, ref)
+				)).value;
+	this.card.sendApdu(0x00, 0xD7, 0x00, sfi, cdata, [0x9000]);
+
+	var data = this.card.sendApdu(0x00, 0xB0, 0x00, 0x00, ref.length, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+
+		]]></Script>
+	</testcase>
+
+
+
+	<testcase id="021UpdateBinaryFID">
+		<name>Update region in EF using SFI file selection</name>
+		<description>
+			<p>Select file using SFI and update one byte at the beginning, two bytes in the middle and three bytes at the end of the file</p>
+		</description>
+		<requirement>
+			<p>The card must support SFI selection, valid offsets and data length value</p>
+		</requirement>
+		<reference>
+			<p>ISO 7816-4</p>
+		</reference>
+		<Script><![CDATA[
+
+	var dm = this.parameter.dataModel;
+	var ef = dm.getNode("MF/EF_01");
+	var fid = new ByteString(ef.fid, HEX);
+	var ref = new ByteString(ef.content, HEX);
+	var sfi = parseInt(ef.sfi);
+
+	// Assert correct reference value at begin of test
+	var data = this.card.sendApdu(0x00, 0xB0, 0x80 | sfi, 0x00, ref.length, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+
+	// Replace first byte
+	var ref = (new ByteString("A5", HEX)).concat(ref.bytes(1));
+	
+	var cdata = (new ASN1(0x30,
+					new ASN1(0x54, ByteString.valueOf(0)),
+					new ASN1(0x53, ref.bytes(0, 1))
+				)).value;
+	this.card.sendApdu(0x00, 0xD7, fid.byteAt(0), fid.byteAt(1), cdata, [0x9000]);
+
+	var data = this.card.sendApdu(0x00, 0xB0, 0x00, 0x00, ref.length, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+
+	// Replace next two bytes
+	var ref = (new ByteString("A5A5A5", HEX)).concat(ref.bytes(3));
+	
+	var cdata = (new ASN1(0x30,
+					new ASN1(0x54, ByteString.valueOf(1)),
+					new ASN1(0x53, ref.bytes(1, 2))
+				)).value;
+	this.card.sendApdu(0x00, 0xD7, fid.byteAt(0), fid.byteAt(1), cdata, [0x9000]);
+
+	var data = this.card.sendApdu(0x00, 0xB0, 0x00, 0x00, ref.length, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+
+	// Replace final three bytes
+	var ref = ref.left(ref.length - 3).concat(new ByteString("A5A5A5", HEX));
+
+	var cdata = (new ASN1(0x30,
+					new ASN1(0x54, ByteString.valueOf(ref.length - 3)),
+					new ASN1(0x53, ref.bytes(ref.length - 3, 3))
+				)).value;
+	this.card.sendApdu(0x00, 0xD7, fid.byteAt(0), fid.byteAt(1), cdata, [0x9000]);
+
+	var data = this.card.sendApdu(0x00, 0xB0, 0x00, 0x00, ref.length, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+
+	// Restore old value
+	var ref = new ByteString(ef.content, HEX);
+
+	var cdata = (new ASN1(0x30,
+					new ASN1(0x54, ByteString.valueOf(0)),
+					new ASN1(0x53, ref)
+				)).value;
+	this.card.sendApdu(0x00, 0xD7, fid.byteAt(0), fid.byteAt(1), cdata, [0x9000]);
+
+	var data = this.card.sendApdu(0x00, 0xB0, 0x00, 0x00, ref.length, [0x9000]);
+	this.assertTrue(ref.equals(data), "Data read does not match reference value");
+
+		]]></Script>
+	</testcase>
+
+
+
+</testgroup>

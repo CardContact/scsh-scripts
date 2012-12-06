@@ -448,6 +448,39 @@ TransparentEF.prototype.readBinary = function(apdu, offset, length) {
 
 
 /**
+ * Update data in transparent EF
+ *
+ * @param {APDU} apdu the APDU used for updating
+ * @param {Number} offset the offset to update
+ * @param {ByteString} data the data to write into the EF
+ */
+TransparentEF.prototype.updateBinary = function(apdu, offset, data) {
+	if (typeof(offset) != "number") {
+		throw new GPError("TransparentEF", GPError.INVALID_TYPE, APDU.SW_GENERALERROR, "Offset must be type Number");
+	}
+	if ((typeof(data) != "object") || !(data instanceof ByteString)) {
+		throw new GPError("TransparentEF", GPError.INVALID_TYPE, APDU.SW_GENERALERROR, "Data must be a ByteString");
+	}
+
+	if (offset > this.content.length) {
+		throw new GPError("TransparentEF", GPError.INVALID_DATA, APDU.SW_INCP1P2, "Offset out of range");
+	}
+
+	if (offset + data.length > this.fcp.size) {
+		throw new GPError("TransparentEF", GPError.INVALID_DATA, APDU.SW_WRONGLENGTH, "Writing beyond file limit");
+	}
+
+	var newcontent = this.content.bytes(0, offset).concat(data);
+	if (this.content.length > newcontent.length) {
+		newcontent = newcontent.concat(this.content.bytes(newcontent.length));
+	}
+	this.content = newcontent;
+	apdu.setSW(APDU.SW_OK);
+}
+
+
+
+/**
  * Creates a LinearEF
  *
  * @class Class implementing linear EFs

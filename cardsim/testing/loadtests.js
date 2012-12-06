@@ -49,6 +49,9 @@ testRunner.addTestGroupFromXML("tg_select.xml", param);
 testRunner.addTestGroupFromXML("tg_readbinary_even_ins.xml", param);
 testRunner.addTestGroupFromXML("tg_readbinary_odd_ins.xml", param);
 testRunner.addTestGroupFromXML("tg_readbinary_sw.xml", param);
+testRunner.addTestGroupFromXML("tg_updatebinary_even_ins.xml", param);
+testRunner.addTestGroupFromXML("tg_updatebinary_odd_ins.xml", param);
+testRunner.addTestGroupFromXML("tg_updatebinary_sw.xml", param);
 testRunner.addTestGroupFromXML("tg_secmsg.xml", param);
 
 print("Test-Suite loaded...");

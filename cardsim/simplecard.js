@@ -41,6 +41,7 @@ function SimpleCardSimulator() {
 	this.mf = new DF(FCP.newDF("3F00", null),
 						new LinearEF(FCP.newLinearEF("2F00", 0, FCP.LINEARVARIABLE, 20, 10)),
 						new TransparentEF(FCP.newTransparentEF("2F02", 1, 100), new ByteString("5A0A00010203040506070809", HEX)),
+						new TransparentEF(FCP.newTransparentEF("EF01", 2, 100), new ByteString("4041424344", HEX)),
 						new DF(FCP.newDF("DF01", this.aid),
 							new TransparentEF(FCP.newTransparentEF("EF01", 0, 100)),
 							new TransparentEF(FCP.newTransparentEF("EF02", 0, 100))

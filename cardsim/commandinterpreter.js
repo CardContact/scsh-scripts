@@ -112,6 +112,59 @@ CommandInterpreter.prototype.readBinary = function(apdu) {
 
 
 
+/**
+ * Process an UPDATE BINARY APDU
+ *
+ * @param {APDU} apdu the command and response APDU
+ */
+CommandInterpreter.prototype.updateBinary = function(apdu) {
+	if (apdu.isChained()) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CHAINNOTSUPPORTED, "Chaining not supported in READ BINARY");
+	}
+	
+	if (!apdu.hasCData()) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_WRONGLENGTH, "No data found in UPDATE BINARY");
+	}
+
+	var dua = new DataUnitAPDU(apdu);
+	
+	if (!dua.hasCData()) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_INVDATA, "No data found in UPDATE BINARY");
+	}
+
+	var ef;
+	var sfi = dua.getSFI();
+	var fid = dua.getFID();
+	
+	if (sfi >= 0) {
+		ef = this.fileSelector.selectSFI(sfi);
+	} else if (fid != null) {
+		ef = this.fileSelector.selectFID(fid, false, false);
+	} else {
+		ef = this.fileSelector.getCurrentEF();
+	
+		if (ef == null) {
+			throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_COMNOTALLOWNOEF, "No current EF in UPDATE BINARY");
+		}
+	}
+	
+	if (!(ef instanceof TransparentEF)) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_COMINCOMPATIBLE, "EF is not a transparent file in UPDATE BINARY");
+	}
+
+	var offset = dua.getOffset();
+	var data = dua.getCData();
+
+	ef.updateBinary(apdu, offset, data);
+}
+
+
+
+/**
+ * Process a MANAGE SECURITY ENVIRONMENT APDU
+ *
+ * @param {APDU} apdu the command and response APDU
+ */
 CommandInterpreter.prototype.manageSecurityEnvironment = function(apdu) {
 	var p1 = apdu.getP1();
 	var p2 = apdu.getP2();
@@ -194,8 +247,11 @@ CommandInterpreter.prototype.dispatch = function(apdu, ins) {
 		case APDU.INS_SELECT:
 			this.fileSelector.processSelectAPDU(apdu);
 			break;
-		case APDU.INS_READBINARY:
+		case APDU.INS_READ_BINARY:
 			this.readBinary(apdu);
+			break;
+		case APDU.INS_UPDATE_BINARY:
+			this.updateBinary(apdu);
 			break;
 		case APDU.INS_MANAGE_SE:
 			this.manageSecurityEnvironment(apdu);

@@ -22,6 +22,7 @@
         <scdp:FileStructure arrayElement="EF" arrayIndex="#">
             <scdp:EF fid="2F00" type="LV" format="asn1.efdir" name="EF_DIR" />
             <scdp:EF fid="2F02" sfi="1" type="T" format="asn1" name="EF_GDO" size="100" content="5A0A00010203040506070809"/>
+            <scdp:EF fid="EF01" sfi="2" type="T" format="asn1" name="EF_01" size="100" content="4041424344"/>
         </scdp:FileStructure>    
     </scdp:DataStructure>   
 </scdp:ApplicationProfile>
