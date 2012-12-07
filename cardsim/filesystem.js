@@ -27,7 +27,6 @@
 
 load("apdu.js");
 load("securityenvironment.js");
-load("authenticationobject.js");
 
 
 /**
@@ -591,17 +590,16 @@ DF.prototype.addMeta = function(name, value) {
 
 
 /**
- * Add authentication object to DF
+ * Add object to DF
  *
- * @param {String} name name of meta information
- * @param {Object} value value of meta information
+ * @param {Object} o object to be added. Must have property type and id.
  */
-DF.prototype.addAuthenticationObject = function(ao) {
-	assert((typeof(ao) == "object") && (ao instanceof AuthenticationObject), "Argument must be of type AuthenticationObject");
-	if (typeof(this.meta[ao.type]) == "undefined") {
-		this.meta[ao.type] = [];
+DF.prototype.addObject = function(o) {
+	assert((typeof(o) == "object") && (o instanceof FileSystemIdObject), "Argument must be instance of FileSystemIdObject");
+	if (typeof(this.meta[o.getType()]) == "undefined") {
+		this.meta[o.getType()] = [];
 	}
-	this.meta[ao.type][ao.id] = ao;
+	this.meta[o.getType()][o.getId()] = o;
 }
 
 
@@ -663,7 +661,7 @@ DF.prototype.dump = function(indent) {
 			str += indent + "  Meta:" + i + "\n";
 			if (typeof(this.meta[i]) == "object") {
 				for each (e in this.meta[i]) {
-					if (e instanceof AuthenticationObject) {
+					if (e instanceof FileSystemIdObject) {
 						str += indent + "    " + e.toString() + "\n";
 					}
 				}
@@ -681,6 +679,48 @@ DF.prototype.dump = function(indent) {
 		}
 	}
 	return str;
+}
+
+
+
+/**
+ * Create a file system object identifiable by an id
+ *
+ * @class Abstract class for file system objects identified by an identifier
+ *
+ * @param {String} name the human readable name of the object
+ * @param {Number} id the id
+ */
+function FileSystemIdObject(name, id) {
+	this.name = name;
+	this.id = id;
+}
+
+
+
+/**
+ * Return id of object
+ */
+FileSystemIdObject.prototype.getId = function() {
+	return this.id;
+}
+
+
+
+/**
+ * Return type of object
+ */
+FileSystemIdObject.prototype.getType = function() {
+	throw new GPError("FileSystemIdObject", GPError.NOT_IMPLEMENTED, 0, "Derived class must override getType()");
+}
+
+
+
+/**
+ * Return human readable string
+ */
+FileSystemIdObject.prototype.toString = function() {
+	return this.name + "(" + this.id + ")";
 }
 
 
@@ -735,13 +775,59 @@ FileSelector.prototype.getSecurityEnvironment = function() {
  * Return meta data associated with the current DF or MF
  *
  * @param {String} name the meta data name
+ * @type Object
+ * @returns The meta data
  */
 FileSelector.prototype.getMeta = function(name) {
-	var meta = this.currentDF.meta[name];
+	var meta;
+
+	if (this.currentDF) {
+		var meta = this.currentDF.meta[name];
+	}
+
 	if (!meta) {
 		meta = this.mf.meta[name];
 	}
 	return meta;
+}
+
+
+
+/**
+ * Return object of given type identified by id
+ *
+ * <p>If bit b8 in the id is 1, then the search will start in the current DF. If the object
+ *    is not found, the search is continued in the MF. If the bit is not set, then the search
+ *    will only look into the MF.</p>
+ *
+ * @param {String} type the type of the object
+ * @param {Number} id the id, bit b8 indicating local DF or global MF search
+ * @type {Object}
+ * @returns the object of the requested type or null if not found
+ */
+FileSelector.prototype.getObject = function(type, id) {
+	var olist;
+
+	if (id & 0x80) {
+		olist = this.currentDF.meta[type];
+		if (olist) {
+			var o = olist[id & 0x7F];
+			
+			if (o) {
+				return o;
+			}
+		}
+	}
+
+	olist = this.mf.meta[type];
+	if (olist) {
+		var o = olist[id & 0x7F];
+
+		if (o) {
+			return o;
+		}
+	}
+	return null;
 }
 
 

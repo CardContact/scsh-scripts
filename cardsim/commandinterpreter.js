@@ -161,6 +161,94 @@ CommandInterpreter.prototype.updateBinary = function(apdu) {
 
 
 /**
+ * Performs a VERIFY command
+ *
+ * @param {APDU} the apdu
+ */
+CommandInterpreter.prototype.verify = function(apdu) {
+	if (apdu.isChained()) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CHAINNOTSUPPORTED, "Chaining not supported in command");
+	}
+	
+	var pinao = this.fileSelector.getObject(AuthenticationObject.TYPE_PIN, apdu.getP2());
+	if (!pinao) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_RDNOTFOUND, "PIN with reference " + apdu.getP2() + " not found");
+	}
+
+	if (apdu.hasCData()) {
+		pinao.verify(apdu.getCData());
+	} else {
+		if (!this.fileSelector.isAuthenticated(ao)) {
+			pinao.determineStatus();
+		}
+	}
+
+	apdu.setSW(APDU.SW_OK);
+}
+
+
+
+/**
+ * Performs a CHANGE REFERENCE DATA command
+ *
+ * @param {APDU} the apdu
+ */
+CommandInterpreter.prototype.changeReferenceData = function(apdu) {
+	if (apdu.isChained()) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CHAINNOTSUPPORTED, "Chaining not supported in command");
+	}
+	if (!apdu.hasCData()) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_WRONGLENGTH, "Command must have C-data");
+	}
+
+	var pinao = this.fileSelector.getObject(AuthenticationObject.TYPE_PIN, apdu.getP2());
+	if (!pinao) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_RDNOTFOUND, "PIN with reference " + apdu.getP2() + " not found");
+	}
+
+	pinao.changeReferenceData(apdu.getP1(), apdu.getCData());
+
+	apdu.setSW(APDU.SW_OK);
+}
+
+
+
+/**
+ * Performs a RESET RETRY COUNTER command
+ *
+ * @param {APDU} the apdu
+ */
+CommandInterpreter.prototype.resetRetryCounter = function(apdu) {
+	if (apdu.isChained()) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CHAINNOTSUPPORTED, "Chaining not supported in command");
+	}
+	var p1 = apdu.getP1();
+
+	if (p1 == 0x02) {
+		if (!apdu.hasCData()) {
+			throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_WRONGLENGTH, "Command must have C-data");
+		}
+	} else if (p1 == 0x03) {
+		if (apdu.hasCData()) {
+			throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_WRONGLENGTH, "Command must not have C-data");
+		}
+	} else {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_INCP1P2, "Invalid P1 or P2");
+	}
+
+	var pinao = this.fileSelector.getObject(AuthenticationObject.TYPE_PIN, apdu.getP2());
+	if (!pinao) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_RDNOTFOUND, "PIN with reference " + apdu.getP2() + " not found");
+	}
+
+	pinao.resetRetryCounter(apdu.getCData());
+
+	apdu.setSW(APDU.SW_OK);
+}
+
+
+
+/**
  * Process a MANAGE SECURITY ENVIRONMENT APDU
  *
  * @param {APDU} apdu the command and response APDU
@@ -252,6 +340,15 @@ CommandInterpreter.prototype.dispatch = function(apdu, ins) {
 			break;
 		case APDU.INS_UPDATE_BINARY:
 			this.updateBinary(apdu);
+			break;
+		case APDU.VERIFY:
+			this.verify(apdu);
+			break;
+		case APDU.INS_RESET_RETRY_COUNTER:
+			this.resetRetryCounter(apdu);
+			break;
+		case APDU.INS_CHANGE_REFERENCE_DATA:
+			this.changeReferenceData(apdu);
 			break;
 		case APDU.INS_MANAGE_SE:
 			this.manageSecurityEnvironment(apdu);
