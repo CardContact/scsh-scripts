@@ -461,6 +461,8 @@ PACE.stripLeadingZeros = function(value) {
  * @param {String} oid the object identifier to encode
  * @param {Key} key the EC public key
  * @param {Boolean} withDP true to encode domain parameter as well
+ * @type ASN1
+ * @returns the ASN1 encoded public key object
  */
 PACE.encodePublicKey = function(oid, key, withDP) {
 
