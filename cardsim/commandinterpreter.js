@@ -341,7 +341,7 @@ CommandInterpreter.prototype.dispatch = function(apdu, ins) {
 		case APDU.INS_UPDATE_BINARY:
 			this.updateBinary(apdu);
 			break;
-		case APDU.VERIFY:
+		case APDU.INS_VERIFY:
 			this.verify(apdu);
 			break;
 		case APDU.INS_RESET_RETRY_COUNTER:

@@ -461,18 +461,25 @@ TransparentEF.prototype.updateBinary = function(apdu, offset, data) {
 		throw new GPError("TransparentEF", GPError.INVALID_TYPE, APDU.SW_GENERALERROR, "Data must be a ByteString");
 	}
 
-	if (offset > this.content.length) {
-		throw new GPError("TransparentEF", GPError.INVALID_DATA, APDU.SW_INCP1P2, "Offset out of range");
-	}
-
 	if (offset + data.length > this.fcp.size) {
 		throw new GPError("TransparentEF", GPError.INVALID_DATA, APDU.SW_WRONGLENGTH, "Writing beyond file limit");
 	}
 
-	var newcontent = this.content.bytes(0, offset).concat(data);
-	if (this.content.length > newcontent.length) {
-		newcontent = newcontent.concat(this.content.bytes(newcontent.length));
+	if (this.content) {
+		if (offset > this.content.length) {
+			throw new GPError("TransparentEF", GPError.INVALID_DATA, APDU.SW_INCP1P2, "Offset out of range");
+		}
+		var newcontent = this.content.bytes(0, offset).concat(data);
+		if (this.content.length > newcontent.length) {
+			newcontent = newcontent.concat(this.content.bytes(newcontent.length));
+		}
+	} else {
+		if (offset > 0) {
+			throw new GPError("TransparentEF", GPError.INVALID_DATA, APDU.SW_INCP1P2, "Offset out of range");
+		}
+		var newcontent = data;
 	}
+
 	this.content = newcontent;
 	apdu.setSW(APDU.SW_OK);
 }
