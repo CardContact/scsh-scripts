@@ -439,6 +439,9 @@ function ChipAuthentication(crypto, algo, domparam) {
 
 
 ChipAuthentication.id_CA_ECDH_3DES_CBC_CBC = (new ByteString("id-CA-ECDH-3DES-CBC-CBC", OID));
+ChipAuthentication.id_CA_ECDH_AES_CBC_CMAC_128 = (new ByteString("id-CA-ECDH-AES-CBC-CMAC-128", OID));
+ChipAuthentication.id_CA_ECDH_AES_CBC_CMAC_192 = (new ByteString("id-CA-ECDH-AES-CBC-CMAC-192", OID));
+ChipAuthentication.id_CA_ECDH_AES_CBC_CMAC_256 = (new ByteString("id-CA-ECDH-AES-CBC-CMAC-256", OID));
 
 ChipAuthentication.standardizedDomainParameter = [];
 ChipAuthentication.standardizedDomainParameter[8] = "secp192r1";
@@ -478,24 +481,19 @@ ChipAuthentication.prototype.deriveKey = function(input, counter, nonce) {
 	if (this.algo.equals(ChipAuthentication.id_CA_ECDH_3DES_CBC_CBC)) {
 		var digest = this.crypto.digest(Crypto.SHA_1, input);
 		key.setComponent(Key.DES, digest.left(16));
-	} else {
+	} else if (this.algo.equals(ChipAuthentication.id_CA_ECDH_AES_CBC_CMAC_128)) {
 		var digest = this.crypto.digest(Crypto.SHA_1, input);
 		key.setComponent(Key.AES, digest.left(16));
-	}
-/*
-	} else if (this.algo == PACE.id_PACE_ECDH_GM_AES_CBC_CMAC_128) {
-		var digest = this.crypto.digest(Crypto.SHA_1, input);
-		key.setComponent(Key.AES, digest.left(16));
-	} else if (this.algo == PACE.id_PACE_ECDH_GM_AES_CBC_CMAC_192) {
+	} else if (this.algo.equals(ChipAuthentication.id_CA_ECDH_AES_CBC_CMAC_192)) {
 		var digest = this.crypto.digest(Crypto.SHA_256, input);
 		key.setComponent(Key.AES, digest.left(24));
-	} else if (this.algo == PACE.id_PACE_ECDH_GM_AES_CBC_CMAC_256) {
+	} else if (this.algo.equals(ChipAuthentication.id_CA_ECDH_AES_CBC_CMAC_256)) {
 		var digest = this.crypto.digest(Crypto.SHA_256, input);
 		key.setComponent(Key.AES, digest);
 	} else {
-		throw new GPError("pace", GPError.INVALID_MECH, 0, "Algorithm not supported");
+		throw new GPError("ChipAuthentication", GPError.INVALID_MECH, 0, "Algorithm not supported");
 	}
-*/
+
 	return key;
 }
 
@@ -617,8 +615,8 @@ ChipAuthentication.prototype.performKeyAgreement = function(publicKey, nonce) {
  * @type Boolean
  */
 ChipAuthentication.prototype.verifyAuthenticationToken = function(authToken) {
-	var t = ChipAuthentication.encodePublicKey(this.algo.toString(OID), this.pukCA, this.includeDPinAuthToken);
-	GPSystem.trace("Authentication Token:");
+	var t = ChipAuthentication.encodePublicKey(this.algo.toString(OID), this.otherPuK, this.includeDPinAuthToken);
+	GPSystem.trace("Authentication Token for verification:");
 	GPSystem.trace(t);
 
 	if (this.algo.equals(ChipAuthentication.id_CA_ECDH_3DES_CBC_CBC)) {
@@ -642,7 +640,7 @@ ChipAuthentication.prototype.verifyAuthenticationToken = function(authToken) {
  */
 ChipAuthentication.prototype.calculateAuthenticationToken = function() {
 	var t = ChipAuthentication.encodePublicKey(this.algo.toString(OID), this.pukCA, this.includeDPinAuthToken);
-	GPSystem.trace("Authentication Token:");
+	GPSystem.trace("Authentication Token for signing:");
 	GPSystem.trace(t);
 
 	if (this.algo.equals(ChipAuthentication.id_CA_ECDH_3DES_CBC_CBC)) {
