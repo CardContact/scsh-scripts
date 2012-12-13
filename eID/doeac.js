@@ -35,7 +35,7 @@ var crypto = new Crypto();
 // Allocate a certificate store that contains the required certificate chain and
 // a key for terminal authentication
 var certstorepath = GPSystem.mapFilename("cvc", GPSystem.CWD);
-var terminalpath = "/UTCVCA/UTDVCA/UTTERM";
+var terminalpath = "/UTISCVCA/UTISDVCAOD/UTTERM";
 
 // Create object to access certificate store
 var certstore = new CVCertificateStore(certstorepath);
@@ -54,6 +54,7 @@ var chat = new ASN1(0x7F4C,
 
 // Create an EAC object that controls the protocol execution
 var eac = new EAC20(crypto, card);
+eac.verbose = true;
 
 print("Reading EF.CardInfo...");
 eac.readCardInfo();
@@ -89,7 +90,7 @@ var termkey = certstore.getPrivateKey(terminalpath, terminalchr);
 var ad = null;
 
 // Prepare for the later chip authentication step
-eac.prepareChipAuthentication(0x41);
+eac.prepareChipAuthentication(eac.getCAKeyId());
 
 // Perform terminal authentication
 eac.performTerminalAuthentication(termkey, ad);
@@ -98,51 +99,15 @@ print("Reading EF.CardSecurity...");
 eac.readCardSecurity();
 
 print("Performing CA...");
-eac.performChipAuthentication();
+assert(eac.performChipAuthentication(), "Chip authentication failed");
 
 print("Reading files from eID application using secure messaging...");
-var mf = eac.getMF();
 
-// Select DF
-var dfeid = new CardFile(mf, "#E80704007F00070302");
+eac.select_eID();
+
+var df = eac.getDF();
 
 // Read DG using short file identifier
-var dg1 = new CardFile(dfeid, ":01");
+var dg1 = new CardFile(df, ":01");
 print("DG1 (Document Type):");
 print(dg1.readBinary());
-
-var dg2 = new CardFile(dfeid, ":02");
-print("DG2 (Issuing State):");
-print(dg2.readBinary());
-
-var dg3 = new CardFile(dfeid, ":03");
-print("DG3 (Date of Expiration):");
-print(dg3.readBinary());
-
-var dg4 = new CardFile(dfeid, ":04");
-print("DG4 (Given Name):");
-print(dg4.readBinary());
-
-var dg5 = new CardFile(dfeid, ":05");
-print("DG5 (Surname):");
-print(dg5.readBinary());
-
-var dg6 = new CardFile(dfeid, ":06");
-print("DG6 (Artist Name):");
-print(dg6.readBinary());
-
-var dg7 = new CardFile(dfeid, ":07");
-print("DG7 (Academic Grade):");
-print(dg7.readBinary());
-
-var dg8 = new CardFile(dfeid, ":08");
-print("DG8 (Date of Birth):");
-print(dg8.readBinary());
-
-var dg9 = new CardFile(dfeid, ":09");
-print("DG9 (Place of Birth):");
-print(dg9.readBinary());
-
-var dg17 = new CardFile(dfeid, ":11");
-print("DG17 (Place of Residence):");
-print(dg17.readBinary());

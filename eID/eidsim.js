@@ -25,6 +25,9 @@
  */
 
 load("../cardsim/filesystem.js");
+load("../cardsim/authenticationobject.js");
+load("../cardsim/signaturekey.js");
+
 load("eidcommandinterpreter.js");
 load("../cardsim/securechannel.js");
 
@@ -34,7 +37,7 @@ load("../icao/chipauthentication.js");
 
 var paceInfo = new PACEInfo();
 paceInfo.protocol = new ByteString("id-PACE-ECDH-GM-AES-CBC-CMAC-128", OID);
-paceInfo.version = 1;
+paceInfo.version = 2;
 
 var paceDomainParameterInfo = new PACEDomainParameterInfo();
 paceDomainParameterInfo.protocol = new ByteString("id-PACE-ECDH-GM", OID);
@@ -46,13 +49,42 @@ chipAuthenticationInfo.version = 2;
 var chipAuthenticationDomainParameterInfo = new PACEDomainParameterInfo();
 chipAuthenticationDomainParameterInfo.protocol = new ByteString("id-CA-ECDH", OID);
 
+var groupCAPrk = new Key("kp_prk_GroupCAKey.xml");
+var groupCAPuk = new Key("kp_puk_GroupCAKey.xml");
 
-var CardInfo = new ASN1(ASN1.SEQUENCE,
+var chipAuthenticationPublicKeyInfo = new ChipAuthenticationPublicKeyInfo();
+chipAuthenticationPublicKeyInfo.protocol = new ByteString("id-PK-ECDH", OID);
+chipAuthenticationPublicKeyInfo.algorithm = new ByteString("standardizedDomainParameter", OID);
+chipAuthenticationPublicKeyInfo.standardizedDomainParameter = 0x0D;
+chipAuthenticationPublicKeyInfo.publicKey = groupCAPuk;
+
+
+var cardAccess = new ASN1(ASN1.SET,
 							paceInfo.toTLV(),
 							paceDomainParameterInfo.toTLV(),
 							chipAuthenticationInfo.toTLV(),
 							chipAuthenticationDomainParameterInfo.toTLV()
 						);
+
+var cardSecurity = new ASN1(ASN1.SET,
+							paceInfo.toTLV(),
+							paceDomainParameterInfo.toTLV(),
+							chipAuthenticationInfo.toTLV(),
+							chipAuthenticationDomainParameterInfo.toTLV(),
+							chipAuthenticationPublicKeyInfo.toTLV()
+						);
+
+var dskey = new Key("kp_prk_DocSigner.xml");
+var dscert = new X509("C_DocSigner.cer");
+
+var gen = new CMSGenerator(CMSGenerator.TYPE_SIGNED_DATA);
+gen.setDataContent(cardSecurity.getBytes());
+gen.addSigner(dskey, dscert, new ByteString("id-sha256", OID), true);
+var signedCardSecurity = gen.generate(new ByteString("id-SecurityObject", OID));
+
+//print(new ASN1(signedCardSecurity));
+
+
 
 
 /**
@@ -62,23 +94,83 @@ var CardInfo = new ASN1(ASN1.SEQUENCE,
  * @constructor
  */
 function eIDSimulation() {
-	this.aid = new ByteString("E80704007F00070302", HEX);
-
-	this.mf = new DF(FCP.newDF("3F00", null),
-						new LinearEF(FCP.newLinearEF("2F00", 0, FCP.LINEARVARIABLE, 20, 10)),
-						new TransparentEF(FCP.newTransparentEF("2F02", 1, 100), new ByteString("5A0A00010203040506070809", HEX)),
-						new TransparentEF(FCP.newTransparentEF("011C", 0, 100), CardInfo.getBytes()),
-						new DF(FCP.newDF("DF01", this.aid),
-							new TransparentEF(FCP.newTransparentEF("EF01", 0, 100)),
-							new TransparentEF(FCP.newTransparentEF("EF02", 0, 100))
-						)
-					);
-
-	print(this.mf.dump(""));
-	
+	this.createFileSystem();
 	this.initialize();
 }
 
+
+
+/**
+ * Initialize card runtime
+ */
+eIDSimulation.prototype.createFileSystem = function() {
+	this.mf = new DF(FCP.newDF("3F00", null),
+						new LinearEF(FCP.newLinearEF("2F00", 0, FCP.LINEARVARIABLE, 20, 10)),
+						new TransparentEF(FCP.newTransparentEF("2F02", 1, 100), new ByteString("5A0A00010203040506070809", HEX)),
+						new TransparentEF(FCP.newTransparentEF("011C", 0, 100), cardAccess.getBytes()),
+						new TransparentEF(FCP.newTransparentEF("011D", 0, 100), signedCardSecurity)
+					);
+
+	this.mf.addMeta("groupChipAuthenticationPrivateKey", groupCAPrk);
+	this.mf.addMeta("groupChipAuthenticationPublicKey", groupCAPuk);
+	this.mf.addMeta("groupChipAuthenticationInfo", chipAuthenticationInfo);
+	this.mf.addMeta("paceInfo", paceInfo);
+
+	var pacemrz = new AuthenticationObject("PACE_MRZ", AuthenticationObject.TYPE_PACE, 1, 
+									new ByteString("BC5CED1FC3775214F8AD22EA86C37E86FD27F717", HEX));
+	pacemrz.initialretrycounter = 0;
+	this.mf.addObject(pacemrz);
+
+	var pacecan = new AuthenticationObject("PACE_CAN", AuthenticationObject.TYPE_PACE, 2, 
+									new ByteString("488444", ASCII));
+	pacecan.initialretrycounter = 0;
+	pacecan.allowResetRetryCounter = true;
+	pacecan.allowResetValue = true;
+	this.mf.addObject(pacecan);
+
+	var pacepuk = new AuthenticationObject("PACE_PUK", AuthenticationObject.TYPE_PACE, 4, 
+									new ByteString("87654321", ASCII));
+	pacecan.initialretrycounter = 0;
+	this.mf.addObject(pacepuk);
+
+	var pacepin = new AuthenticationObject("PACE_PIN", AuthenticationObject.TYPE_PACE, 3, 
+									new ByteString("55555", ASCII));
+	pacepin.isTransport = true;
+	pacepin.allowActivate = true;
+	pacepin.allowDeactivate = true;
+	pacepin.allowResetRetryCounter = true;
+	pacepin.allowResetValue = true;
+	pacepin.unsuspendAuthenticationObject = pacecan;
+	pacepin.unblockAuthenticationObject = pacepuk;
+	this.mf.addObject(pacepin);
+
+	var dFeID = 		new DF(FCP.newDF("DF02", new ByteString("E80704007F00070302", HEX)),
+							new TransparentEF(FCP.newTransparentEF("0101", 1, 100), 		// EF.DG1
+								(new ASN1(0x61, new ASN1(ASN1.PrintableString, new ByteString("TP", ASCII)))).getBytes())
+						);
+
+	var dFeSign =		new DF(FCP.newDF("DF03", new ByteString("A000000167455349474E", HEX)),
+							new TransparentEF(FCP.newTransparentEF("C000", 1, 2048)), 		// EF.C.ZDA.QES
+							new TransparentEF(FCP.newTransparentEF("C001", 2, 2048)) 		// EF.C.ICC.QES
+						);
+
+	var signpin = new AuthenticationObject("PIN.QES", AuthenticationObject.TYPE_PIN, 1);
+	signpin.isTerminated = true;
+	signpin.allowTerminate = true;
+	signpin.allowResetRetryCounter = true;
+	signpin.allowResetValue = true;
+	signpin.allowChangeReferenceData = true;
+	signpin.unblockAuthenticationObject = pacepuk;
+	dFeSign.addObject(signpin);
+
+	var signaturekey = new SignatureKey("PrK.QES", 4);
+	dFeSign.addObject(signaturekey);
+
+	this.mf.add(dFeID);
+	this.mf.add(dFeSign);
+
+	print(this.mf.dump(""));
+}
 
 
 /**
