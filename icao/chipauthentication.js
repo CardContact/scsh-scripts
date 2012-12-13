@@ -615,7 +615,7 @@ ChipAuthentication.prototype.performKeyAgreement = function(publicKey, nonce) {
  * @type Boolean
  */
 ChipAuthentication.prototype.verifyAuthenticationToken = function(authToken) {
-	var t = ChipAuthentication.encodePublicKey(this.algo.toString(OID), this.otherPuK, this.includeDPinAuthToken);
+	var t = ChipAuthentication.encodePublicKey(this.algo.toString(OID), this.pukCA, this.includeDPinAuthToken);
 	GPSystem.trace("Authentication Token for verification:");
 	GPSystem.trace(t);
 
@@ -639,7 +639,7 @@ ChipAuthentication.prototype.verifyAuthenticationToken = function(authToken) {
  * @type Boolean
  */
 ChipAuthentication.prototype.calculateAuthenticationToken = function() {
-	var t = ChipAuthentication.encodePublicKey(this.algo.toString(OID), this.pukCA, this.includeDPinAuthToken);
+	var t = ChipAuthentication.encodePublicKey(this.algo.toString(OID), this.otherPuK, this.includeDPinAuthToken);
 	GPSystem.trace("Authentication Token for signing:");
 	GPSystem.trace(t);
 
