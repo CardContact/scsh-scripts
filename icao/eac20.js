@@ -56,8 +56,10 @@ function EAC20(crypto, card) {
 	this.CAPublicKeys = new Array();
 
 	this.RIInfos = new Array();
-
-	this.verbose = false;
+	this.maxRData = 0;
+	this.maxCData = 239;		// Used for update binary
+	this.useFID = false;		// Use FIDs rather than SFIs
+	this.verbose = true;
 }
 
 
@@ -70,6 +72,15 @@ EAC20.ID_PIN = 3;
 /** PACE PWD is the PUK */
 EAC20.ID_PUK = 4;
 
+EAC20.AID_LDS = new ByteString("A0000002471001", HEX);
+EAC20.AID_eID = new ByteString("E80704007F00070302", HEX);
+EAC20.AID_eSign = new ByteString("A000000167455349474E", HEX);
+
+EAC20.SFI_CVCA = 0x1C;
+EAC20.SFI_ChipSecurity = 0x1B;
+EAC20.SFI_CardAccess = 0x1C;
+EAC20.SFI_CardSecurity = 0x1D;
+EAC20.SFI_COM = 0x1E;
 
 
 EAC20.prototype.log = function(str) {
@@ -247,15 +258,123 @@ EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
 
 
 /**
+ * Select EF using FID and read elementary file
+ *
+ * @param {ByteString} fid 2 byte file identifier
+ * @type ByteString
+ * @return the content of the EF
+ */
+EAC20.prototype.readEFwithFID = function(fid) {
+	assert(fid.length == 2, "Length of fid must be 2 bytes");
+	this.card.sendSecMsgApdu(Card.ALL, 0x00, 0xA4, 0x02, 0x0C, fid, [0x9000]);
+
+	var bb = new ByteBuffer();
+	var offset = 0;
+	do	{
+		var rsp = this.card.sendSecMsgApdu(Card.ALL, 0x00, 0xB0, offset >> 8, offset & 0xFF, this.maxRData);
+		bb.append(rsp);
+		offset += rsp.length;
+	} while ((this.card.SW == 0x9000) && (rsp.length > 0));
+	
+	return bb.toByteString();
+}
+
+
+
+/**
+ * Select EF using FID and update content
+ *
+ * @param {ByteString} fid 2 byte file identifier
+ * @param {ByteString} data data to be written
+ */
+EAC20.prototype.updateEFwithFID = function(fid, data) {
+	assert(fid.length == 2, "Length of fid must be 2 bytes");
+	this.card.sendSecMsgApdu(Card.ALL, 0x00, 0xA4, 0x02, 0x0C, fid, [0x9000]);
+
+	var offset = 0;
+	while (offset < data.length) {
+		var len = data.length - offset;
+		len = this.maxCData < len ? this.maxCData : len;
+		this.card.sendSecMsgApdu(Card.ALL, 0x00, 0xD6, offset >> 8, offset & 0xFF, data.bytes(offset, len), [0x9000]);
+		offset += len;
+	}
+}
+
+
+
+/**
+ * Select and read EF using SFI
+ *
+ * @param {Number} short file identifier
+ * @type ByteString
+ * @return the content of the EF
+ */
+EAC20.prototype.readEFwithSFI = function(sfi) {
+	assert(typeof(sfi) == "number", "Parameter must be a number");
+
+	if (this.useFID) {
+		var fid = ByteString.valueOf(0x0100 + sfi, 2);
+		return this.readEFwithFID(fid);
+	}
+	
+	var rsp = this.card.sendSecMsgApdu(Card.ALL, 0x00, 0xB0, 0x80 | sfi, 0x00, this.maxRData, [0x9000]);
+
+	var bb = new ByteBuffer(rsp);
+	var offset = bb.length;
+	do	{
+		var rsp = this.card.sendSecMsgApdu(Card.ALL, 0x00, 0xB0, offset >> 8, offset & 0xFF, this.maxRData);
+		bb.append(rsp);
+		offset += rsp.length;
+	} while ((this.card.SW == 0x9000) && (rsp.length > 0));
+	
+	return bb.toByteString();
+}
+
+
+
+/**
+ * Select EF using SFI and update content
+ *
+ * @param {Number} short file identifier
+ * @param {ByteString} data data to be written
+ */
+EAC20.prototype.updateEFwithSFI = function(sfi, data) {
+	assert(typeof(sfi) == "number", "Parameter must be a number");
+
+	if (this.useFID) {
+		var fid = ByteString.valueOf(0x0100 + sfi, 2);
+		return this.updateEFwithFID(fid, offset, data);
+	}
+
+	var offset = 0;
+	var p1 = 0x80 | sfi;
+	while (offset < data.length) {
+		var len = data.length - offset;
+		len = this.maxCData < len ? this.maxCData : len;
+		this.card.sendSecMsgApdu(Card.ALL, 0x00, 0xD6, p1, offset & 0xFF, data.bytes(offset, len), [0x9000]);
+		offset += len;
+		p1 = offset >> 8;
+	}
+}
+
+
+
+/**
+ * Select application DF
+ *
+ * @param {ByteString} aid the application identifier
+ */
+EAC20.prototype.selectADF = function(aid) {
+	this.card.sendSecMsgApdu(Card.ALL, 0x00, 0xA4, 0x04, 0x0C, aid, [0x9000]);
+}
+
+
+
+/**
  * Select ePass LDS Application
  */
 EAC20.prototype.selectLDS = function() {
-	if (this.sm) {			// If we use SAC, then we already have a PACE channel open
-		var mf = this.getDF();
-		this.df = new CardFile(mf, "#A0000002471001");
-	} else {
-		this.df = new CardFile(this.card, "#A0000002471001");
-	}
+	this.selectADF(EAC20.AID_LDS);
 }
 
 
@@ -264,12 +383,16 @@ EAC20.prototype.selectLDS = function() {
  * Select eID Application
  */
 EAC20.prototype.select_eID = function() {
-	if (this.sm) {
-		var mf = this.getDF();
-		this.df = new CardFile(mf, "#E80704007F00070302");
-	} else {
-		this.df = new CardFile(this.card, "#E80704007F00070302");
-	}
+	this.selectADF(EAC20.AID_eID);
+}
+
+
+
+/**
+ * Select eSign Application
+ */
+EAC20.prototype.select_eSign = function() {
+	this.selectADF(EAC20.AID_eSign);
 }
 
 
@@ -279,9 +402,7 @@ EAC20.prototype.select_eID = function() {
  *
  */
 EAC20.prototype.readDG14 = function() {
-
-	var ci = new CardFile(this.getDF(), ":0E");
-	var cibin = ci.readBinary();
+	var cibin = this.readEFwithSFI(14);
 	var citlv = new ASN1(cibin);
 	this.log(citlv);
 	
@@ -295,9 +416,7 @@ EAC20.prototype.readDG14 = function() {
  *
  */
 EAC20.prototype.readCVCA = function() {
-
-	var cvcaef = new CardFile(this.getDF(), ":011C");
-	var cvcabin = cvcaef.readBinary();
+	var cvcabin = this.readEFwithSFI(EAC20.SFI_CVCA);
 	assert(cvcabin.byteAt(0) == 0x42);
 
 	var cvca = new ASN1(cvcabin);
@@ -316,9 +435,7 @@ EAC20.prototype.readCVCA = function() {
  *
  */
 EAC20.prototype.readCardAccess = function() {
-
-	var ci = new CardFile(this.getDF(), ":011C");
-	var cibin = ci.readBinary();
+	var cibin = this.readEFwithSFI(EAC20.SFI_CardAccess);
 	var citlv = new ASN1(cibin);
 	this.log(citlv);
 	
@@ -334,8 +451,7 @@ EAC20.prototype.readCardInfo = EAC20.prototype.readCardAccess;
  * Read EF.CardSecurity and process security infos
  */
 EAC20.prototype.readCardSecurity = function() {
-	var cs = new CardFile(this.getDF(), ":011D");
-	var csbin = cs.readBinary();
+	var csbin = this.readEFwithSFI(EAC20.SFI_CardSecurity);
 	var cstlv = new ASN1(csbin);
 	this.log("EF.CardSecurity:");
 	this.log(cstlv);
@@ -368,8 +484,7 @@ EAC20.prototype.readCardSecurity = function() {
  * Read EF.ChipSecurity and process security infos
  */
 EAC20.prototype.readChipSecurity = function() {
-	var cs = new CardFile(this.getDF(), ":011B");
-	var csbin = cs.readBinary();
+	var csbin = this.readEFwithSFI(EAC20.SFI_ChipSecurity);
 	var cstlv = new ASN1(csbin);
 	this.log("EF.ChipSecurity:");
 	this.log(cstlv);
@@ -453,8 +568,11 @@ EAC20.prototype.getCADomainParameterInfos = function() {
  * @type 
  */
 EAC20.prototype.getCAKeyId = function() {
-	if (this.CAInfos[0].keyId) {
-		this.CAInfos[0].keyId;
+	for (var i in this.CAInfos) {		// Locate first entry in list
+		if (this.CAInfos[i].keyId) {
+			return this.CAInfos[i].keyId;
+		}
+		return 0;
 	}
 	return 0;
 }
@@ -464,7 +582,7 @@ EAC20.prototype.getCAKeyId = function() {
 /**
  * Return the key id of the restricted identification key
  *
- * @boolean authOnly return the RI key available after authentication only (to calculate the pseudonym)
+ * @param {boolean} authOnly return the RI key available after authentication only (to calculate the pseudonym)
  * @return the key id
  * @type 
  */
@@ -475,33 +593,6 @@ EAC20.prototype.getRIKeyId = function(authOnly) {
 		}
 	}
 	return 0;
-}
-
-
-
-/**
- * Return the MF access object with the associated secure channel. Deprecated use getDF instead
- *
- * @return the MF card file object
- * @type CardFile
- */
-EAC20.prototype.getMF = function() {
-	return this.df;
-}
-
-
-
-/**
- * Return the DF access object with the associated secure channel
- *
- * @return the DF card file object
- * @type CardFile
- */
-EAC20.prototype.getDF = function() {
-	if (typeof(this.df) == "undefined") {
-		this.df = new CardFile(this.card, ":3F00");
-	}
-	return this.df;
 }
 
 
@@ -673,7 +764,6 @@ EAC20.prototype.performBAC = function(kenc, kmac) {
 	this.sm.setMacKey(kmac);
 	this.sm.setSendSequenceCounter(ssc);
 
-	this.df.setCredential(CardFile.ALL, Card.ALL, this.sm);
 	this.card.setCredential(this.sm);
 }
 
@@ -837,7 +927,6 @@ EAC20.prototype.performPACE = function(parameterId, pwdid, pwd, chat) {
 			sm.setMacKey(pace.kmac);
 			sm.setMACSendSequenceCounter(new ByteString("0000000000000000", HEX));
 		}
-		this.df.setCredential(CardFile.ALL, Card.ALL, sm);
 		this.card.setCredential(sm);
 	}
 	this.sm = sm;
@@ -876,8 +965,6 @@ EAC20.prototype.verifyCertificateChain = function(cvcchain) {
 		var pukrefdo = new ASN1(0x83, car);
 		var pukref = pukrefdo.getBytes();
 		
-		this.log("PuKref: " + pukref);
-		this.log(pukref);
 		this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x22, 0x81, 0xB6, pukref, [0x9000]);
 		
 		// Extract value of 7F21
@@ -921,9 +1008,6 @@ EAC20.prototype.performTerminalAuthentication = function(termkey, auxdata, crypt
 		var crypto = this.crypto;
 	}
 	var signature = crypto.sign(termkey, Crypto.ECDSA_SHA256, signatureInput);
-
-	this.log("Signature (Encoded):");
-	this.log(signature);
 
 	var keysize = termkey.getSize();
 	if (keysize < 0) {
@@ -1043,7 +1127,6 @@ EAC20.prototype.performChipAuthenticationV1 = function(keyid) {
 	sm.setMacKey(this.ca.kmac);
 	sm.setSendSequenceCounter(new ByteString("0000000000000000", HEX));
 
-	this.df.setCredential(CardFile.ALL, Card.ALL, sm);
 	this.card.setCredential(sm);
 	this.sm = sm;
 }
@@ -1064,7 +1147,6 @@ EAC20.prototype.prepareChipAuthentication = function(keyId) {
 	if (typeof(cainfo) == "undefined") {
 		throw new GPError("EAC20", GPError.INVALID_DATA, 0, "Unknown keyId " + keyId + " for ChipAuthenticationInfo");
 	}
-	this.cainfo = cainfo;
 
 	var cadp = this.CADPs[keyId];
 	if (typeof(cadp) == "undefined") {
@@ -1089,17 +1171,29 @@ EAC20.prototype.prepareChipAuthentication = function(keyId) {
 EAC20.prototype.performChipAuthenticationV2 = function() {
 	this.log("performChipAuthenticationV2() called");
 
+	var cainfo = this.CAInfos[this.cakeyId];
+	if (typeof(cainfo) == "undefined") {
+		throw new GPError("EAC20", GPError.INVALID_DATA, 0, "Unknown keyId " + this.cakeyId + " for ChipAuthenticationInfo");
+	}
+
+	if (this.ca.algo != cainfo.protocol) {
+		this.log("Special handling for ChipAuthenticationInfo in EF.CardSecurity overwriting ChipAuthenticationInfo in EF.CardAccess");
+		this.log("Protocol in EF.CardAccess: " + this.ca.algo);
+		this.log("Protocol is EF.CardSecurity: " + cainfo.protocol);
+		this.ca.algo = cainfo.protocol;
+	}
+	
 	var capuk = this.CAPublicKeys[this.cakeyId];
 	if (typeof(capuk) == "undefined") {
 		throw new GPError("EAC20", GPError.INVALID_DATA, 0, "Unknown keyId " + this.cakeyId + " for ChipAuthenticationPublicKeyInfo");
 	}
 
 	var bb = new ByteBuffer();
-	bb.append(new ASN1(0x80, this.cainfo.protocol).getBytes());
+	bb.append(new ASN1(0x80, cainfo.protocol).getBytes());
 	
-	if (typeof(this.cainfo.keyId) != "undefined") {
+	if (typeof(cainfo.keyId) != "undefined") {
 		bb.append(new ByteString("8401", HEX));
-		bb.append(this.cainfo.keyId);
+		bb.append(cainfo.keyId);
 	}
 	
 	var msedata = bb.toByteString();
@@ -1146,7 +1240,6 @@ EAC20.prototype.performChipAuthenticationV2 = function() {
 			sm.setMacKey(this.ca.kmac);
 			sm.setMACSendSequenceCounter(new ByteString("00000000000000000000000000000000", HEX));
 		}
-		this.df.setCredential(CardFile.ALL, Card.ALL, sm);
 		this.card.setCredential(sm);
 		this.sm = sm;
 	} else {
@@ -1167,8 +1260,8 @@ EAC20.prototype.performChipAuthenticationV2 = function() {
  */
 EAC20.prototype.verifyAuxiliaryData = function(oid) {
 	var o = new ASN1(ASN1.OBJECT_IDENTIFIER, oid);
-	this.df.sendSecMsgApdu(Card.ALL, 0x80, 0x20, 0x80, 0x00, o.getBytes(), [0x9000,0x6300]);
-	return this.df.SW == 0x9000;
+	this.card.sendSecMsgApdu(Card.ALL, 0x80, 0x20, 0x80, 0x00, o.getBytes(), [0x9000,0x6300]);
+	return this.card.SW == 0x9000;
 }
 
 
@@ -1181,7 +1274,7 @@ EAC20.prototype.verifyAuxiliaryData = function(oid) {
  * @type boolean
  */
 EAC20.prototype.performChipAuthentication = function(keyid) {
-	if (this.cainfo) {
+	if (typeof(this.cakeyId) != "undefined") {
 		return this.performChipAuthenticationV2();
 	} else {
 		return this.performChipAuthenticationV1(keyid);
