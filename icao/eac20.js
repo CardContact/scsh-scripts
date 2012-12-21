@@ -60,6 +60,7 @@ function EAC20(crypto, card) {
 	this.maxCData = 239;		// Used for update binary
 	this.useFID = false;		// Use FIDs rather than SFIs
 	this.verbose = true;
+	this.selectADFwithoutSM = false;	// Send SELECT ADF without SM (for applets)
 }
 
 
@@ -343,7 +344,7 @@ EAC20.prototype.updateEFwithSFI = function(sfi, data) {
 
 	if (this.useFID) {
 		var fid = ByteString.valueOf(0x0100 + sfi, 2);
-		return this.updateEFwithFID(fid, offset, data);
+		return this.updateEFwithFID(fid, data);
 	}
 
 	var offset = 0;
@@ -365,7 +366,11 @@ EAC20.prototype.updateEFwithSFI = function(sfi, data) {
  * @param {ByteString} aid the application identifier
  */
 EAC20.prototype.selectADF = function(aid) {
-	this.card.sendSecMsgApdu(Card.ALL, 0x00, 0xA4, 0x04, 0x0C, aid, [0x9000]);
+	if (this.selectADFwithoutSM) {
+		this.card.sendApdu(0x00, 0xA4, 0x04, 0x0C, aid, [0x9000]);
+	} else {
+		this.card.sendSecMsgApdu(Card.ALL, 0x00, 0xA4, 0x04, 0x0C, aid, [0x9000]);
+	}
 }
 
 
