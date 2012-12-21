@@ -21,7 +21,7 @@
  *  along with OpenSCDP; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
- * @fileoverview Generate Group Chip Authentication key pair and save to GP profile
+ * @fileoverview Generate a set of test keys and save to GP profile
  */
 
  
@@ -107,4 +107,79 @@ function generateECCKeyPair(name) {
 
 
 
+/**
+ * Generate a sector key pair with the sector public key as PrK_Sector * PuK_Revocation
+ * 
+ * @param name the name of the key
+ * @return
+ */
+function generateSectorKeyPair(name) {
+	var curve = new ByteString("brainpoolP256r1", OID);
+	var keysize = 256;
+
+	var pubKey = new Key();
+	pubKey.setType(Key.PUBLIC);
+	pubKey.setComponent(Key.ECC_CURVE_OID, curve);
+
+	var priKey = new Key();
+	priKey.setType(Key.PRIVATE);
+	priKey.setComponent(Key.ECC_CURVE_OID, curve);
+
+	var crypto = new Crypto();
+	crypto.generateKeyPair(Crypto.EC, pubKey, priKey);
+
+	var revocationKey = new Key("kp_puk_RevocationKey.xml");
+	var inp = revocationKey.getComponent(Key.ECC_QX).concat(revocationKey.getComponent(Key.ECC_QY));
+	var puk = crypto.decrypt(priKey, Crypto.ECDHP, inp);
+	var len = priKey.getComponent(Key.ECC_P).length;
+	pubKey.setComponent(Key.ECC_QX, puk.left(len));
+	pubKey.setComponent(Key.ECC_QY, puk.right(len));
+
+	var gp = new Namespace("http://namespaces.globalplatform.org/systems-profiles/1.1.0");
+
+	var priKeyXML = 
+		<gp:KeyProfile xmlns:gp={gp} UniqueID="2B0601040181C31F100006" ProfileVersion="1.1.0" ErrataVersion="0">
+			<gp:Description>{"PrK_" + name + " ECDSA Private Key"}</gp:Description>
+			<gp:Revisions arrayElement="Revision" arrayIndex="#">
+				<gp:Revision Version="1.0.0" Date="2011-11-11" Time="00:00:00" By="www.smartcard-hsm.org" Digest="00000000"/>
+			</gp:Revisions>
+			<gp:KeyInfo Name="ECPrivate" Type="PRIVATE" SubType="EC" Size={keysize} Mode="TEST"/>
+			<gp:Attribute Sensitive="false" Importable="true" Exportable="true"/>
+			<gp:Usage Encrypt="true" Decrypt="true" DecryptEncrypt="true" Sign="true" Verify="true" Wrap="true" Unwrap="true" UnwrapWrap="true" Derive="true"/>
+			<gp:Value Format="ECPRIVATE" arrayElement="Component" arrayIndex="#">
+				<gp:Component Name="ECC_CURVE_OID" Encoding="HEX" Value={curve.toString(HEX)}></gp:Component>
+				<gp:Component Name="ECC_D" Encoding="HEX" Value={priKey.getComponent(Key.ECC_D).toString(HEX)}></gp:Component>
+			</gp:Value>
+		</gp:KeyProfile>
+		
+	var pubKeyXML =
+		<gp:KeyProfile xmlns:gp={gp} UniqueID="2B0601040181C31F100008" ProfileVersion="1.1.0" ErrataVersion="0">
+			<gp:Description>{"PuK_" + name + " ECDSA Public Key"}</gp:Description>
+			<gp:Revisions arrayElement="Revision" arrayIndex="#">
+				<gp:Revision Version="1.0.0" Date="2011-11-11" Time="00:00:00" By="www.smartcard-hsm.org" Digest="00000000"/>
+			</gp:Revisions>
+			<gp:KeyInfo Name="ECPublic" Type="PUBLIC" SubType="EC" Size={keysize} Mode="TEST"/>
+			<gp:Attribute Sensitive="false" Importable="true" Exportable="true"/>
+			<gp:Usage Encrypt="true" Decrypt="true" DecryptEncrypt="true" Sign="true" Verify="true" Wrap="true" Unwrap="true" UnwrapWrap="true" Derive="true"/>
+			<gp:Value Format="ECPUBLIC" arrayElement="Component" arrayIndex="#">
+				<gp:Component Name="ECC_CURVE_OID" Encoding="HEX" Value={curve.toString(HEX)}></gp:Component>
+				<gp:Component Name="ECC_QX" Encoding="HEX" Value={pubKey.getComponent(Key.ECC_QX).toString(HEX)}></gp:Component>
+				<gp:Component Name="ECC_QY" Encoding="HEX" Value={pubKey.getComponent(Key.ECC_QY).toString(HEX)}></gp:Component>
+			</gp:Value>
+		</gp:KeyProfile>
+		
+	var fname = GPSystem.mapFilename("kp_prk_" + name + ".xml", GPSystem.CWD);
+	writeXML(fname, priKeyXML);
+
+	var fname = GPSystem.mapFilename("kp_puk_" + name + ".xml", GPSystem.CWD);
+	writeXML(fname, pubKeyXML);
+}
+
+
+
 generateECCKeyPair("GroupCAKey");
+
+generateECCKeyPair("RevocationKey");
+generateSectorKeyPair("SectorKey");
+generateECCKeyPair("IDKey");
+

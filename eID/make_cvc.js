@@ -25,6 +25,7 @@
  */
  
 load("../icao/cvca/cvcca.js");
+load("../icao/pace.js");
 
  
  
@@ -223,12 +224,21 @@ var policy = { certificateValidityDays: 365,
 			 };
 g.createTerminal("/UTATCVCA/UTATDVCAOD/UTTERM", policy);
 
+var sectorPublicKey = new Key("kp_puk_SectorKey.xml");
+sectorPublicKey.setComponent(Key.ECC_CURVE_OID, sectorPublicKey.getComponent(Key.ECC_CURVE_OID));
+var encodedSectorPublicKey = PACE.encodePublicKey("id-RI-ECDH-SHA-256", sectorPublicKey, true).getBytes();
+var encodedSectorPublicKeyHash = crypto.digest(Crypto.SHA_256, encodedSectorPublicKey);
+
+var sectorId = new ASN1(0x73,
+			new ASN1(ASN1.OBJECT_IDENTIFIER, new ByteString("id-sector", OID)),
+			new ASN1(0x80, encodedSectorPublicKeyHash)
+		);
 
 var policy = { certificateValidityDays: 365,
 			   chatRoleOID: new ByteString("id-AT", OID),
 			   chatRights: new ByteString("3FFFFFFFFF", HEX),
 			   includeDomainParameter: false,
-			   extensions: []
+			   extensions: [ sectorId ]
 			 };
 g.createTerminal("/UTATCVCA/UTATDVCANO/UTTERM", policy);
 

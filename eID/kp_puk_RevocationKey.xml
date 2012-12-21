@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gp:KeyProfile xmlns:gp="http://namespaces.globalplatform.org/systems-profiles/1.1.0" ErrataVersion="0" ProfileVersion="1.1.0" UniqueID="2B0601040181C31F100008">
+  <gp:Description>PuK_RevocationKey ECDSA Public Key</gp:Description>
+  <gp:Revisions arrayElement="Revision" arrayIndex="#">
+    <gp:Revision By="www.smartcard-hsm.org" Date="2011-11-11" Digest="00000000" Time="00:00:00" Version="1.0.0"/>
+  </gp:Revisions>
+  <gp:KeyInfo Mode="TEST" Name="ECPublic" Size="256" SubType="EC" Type="PUBLIC"/>
+  <gp:Attribute Exportable="true" Importable="true" Sensitive="false"/>
+  <gp:Usage Decrypt="true" DecryptEncrypt="true" Derive="true" Encrypt="true" Sign="true" Unwrap="true" UnwrapWrap="true" Verify="true" Wrap="true"/>
+  <gp:Value Format="ECPUBLIC" arrayElement="Component" arrayIndex="#">
+    <gp:Component Encoding="HEX" Name="ECC_CURVE_OID" Value="2B2403030208010107"/>
+    <gp:Component Encoding="HEX" Name="ECC_QX" Value="185BE498277CD5906526FE414F8D1BA6D35CE9F81EAAF1C1E397F3F8717CB136"/>
+    <gp:Component Encoding="HEX" Name="ECC_QY" Value="3712FDD3AEC08BAAF4FB502C743DE5C89731ED3ABB7652D6C674F2E2CD661033"/>
+  </gp:Value>
+</gp:KeyProfile>
