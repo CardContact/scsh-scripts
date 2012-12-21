@@ -105,9 +105,7 @@ print("Reading files from eID application using secure messaging...");
 
 eac.select_eID();
 
-var df = eac.getDF();
-
 // Read DG using short file identifier
-var dg1 = new CardFile(df, ":01");
+var dg1 = eac.readEFwithSFI(1);
 print("DG1 (Document Type):");
-print(dg1.readBinary());
+print(dg1);

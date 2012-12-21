@@ -275,18 +275,18 @@ eIDCommandInterpreter.prototype.performChipAuthenticationV1 = function(apdu) {
 	var a = new ASN1(0x30, apdu.getCData());
 	a = new ASN1(a.getBytes());
 
-	var groupChipAuthenticationInfo = this.fileSelector.getMeta("groupChipAuthenticationInfo");
-	var groupChipAuthenticationPublicKey = this.fileSelector.getMeta("groupChipAuthenticationPublicKey");
-	var groupChipAuthenticationPrivateKey = this.fileSelector.getMeta("groupChipAuthenticationPrivateKey");
+	var chipAuthenticationInfo = this.fileSelector.getMeta("chipAuthenticationInfo");
+	var chipAuthenticationPublicKey = this.fileSelector.getMeta("chipAuthenticationPublicKey");
+	var chipAuthenticationPrivateKey = this.fileSelector.getMeta("chipAuthenticationPrivateKey");
 
-	assert(groupChipAuthenticationInfo);
-	assert(groupChipAuthenticationPublicKey);
-	assert(groupChipAuthenticationPrivateKey);
+	assert(chipAuthenticationInfo);
+	assert(chipAuthenticationPublicKey);
+	assert(chipAuthenticationPrivateKey);
 
 	// ToDo: Select key based on MSE SET
-	var ca = new ChipAuthentication(this.crypto, groupChipAuthenticationInfo.protocol, groupChipAuthenticationPublicKey);
+	var ca = new ChipAuthentication(this.crypto, chipAuthenticationInfo.protocol, chipAuthenticationPublicKey);
 
-	ca.setKeyPair(groupChipAuthenticationPrivateKey, groupChipAuthenticationPublicKey);
+	ca.setKeyPair(chipAuthenticationPrivateKey, chipAuthenticationPublicKey);
 
 	ca.performKeyAgreement(a.get(0).value);
 

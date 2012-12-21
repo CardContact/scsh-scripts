@@ -105,10 +105,8 @@ function eIDSimulation() {
  */
 eIDSimulation.prototype.createFileSystem = function() {
 	this.mf = new DF(FCP.newDF("3F00", null),
-						new LinearEF(FCP.newLinearEF("2F00", 0, FCP.LINEARVARIABLE, 20, 10)),
-						new TransparentEF(FCP.newTransparentEF("2F02", 1, 100), new ByteString("5A0A00010203040506070809", HEX)),
-						new TransparentEF(FCP.newTransparentEF("011C", 0, 100), cardAccess.getBytes()),
-						new TransparentEF(FCP.newTransparentEF("011D", 0, 100), signedCardSecurity)
+						new TransparentEF(FCP.newTransparentEF("011C", 0x1C, 100), cardAccess.getBytes()),
+						new TransparentEF(FCP.newTransparentEF("011D", 0x1D, 100), signedCardSecurity)
 					);
 
 	this.mf.addMeta("groupChipAuthenticationPrivateKey", groupCAPrk);
@@ -128,11 +126,6 @@ eIDSimulation.prototype.createFileSystem = function() {
 	pacecan.allowResetValue = true;
 	this.mf.addObject(pacecan);
 
-	var pacepuk = new AuthenticationObject("PACE_PUK", AuthenticationObject.TYPE_PACE, 4, 
-									new ByteString("87654321", ASCII));
-	pacecan.initialretrycounter = 0;
-	this.mf.addObject(pacepuk);
-
 	var pacepin = new AuthenticationObject("PACE_PIN", AuthenticationObject.TYPE_PACE, 3, 
 									new ByteString("55555", ASCII));
 	pacepin.isTransport = true;
@@ -143,6 +136,11 @@ eIDSimulation.prototype.createFileSystem = function() {
 	pacepin.unsuspendAuthenticationObject = pacecan;
 	pacepin.unblockAuthenticationObject = pacepuk;
 	this.mf.addObject(pacepin);
+
+	var pacepuk = new AuthenticationObject("PACE_PUK", AuthenticationObject.TYPE_PACE, 4, 
+									new ByteString("87654321", ASCII));
+	pacecan.initialretrycounter = 0;
+	this.mf.addObject(pacepuk);
 
 	var dFeID = 		new DF(FCP.newDF("DF02", new ByteString("E80704007F00070302", HEX)),
 							new TransparentEF(FCP.newTransparentEF("0101", 1, 100), 		// EF.DG1
