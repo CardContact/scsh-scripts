@@ -284,11 +284,10 @@ PACE.prototype.setPassword = function(pwd) {
  * @type ByteString
  */
 PACE.prototype.getEncryptedNonce = function() {
+	this.nonce = this.crypto.generateRandom(16);
 	if (this.symalgo == Key.DES) {
-		this.nonce = this.crypto.generateRandom(8);
-		var encnonce = this.crypto.encrypt(this.pacekey, Crypto.DES_ECB, this.nonce);
+		var encnonce = this.crypto.encrypt(this.pacekey, Crypto.DES_CBC, this.nonce);
 	} else {
-		this.nonce = this.crypto.generateRandom(16);
 		var encnonce = this.crypto.encrypt(this.pacekey, Crypto.AES_ECB, this.nonce);
 	}
 	return encnonce;
@@ -303,7 +302,7 @@ PACE.prototype.getEncryptedNonce = function() {
  */
 PACE.prototype.decryptNonce = function(encnonce) {
 	if (this.symalgo == Key.DES) {
-		this.nonce = this.crypto.decrypt(this.pacekey, Crypto.DES_ECB, encnonce);
+		this.nonce = this.crypto.decrypt(this.pacekey, Crypto.DES_CBC, encnonce);
 	} else {
 		this.nonce = this.crypto.decrypt(this.pacekey, Crypto.AES_ECB, encnonce);
 	}
@@ -510,7 +509,8 @@ PACE.prototype.calculateAuthenticationToken = function() {
 	GPSystem.trace(t);
 
 	if (this.symalgo == Key.DES) {
-		var at = this.crypto.sign(this.kmac, Crypto.DES_MAC_EMV, t.getBytes());
+		var inp = t.getBytes().pad(Crypto.ISO9797_METHOD_2);
+		var at = this.crypto.sign(this.kmac, Crypto.DES_MAC_EMV, inp);
 	} else {
 		var at = this.crypto.sign(this.kmac, Crypto.AES_CMAC, t.getBytes()).left(8);
 	}
@@ -534,7 +534,8 @@ PACE.prototype.verifyAuthenticationToken = function(authToken) {
 	GPSystem.trace(t);
 
 	if (this.symalgo == Key.DES) {
-		var at = this.crypto.sign(this.kmac, Crypto.DES_MAC_EMV, t.getBytes());
+		var inp = t.getBytes().pad(Crypto.ISO9797_METHOD_2);
+		var at = this.crypto.sign(this.kmac, Crypto.DES_MAC_EMV, inp);
 	} else {
 		var at = this.crypto.sign(this.kmac, Crypto.AES_CMAC, t.getBytes()).left(8);
 	}

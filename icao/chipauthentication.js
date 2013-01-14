@@ -620,7 +620,8 @@ ChipAuthentication.prototype.verifyAuthenticationToken = function(authToken) {
 	GPSystem.trace(t);
 
 	if (this.algo.equals(ChipAuthentication.id_CA_ECDH_3DES_CBC_CBC)) {
-		var at = this.crypto.sign(this.kmac, Crypto.DES_MAC_EMV, t.getBytes());
+		var inp = t.getBytes().pad(Crypto.ISO9797_METHOD_2);
+		var at = this.crypto.sign(this.kmac, Crypto.DES_MAC_EMV, inp);
 		return at.equals(authToken);
 	} else {
 		var at = this.crypto.sign(this.kmac, Crypto.AES_CMAC, t.getBytes());
@@ -644,7 +645,8 @@ ChipAuthentication.prototype.calculateAuthenticationToken = function() {
 	GPSystem.trace(t);
 
 	if (this.algo.equals(ChipAuthentication.id_CA_ECDH_3DES_CBC_CBC)) {
-		var at = this.crypto.sign(this.kmac, Crypto.DES_MAC_EMV, t.getBytes());
+		var inp = t.getBytes().pad(Crypto.ISO9797_METHOD_2);
+		var at = this.crypto.sign(this.kmac, Crypto.DES_MAC_EMV, inp);
 	} else {
 		var at = this.crypto.sign(this.kmac, Crypto.AES_CMAC, t.getBytes()).left(8);
 	}
