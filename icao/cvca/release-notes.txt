@@ -1,7 +1,0 @@
-EAC-PKI for Testing - Release Notes
-===================================
-
-Known Issues
-============
-
-None
