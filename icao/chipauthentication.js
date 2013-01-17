@@ -171,9 +171,9 @@ function ChipAuthenticationDomainParameterInfo(tlv) {
  */
 ChipAuthenticationDomainParameterInfo.prototype.toTLV = function() {
 	var t = new ASN1(ASN1.SEQUENCE);
-	
+
 	t.add(new ASN1(ASN1.OBJECT_IDENTIFIER, this.protocol));
-	
+
 	t.add(new ASN1(ASN1.SEQUENCE));
 	// TODO domainParameter
 	
@@ -425,6 +425,7 @@ ChipAuthenticationPublicKeyInfo.prototype.toString = function() {
  *
  * @constructor
  *
+ * @param {Crypto} crypto the crypto provider
  * @param {ByteString} algo the algorithm OID
  * @param {Key} domparam the key object holding ECC domain parameter
  */
@@ -433,7 +434,8 @@ function ChipAuthentication(crypto, algo, domparam) {
 	this.algo = algo;
 	this.domparam = domparam;
 	this.includeDPinAuthToken = false;
-	
+	this.noPadding = false;
+
 //	print(ECCUtils.ECParametersToString(domparam));
 }
 
@@ -620,7 +622,11 @@ ChipAuthentication.prototype.verifyAuthenticationToken = function(authToken) {
 	GPSystem.trace(t);
 
 	if (this.algo.equals(ChipAuthentication.id_CA_ECDH_3DES_CBC_CBC)) {
-		var inp = t.getBytes().pad(Crypto.ISO9797_METHOD_2);
+		if (this.noPadding) {
+			var inp = t.getBytes();
+		} else {
+			var inp = t.getBytes().pad(Crypto.ISO9797_METHOD_2);
+		}
 		var at = this.crypto.sign(this.kmac, Crypto.DES_MAC_EMV, inp);
 		return at.equals(authToken);
 	} else {
@@ -645,7 +651,11 @@ ChipAuthentication.prototype.calculateAuthenticationToken = function() {
 	GPSystem.trace(t);
 
 	if (this.algo.equals(ChipAuthentication.id_CA_ECDH_3DES_CBC_CBC)) {
-		var inp = t.getBytes().pad(Crypto.ISO9797_METHOD_2);
+		if (this.noPadding) {
+			var inp = t.getBytes();
+		} else {
+			var inp = t.getBytes().pad(Crypto.ISO9797_METHOD_2);
+		}
 		var at = this.crypto.sign(this.kmac, Crypto.DES_MAC_EMV, inp);
 	} else {
 		var at = this.crypto.sign(this.kmac, Crypto.AES_CMAC, t.getBytes()).left(8);

@@ -32,6 +32,7 @@
 				<include name="**/*.js"/>
 				<exclude name="eID/**"/>
 				<exclude name="icao/**"/>
+				<exclude name="sc-hsm/**"/>
 				<exclude name="cardsim/**"/>
 				<exclude name="build/**"/>
 				<exclude name="tutorial/**"/>
@@ -99,6 +100,11 @@
 			<!-- Collect the JS-files -->
 			<fileset dir="${basedir}/mifare" includes="**/*.js"/>
 		</apply>
+		<apply executable="perl" addsourcefile="true" dir="${basedir}/sc-hsm" parallel="true" relative="true" verbose="true">
+			<arg line="${jsdoc} --directory '${doc}/sc-hsm/jsdoc'" />
+			<!-- Collect the JS-files -->
+			<fileset dir="${basedir}/sc-hsm" includes="**/*.js"/>
+		</apply>
 	</target>
 
 
@@ -146,10 +152,10 @@
 		<property name="bundle" location="released/${bundlename}"/>
 
 		<exec executable="pscp" dir="${build}/doc">
-			<arg line="-r * asc@diavolo:/var/www/openscdp.org/scripts" />
+			<arg line="-r * asc@diavola:/var/www/openscdp.org/scripts" />
 		</exec>
 		<exec executable="pscp" dir="${basedir}">
-			<arg line="${bundle} asc@diavolo:/var/www/openscdp.org/scripts" />
+			<arg line="${bundle} asc@diavola:/var/www/openscdp.org/scripts" />
 		</exec>
 	</target>
 
