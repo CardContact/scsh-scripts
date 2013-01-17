@@ -76,7 +76,7 @@
 
 	<target name="jsdoc">
 		<apply executable="perl" addsourcefile="true" dir="${basedir}/icao" parallel="true" relative="true">
-			<arg line="${jsdoc} --no-sources --directory ${doc}/icao/jsdoc" />
+			<arg line="${jsdoc} --directory ${doc}/icao/jsdoc" />
 			<!-- Collect the JS-files -->
 			<fileset dir="${basedir}/icao" includes="**/*.js"/>
 		</apply>
@@ -86,7 +86,7 @@
 			<fileset dir="${basedir}/cardsim" includes="**/*.js"/>
 		</apply>
 		<apply executable="perl" addsourcefile="true" dir="${basedir}/eID" parallel="true" relative="true">
-			<arg line="${jsdoc} --no-sources --directory ${doc}/eID/jsdoc" />
+			<arg line="${jsdoc} --directory ${doc}/eID/jsdoc" />
 			<!-- Collect the JS-files -->
 			<fileset dir="${basedir}/eID" includes="**/*.js"/>
 		</apply>
