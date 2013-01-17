@@ -80,30 +80,6 @@ CVCExplorer.loadBinaryFile = function(filename) {
 
 
 
-CVCExplorer.asCString = function(b) {
-	var str = "";
-	for (var i = 0; i < b.length; i++) {
-		var v = b.bytes(i, 1);
-		str += "\\x" + v.toString(HEX);
-	}
-	return str;
-}
-
-
-
-
-CVCExplorer.asJavaString = function(b) {
-	var str = "";
-	for (var i = 0; i < b.length; i++) {
-		var v = b.bytes(i, 1);
-		str += ",(byte)0x" + v.toString(HEX);
-	}
-	return str;
-}
-
-
-
-
 /**
  * Dump certificate content
  *
@@ -113,15 +89,10 @@ CVCExplorer.dumpCertificate = function(cvc) {
 	print("-----8<----------8<----------8<----------8<----------8<----------8<----------8<----------8<-----");
 	print(cvc);
 	var list = cvc.getRightsAsList();
-	if (list != null) {
-		for (var i = 0; i < list.length; i++) {
-			print("  " + list[i]);
-		}
+	for (var i = 0; i < list.length; i++) {
+		print("  " + list[i]);
 	}
 	print(cvc.getASN1());
-	print(cvc.getBytes().toString(HEX));
-	print(CVCExplorer.asCString(cvc.getBytes()));
-	print(CVCExplorer.asJavaString(cvc.getBytes()));
 }
 
 
