@@ -14,8 +14,9 @@
 load("../lib/smartcardhsm.js");
 load("../lib/hsmkeystore.js");
  
-var url = "http://localhost:8080/se/caws";
-//var url = "http://pasta:8080/se/caws";
+// var url = "http://localhost:8080/se/caws";
+var url = "http://devnet.cardcontact.de/se/caws";
+
 var userPIN = new ByteString("648219", ASCII);
 var initializationCode = new ByteString("57621880", ASCII);
 
@@ -208,7 +209,7 @@ if (key) {
 }
 
 print("Generating a 2048 bit RSA key pair can take up to 60 seconds. Please wait...");
-var req = hsmks.generateRSAKeyPair(label, 1024);
+var req = hsmks.generateRSAKeyPair(label, 2048);
 
 var devAutCert = sc.readBinary(SmartCardHSM.C_DevAut);
 
@@ -216,5 +217,11 @@ var cacon = new CAConnection(url);
 var certs = cacon.requestCertificate(req.getBytes(), devAutCert, commonName, eMailAddress);
 cacon.close();
 
-print("Received certificate from CA, now storing it on the device...");
-hsmks.storeEndEntityCertificate(label, new X509(certs[0]));
+if (certs == null) {
+	print("Online CA returned " + cacon.getLastReturnCode());
+} else {
+	var cert = new X509(certs[0]);
+	print(cert);
+	print("Received certificate from CA, now storing it on the device...");
+	hsmks.storeEndEntityCertificate(label, cert);
+}
