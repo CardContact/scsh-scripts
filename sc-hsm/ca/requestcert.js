@@ -92,7 +92,7 @@ CAConnection.prototype.close = function() {
  * @returns the new certificates
  * @type ByteString[]
  */
-CAConnection.prototype.requestCertificate = function(certreq, devicecert, commonName, eMailAddress) {
+CAConnection.prototype.requestCertificate = function(certreq, devicecert, commonName, eMailAddress, activationCode) {
 
 	this.lastReturnCode = null;
 
@@ -107,6 +107,10 @@ CAConnection.prototype.requestCertificate = function(certreq, devicecert, common
 			<CommonName>{commonName}</CommonName>
 			<eMailAddress>{eMailAddress}</eMailAddress>
 		</ns:RequestCertificate>
+
+	if (activationCode) {
+		request.eMailAddress += <ActivationCode>{activationCode}</ActivationCode>;
+	}
 
 	if (this.verbose) {
 		GPSystem.trace(request.toXMLString());
@@ -193,10 +197,15 @@ var commonName = Dialog.prompt("Please enter name or pseudonym for entry into th
 assert(commonName != null);
 
 var eMailAddress = "joe.doe@openscdp.org";
+
 do	{
-	var eMailAddress = Dialog.prompt("Please enter a valid e-mail address for entry into the subjectAlternativeName name field of the certificate", eMailAddress);
+	var eMailAddress = Dialog.prompt("Please enter a valid e-mail address for entry into the subjectAlternativeName field of the certificate", eMailAddress);
 	assert(eMailAddress != null);
 } while (eMailAddress.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/)[0] != eMailAddress);
+
+if (eMailAddress.length > 0) {
+	print("The CA will send an activation code to " + eMailAddress);
+}
 
 var hsmks = new HSMKeyStore(sc);
 
@@ -204,7 +213,7 @@ sc.enumerateKeys();
 var key = sc.getKey(label);
 
 if (key) {
-	assert(Dialog.prompt("A key with label " + label + " already exists. Press OK to delete the key"));
+	assert(Dialog.prompt("A key with the label " + label + " already exists. Press OK to delete the key"));
 	hsmks.deleteKey(label);
 }
 
@@ -213,15 +222,29 @@ var req = hsmks.generateRSAKeyPair(label, 2048);
 
 var devAutCert = sc.readBinary(SmartCardHSM.C_DevAut);
 
-var cacon = new CAConnection(url);
-var certs = cacon.requestCertificate(req.getBytes(), devAutCert, commonName, eMailAddress);
-cacon.close();
+var activationCode;
 
-if (certs == null) {
-	print("Online CA returned " + cacon.getLastReturnCode());
-} else {
-	var cert = new X509(certs[0]);
-	print(cert);
-	print("Received certificate from CA, now storing it on the device...");
-	hsmks.storeEndEntityCertificate(label, cert);
-}
+do	{
+	var cacon = new CAConnection(url);
+	var certs = cacon.requestCertificate(req.getBytes(), devAutCert, commonName, eMailAddress, activationCode);
+	cacon.close();
+
+	if (certs == null) {
+		var rc = cacon.getLastReturnCode();
+		if (rc == "activation_code_wrong") {
+			assert(Dialog.prompt("Wrong activation code - Press OK to retry"));
+		}
+		if ((rc == "activation_code_required") || (rc == "activation_code_wrong")) {
+			activationCode = Dialog.prompt("Please check your e-mail and enter activation code", "");
+			assert(activationCode != null);
+		} else {
+			print("Online CA returned " + cacon.getLastReturnCode());
+			break;
+		}
+	} else {
+		var cert = new X509(certs[0]);
+		print(cert);
+		print("Received certificate from CA, now storing it on the device...");
+		hsmks.storeEndEntityCertificate(label, cert);
+	}
+} while (!certs);
