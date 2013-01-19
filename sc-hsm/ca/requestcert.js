@@ -196,7 +196,7 @@ var commonName = "Joe Doe";
 var commonName = Dialog.prompt("Please enter name or pseudonym for entry into the common name field of the certificate", commonName);
 assert(commonName != null);
 
-var eMailAddress = "joe.doe@openscdp.org";
+var eMailAddress = " joe.doe@openscdp.org";
 
 do	{
 	var eMailAddress = Dialog.prompt("Please enter a valid e-mail address for entry into the subjectAlternativeName field of the certificate", eMailAddress);
