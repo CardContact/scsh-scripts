@@ -47,8 +47,7 @@ function writeXML(filename, xml) {
 /**
  * Generate an ECC key pair on brainpoolP256r1 and save as GP key profile
  * 
- * @param name the name of the key
- * @return
+ * @param {String} name the name of the key
  */
 function generateECCKeyPair(name) {
 	var curve = new ByteString("brainpoolP256r1", OID);
@@ -110,8 +109,7 @@ function generateECCKeyPair(name) {
 /**
  * Generate a sector key pair with the sector public key as PrK_Sector * PuK_Revocation
  * 
- * @param name the name of the key
- * @return
+ * @param {String} name the name of the key
  */
 function generateSectorKeyPair(name) {
 	var curve = new ByteString("brainpoolP256r1", OID);

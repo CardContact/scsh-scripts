@@ -48,7 +48,6 @@ function writeXML(filename, xml) {
  * Generate an ECC key pair on brainpoolP256r1 and save as GP key profile
  * 
  * @param name the name of the key
- * @return
  */
 function generateECCKeyPair(name) {
 	var curve = new ByteString("brainpoolP256r1", OID);
