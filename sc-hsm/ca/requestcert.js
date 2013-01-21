@@ -177,14 +177,14 @@ if (sc.queryUserPINStatus() == 0x6984) {
 	var userPIN = Dialog.prompt("Please select user PIN for SmartCard-HSM", "648219");
 	assert(userPIN != null);
 
-	sc.initDevice(new ByteString("0001", HEX), userPIN, initializationCode, 3);
+	sc.initDevice(new ByteString("0001", HEX), new ByteString(userPIN, ASCII), initializationCode, 3);
 } else {
 	var userPIN = Dialog.prompt("Please enter user PIN for SmartCard-HSM", "648219");
 	assert(userPIN != null);
-
-	// Verify user PIN
-	sc.verifyUserPIN(new ByteString(userPIN, ASCII));
 }
+
+// Verify user PIN
+sc.verifyUserPIN(new ByteString(userPIN, ASCII));
 
 var url = Dialog.prompt("Please enter URL of Online CA", url);
 assert(url != null);
