@@ -716,6 +716,8 @@ FileSystemIdObject.prototype.getId = function() {
 
 /**
  * Return type of object
+ * @type string
+ * @return type of object
  */
 FileSystemIdObject.prototype.getType = function() {
 	throw new GPError("FileSystemIdObject", GPError.NOT_IMPLEMENTED, 0, "Derived class must override getType()");
@@ -835,6 +837,31 @@ FileSelector.prototype.getObject = function(type, id) {
 		}
 	}
 	return null;
+}
+
+
+
+/**
+ * Enumerate objects of a defined type
+ *
+ * @param {String} type the type of the object
+ * @type {Number[]}
+ * @returns the list of objects found
+ */
+FileSelector.prototype.enumerateObjects = function(type) {
+	var idlist = [];
+
+	if (this.mf != this.currentDF) {
+		for each (var o in this.currentDF.meta[type]) {
+			idlist.push(o.getId());
+		}
+	}
+
+	for each (var o in this.mf.meta[type]) {
+		idlist.push(o.getId());
+	}
+
+	return idlist;
 }
 
 

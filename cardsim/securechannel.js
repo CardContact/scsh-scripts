@@ -147,6 +147,12 @@ SecureChannel.prototype.unwrap = function(apdu) {
 	if (!decoder.verifyMAC(this.macKey)) {
 		throw new GPError("SecureChannel", GPError.CRYPTO_FAILED, APDU.SW_INCSMDATAOBJECT, "MAC verification failed");
 	}
+
+	var le = decoder.getLe();
+	if (le >= 0) {
+		apdu.ne = le;
+	}
+
 	var plain = decoder.decryptBody(this.encKey);
 	apdu.setCData(plain);
 }
@@ -347,4 +353,20 @@ SecureMessagingCommandAPDUDecoder.prototype.decryptBody = function(key) {
 	plain = SecureChannel.removePadding(plain);
 	
 	return plain;
+}
+
+
+
+/**
+ * Return value of optional Le element with tag '97'
+ *
+ * @type Number
+ * @return the value of the Le element
+ */
+SecureMessagingCommandAPDUDecoder.prototype.getLe = function() {
+	var le = this.tlvlist.find(0x97);
+	if (le == null) {
+		return -1;
+	}
+	return le.getValue().toUnsigned();
 }
