@@ -982,7 +982,7 @@ EAC20.prototype.verifyCertificateChain = function(cvcchain) {
 		this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x2A, 0x00, 0xBE, v, [0x9000]);
 	}
 	
-	this.terminalCHR = cvcchain[cvcchain.length - 1].getCHR();
+	this.terminalCert = cvcchain[cvcchain.length - 1];
 }
 
 
@@ -1012,7 +1012,7 @@ EAC20.prototype.performTerminalAuthentication = function(termkey, auxdata, crypt
 	if (crypto == undefined) {
 		var crypto = this.crypto;
 	}
-	var signature = crypto.sign(termkey, Crypto.ECDSA_SHA256, signatureInput);
+	var signature = crypto.sign(termkey, CVC.getSignatureMech(this.terminalCert.getPublicKeyOID()), signatureInput);
 
 	var keysize = termkey.getSize();
 	if (keysize < 0) {
@@ -1040,10 +1040,9 @@ EAC20.prototype.performTerminalAuthenticationSetup = function(auxdata) {
 	var idIFD = this.ca.getCompressedPublicKey();
 
 	var bb = new ByteBuffer();
-	
-	// ToDo: Copy from root CVCA certificate
-	bb.append(new ASN1(0x80, new ByteString("id-TA-ECDSA-SHA-256", OID)).getBytes());
-	bb.append(new ASN1(0x83, this.terminalCHR.getBytes()).getBytes());
+
+	bb.append(new ASN1(0x80, this.terminalCert.getPublicKeyOID()).getBytes());
+	bb.append(new ASN1(0x83, this.terminalCert.getCHR().getBytes()).getBytes());
 	if (auxdata) {
 		bb.append(auxdata);
 	}
@@ -1053,7 +1052,7 @@ EAC20.prototype.performTerminalAuthenticationSetup = function(auxdata) {
 	this.log("Manage SE data:");
 	this.log(msedata);
 	this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x22, 0x81, 0xA4, msedata, [0x9000]);
-	
+
 	var challenge = this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO|Card.RENC, 0x00, 0x84, 0x00, 0x00, 8, [0x9000]);
 	
 	var bb = new ByteBuffer();
