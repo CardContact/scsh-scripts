@@ -43,6 +43,7 @@ function AuthenticationObject(name, type, id, value) {
 	this.initialretrycounter = 3;
 	this.usecounter = -1;
 	this.resetcounter = -1;
+	this.minLength = 4;
 	this.isActive = true;				// State after using ACTIVATE / DEACTIVATE
 	this.isEnabled = true;				// State after using ENABLE / DISABLE VERIFICATION REQUIREMENT 
 	this.isTransport = false;			// State before first change PIN
@@ -130,6 +131,9 @@ AuthenticationObject.prototype.resetRetryCounter = function(newValue) {
 		}
 		this.resetcounter--;
 	}
+	if (newValue && (newValue.length < this.minLength)) {
+		throw new GPError("AuthenticationObject", GPError.INVALID_DATA, APDU.SW_WRONGLENGTH, "New reference data too short");
+	}
 	this.retrycounter = this.initialretrycounter;
 	this.isActive = true;
 
@@ -164,6 +168,11 @@ AuthenticationObject.prototype.changeReferenceData = function(qualifier, value) 
 		this.verify(value.left(this.value.length));
 		value = value.bytes(this.value.length);
 	}
+
+	if (value.length < this.minLength) {
+		throw new GPError("AuthenticationObject", GPError.INVALID_DATA, APDU.SW_WRONGLENGTH, "New reference data too short");
+	}
+
 	this.value = value;
 	this.isTerminated = false;
 }

@@ -101,7 +101,12 @@ CommandInterpreter.prototype.readBinary = function(apdu) {
 	if (!(ef instanceof TransparentEF)) {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_COMINCOMPATIBLE, "EF is not a transparent file in READ BINARY");
 	}
-	
+
+	var ac = this.fileSelector.getMeta("accessController");
+	if (ac && !ac.checkFileReadAccess(this, apdu, ef)) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_SECSTATNOTSAT, "Read access not allowed as determined by " + ac);
+	}
+
 	var offset = dua.getOffset();
 	var length = apdu.getNe();
 
@@ -150,6 +155,11 @@ CommandInterpreter.prototype.updateBinary = function(apdu) {
 	
 	if (!(ef instanceof TransparentEF)) {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_COMINCOMPATIBLE, "EF is not a transparent file in UPDATE BINARY");
+	}
+
+	var ac = this.fileSelector.getMeta("accessController");
+	if (ac && !ac.checkFileWriteAccess(this, apdu, ef)) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_SECSTATNOTSAT, "Write access not allowed as determined by " + ac);
 	}
 
 	var offset = dua.getOffset();

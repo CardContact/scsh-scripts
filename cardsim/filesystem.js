@@ -371,7 +371,7 @@ FSNode.prototype.isDF = function() {
  * @return a string
  */
 FSNode.prototype.toString = function() {
-	if (!this.fcp) {
+	if (!this.fcp || !this.fcp.getFID()) {
 		return "FSNode";
 	}
 	return this.fcp.getFID().toString(HEX);
@@ -791,7 +791,9 @@ FileSelector.prototype.getMeta = function(name) {
 	var meta;
 
 	if (this.currentDF) {
+//		print("DF selected: " + this.currentDF);
 		var meta = this.currentDF.meta[name];
+//		print("Found: " + meta);
 	}
 
 	if (!meta) {
