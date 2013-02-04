@@ -270,6 +270,24 @@ CVC.isECDSA = function(oid) {
 
 
 /**
+ * Return true of the certificate contains domain parameter
+ *
+ * @type boolean
+ * @return true, if certificate contains domain parameter
+ */
+CVC.prototype.containsDomainParameter = function() {
+	var pdo = this.body.find(CVC.TAG_PUK);
+	if (pdo == null) {
+		return false;
+	}
+	
+	var d = pdo.find(0x84);		// Generator
+	return (d != null);
+}
+
+
+
+/**
  * Returns the certification authority reference (CAR).
  *
  * @return the CAR or null

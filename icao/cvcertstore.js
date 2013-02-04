@@ -28,7 +28,7 @@
 
 
 if (typeof(__ScriptingServer) == "undefined") {
-	load("pkcs8.js");
+	load("tools/pkcs8.js");
 	load("cvc.js");
 }
 
