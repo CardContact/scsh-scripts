@@ -21,7 +21,7 @@
  *  along with OpenSCDP; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
- * @fileoverview TrustAnchor Based class for card verifiable certificate based access controller
+ * @fileoverview TrustAnchor Base class for card verifiable certificate based access controller
  */
 
  
@@ -37,7 +37,8 @@ function TrustAnchor(root) {
 		return;
 	}
 
-	this.root = root;
+	this.chain = [];
+	this.chain.push(root);
 
 	// Save in file system under id, which is the last byte in the CHAT OID
 	var chat = root.getCHAT();
@@ -53,31 +54,117 @@ TrustAnchor.TYPE = "TrustAnchor";
 
 
 
+/**
+ * Return type of file system object
+ *
+ * @type String
+ * @return the type string
+ */
 TrustAnchor.prototype.getType = function() {
 	return TrustAnchor.TYPE;
 }
 
 
 
+
+/**
+ * Add recent trust anchor to PACE response
+ *
+ * @param {ASN1} response the response object to receive tag 87 and 88
+ */
+TrustAnchor.prototype.addCARforPACE = function(response) {
+	var cl = this.chain.length;
+	response.add(new ASN1(0x87, this.chain[cl - 1].getCHR().getBytes()));
+	if (cl > 1) {
+		response.add(new ASN1(0x88, this.chain[cl - 2].getCHR().getBytes()));
+	}
+}
+
+
+
+/**
+ * Is a recent trust anchor issuer of the certificate chr in question
+ *
+ * @param {PublicKeyReference} chr the certificate holder
+ * @type boolean
+ * @return true if trust anchor issued certificate
+ */
 TrustAnchor.prototype.isIssuer = function(chr) {
-	return this.root.getCHR().toString() == chr;
+	var cvc = this.getCertificateFor(chr);
+//	print("isIssuer(" + chr + "):");
+//	print(cvc);
+	return cvc != null;
 }
 
 
 
+/**
+ * Get public key from certificate, possibly determine the domain parameter from previous trust anchors
+ *
+ * @param {PublicKeyReference} chr the certificate holder
+ * @type Key
+ * @return the public key or null
+ */
 TrustAnchor.prototype.getPublicKeyFor = function(chr) {
-	return this.root.getPublicKey();
+//	print("Get public key for " + chr);
+	var cl = this.chain.length - 1;
+	for (; (cl >= 0) && !this.chain[cl].getCHR().equals(chr); cl--) {
+	}
+
+	if (cl < 0) {
+//		print("chr not found");
+		return null;
+	}
+
+	var i = cl;
+	if (CVC.isECDSA(this.chain[cl].getPublicKeyOID()) && !this.chain[i].containsDomainParameter()) {
+//		print("Looking for DPs down the chain");
+		for (cl--; (cl >= 0) && !this.chain[cl].containsDomainParameter(); cl--) {}
+		if (cl < 0) {
+			return null;
+		}
+//		print("Found domain parameter in " + this.chain[cl]);
+		var dp = this.chain[cl].getPublicKey();
+		return this.chain[i].getPublicKey(dp);
+	} else {
+//		print(this.chain[i]);
+		return this.chain[i].getPublicKey();
+	}
 }
 
 
 
+/**
+ * Return certificate for chr
+ *
+ * @param {PublicKeyReference} chr the certificate holder
+ * @type CVC
+ * @return the certificate or null
+ */
 TrustAnchor.prototype.getCertificateFor = function(chr) {
-	return this.root;
+	var cl = this.chain.length;
+	if (this.chain[cl - 1].getCHR().toString() == chr) {
+		return this.chain[cl - 1];
+	}
+	if (cl > 1) {
+		if (this.chain[cl - 2].getCHR().toString() == chr) {
+			return this.chain[cl - 2];
+		}
+	}
+	return null;
 }
 
 
 
-TrustAnchor.prototype.checkCertificate = function(issuer, subject) {
+/**
+ * Check certificate
+ *
+ * <p>This method updates the current date for certificates issued by domestic DVCAs.</p>
+ * @param {CVC} issuer the issuing certificate
+ * @param {CVC} subject the subjects certificate
+ * @param {Object} dateProvider object implementing getDate() and setDate()
+ */
+TrustAnchor.prototype.checkCertificate = function(issuer, subject, dateProvider) {
 	var chatissuer = issuer.getCHAT();
 	var chatsubject = subject.getCHAT();
 	
@@ -104,61 +191,66 @@ TrustAnchor.prototype.checkCertificate = function(issuer, subject) {
 	}
 //	print("issuer " + typeissuer);
 //	print("subject " + typesubject);
-	
+
 	if (((typesubject >= typeissuer) && (typeissuer != 0xC0)) || 
 		((typesubject == 0x00) && (typeissuer == 0xC0))) {
 		throw new GPError("TrustAnchor", GPError.INVALID_DATA, APDU.SW_INVDATA, "Certificate hierachie invalid");
 	}
-	
+
 	if (!issuer.getPublicKeyOID().equals(subject.getPublicKeyOID())) {
 		throw new GPError("TrustAnchor", GPError.INVALID_DATA, APDU.SW_INVDATA, "Public key algorithm mismatch");
 	}
+
+	var date = dateProvider.getDate().valueOf();
+	if (typesubject != 0xC0) {			// CVCA certificates do not expire
+		if (subject.getCXD().valueOf() < date) {
+			throw new GPError("TrustAnchor", GPError.INVALID_DATA, APDU.SW_INVDATA, "Certificate is expired");
+		}
+	} else {
+		print("Add to chain: " + subject);
+		this.chain.push(subject);							// Add new CVCA link to the chain
+	}
+
+	if ((rightsissuer.byteAt(0) & 0xC0) != 0x40) {			// Trust all except foreign DVCAs
+		if (subject.getCED().valueOf() > date) {
+			dateProvider.setDate(subject.getCED());
+		}
+	}
 }
 
 
 
-TrustAnchor.prototype.validateCertificateIssuedByCVCA = function(crypto, cert) {
+/**
+ * Validate certificate issued by CVCA
+ *
+ * @param {Crypto} crypto the crypto object to use for verification
+ * @param {CVC} cert the certificate to validate
+ * @param {Object} dateProvider object implementing getDate() and setDate()
+ */
+TrustAnchor.prototype.validateCertificateIssuedByCVCA = function(crypto, cert, dateProvider) {
 	cc = this.getCertificateFor(cert.getCAR());
 	puk = this.getPublicKeyFor(cert.getCAR());
-	if (!cert.verifyWith(crypto, puk, cc.getPublicKeyOID())) {
+	if (!puk || !cert.verifyWith(crypto, puk, cc.getPublicKeyOID())) {
 		throw new GPError("TrustAnchor", GPError.INVALID_DATA, APDU.SW_INVDATA, "Could not verify certificate signature");
 	}
-	this.checkCertificate(cc, cert);
+	this.checkCertificate(cc, cert, dateProvider);
 }
 
 
 
-TrustAnchor.prototype.validateCertificateIssuedByDVCA = function(crypto, cert, dvca) {
+/**
+ * Validate certificate issued by CVCA
+ *
+ * @param {Crypto} crypto the crypto object to use for verification
+ * @param {CVC} cert the certificate to validate
+ * @param {CVC} dvca the issuing certificate
+ * @param {Object} dateProvider object implementing getDate() and setDate()
+ */
+TrustAnchor.prototype.validateCertificateIssuedByDVCA = function(crypto, cert, dvca, dateProvider) {
 	var dp = this.getPublicKeyFor(dvca.getCAR());
-	if (!cert.verifyWith(crypto, dvca.getPublicKey(dp), dvca.getPublicKeyOID())) {
+//	print(dp);
+	if (!dp || !cert.verifyWith(crypto, dvca.getPublicKey(dp), dvca.getPublicKeyOID())) {
 		throw new GPError("TrustAnchor", GPError.INVALID_DATA, APDU.SW_INVDATA, "Could not verify certificate signature");
 	}
-	this.checkCertificate(dvca, cert);
+	this.checkCertificate(dvca, cert, dateProvider);
 }
-
-
-
-function TrustAnchorIS(root) {
-	TrustAnchor.call(this, root);
-}
-
-TrustAnchorIS.prototype = new TrustAnchor();
-TrustAnchorIS.prototype.constructor = TrustAnchor;
-
-
-
-function TrustAnchorAT(root) {
-	TrustAnchor.call(this, root);
-}
-
-TrustAnchorAT.prototype = new TrustAnchor();
-TrustAnchorAT.prototype.constructor = TrustAnchor;
-
-
-
-function TrustAnchorST(root) {
-	TrustAnchor.call(this, root);
-}
-
-TrustAnchorST.prototype = new TrustAnchor();
-TrustAnchorST.prototype.constructor = TrustAnchor;
