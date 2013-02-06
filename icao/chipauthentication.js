@@ -91,9 +91,7 @@ ChipAuthenticationInfo.prototype.toTLV = function() {
 	t.add(new ASN1(ASN1.INTEGER, bb.toByteString()));
 	
 	if (typeof(this.keyId) != "undefined") {
-		var bb = new ByteBuffer();
-		bb.append(this.parameterId);
-		t.add(new ASN1(ASN1.INTEGER, bb.toByteString()));
+		t.add(new ASN1(ASN1.INTEGER, ByteString.valueOf(this.keyId)));
 	}
 	return t;
 }
@@ -174,13 +172,17 @@ ChipAuthenticationDomainParameterInfo.prototype.toTLV = function() {
 
 	t.add(new ASN1(ASN1.OBJECT_IDENTIFIER, this.protocol));
 
-	t.add(new ASN1(ASN1.SEQUENCE));
-	// TODO domainParameter
+	var c = new ASN1(ASN1.SEQUENCE);
+	if (this.standardizedDomainParameter) {
+		c.add(new ASN1(ASN1.OBJECT_IDENTIFIER, new ByteString("standardizedDomainParameter", OID)));
+		c.add(new ASN1(ASN1.INTEGER, ByteString.valueOf(this.standardizedDomainParameter)));
+	} else {
 	
+	}
+	t.add(c);
+
 	if (typeof(this.keyId) != "undefined") {
-		var bb = new ByteBuffer();
-		bb.append(this.keyId);
-		t.add(new ASN1(ASN1.INTEGER, bb.toByteString()));
+		t.add(new ASN1(ASN1.INTEGER, ByteString.valueOf(this.keyId)));
 	}
 	return t;
 }
@@ -403,9 +405,7 @@ ChipAuthenticationPublicKeyInfo.prototype.toTLV = function() {
 	t.add(spki);
 
 	if (typeof(this.keyId) != "undefined") {
-		var bb = new ByteBuffer();
-		bb.append(this.keyId);
-		t.add(new ASN1("keyId", ASN1.INTEGER, bb.toByteString()));
+		t.add(new ASN1(ASN1.INTEGER, ByteString.valueOf(this.keyId)));
 	}
 	return t;
 }

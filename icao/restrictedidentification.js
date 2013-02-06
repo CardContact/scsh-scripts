@@ -177,11 +177,18 @@ function RestrictedIdentificationDomainParameterInfo(tlv) {
  */
 RestrictedIdentificationDomainParameterInfo.prototype.toTLV = function() {
 	var t = new ASN1(ASN1.SEQUENCE);
-	
+
 	t.add(new ASN1(ASN1.OBJECT_IDENTIFIER, this.protocol));
-	
-	t.add(new ASN1(ASN1.SEQUENCE));
-	// TODO domainParameter
+
+	var c = new ASN1(ASN1.SEQUENCE);
+	if (this.standardizedDomainParameter) {
+		c.add(new ASN1(ASN1.OBJECT_IDENTIFIER, new ByteString("standardizedDomainParameter", OID)));
+		c.add(new ASN1(ASN1.INTEGER, ByteString.valueOf(this.standardizedDomainParameter)));
+	} else {
+
+	}
+	t.add(c);
+
 	return t;
 }
 
