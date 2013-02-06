@@ -51,6 +51,7 @@ TrustAnchor.prototype = new FileSystemIdObject();
 TrustAnchor.prototype.constructor = TrustAnchor;
 
 TrustAnchor.TYPE = "TrustAnchor";
+TrustAnchor.idIS = new ByteString("id-IS", OID);
 
 
 
@@ -157,18 +158,37 @@ TrustAnchor.prototype.getCertificateFor = function(chr) {
 
 
 /**
+ * Update EF.CVCA with list of valid trust anchors
+ *
+ * @param {Object} dataProvider object implementing getDate(), setDate() and updateEFCVCA()
+ */
+TrustAnchor.prototype.updateEFCVCA = function(dataProvider) {
+	var cl = this.chain.length - 1;
+	var bb = new ByteBuffer();
+	bb.append((new ASN1(0x42, this.chain[cl].getCHR().getBytes())).getBytes());
+	if (cl > 0) {
+		bb.append((new ASN1(0x42, this.chain[cl - 1].getCHR().getBytes())).getBytes());
+	}
+	bb.append(0);
+	dataProvider.updateEFCVCA(bb.toByteString());
+}
+
+
+
+/**
  * Check certificate
  *
  * <p>This method updates the current date for certificates issued by domestic DVCAs.</p>
  * @param {CVC} issuer the issuing certificate
  * @param {CVC} subject the subjects certificate
- * @param {Object} dateProvider object implementing getDate() and setDate()
+ * @param {Object} dataProvider object implementing getDate(), setDate() and updateEFCVCA()
  */
-TrustAnchor.prototype.checkCertificate = function(issuer, subject, dateProvider) {
+TrustAnchor.prototype.checkCertificate = function(issuer, subject, dataProvider) {
 	var chatissuer = issuer.getCHAT();
 	var chatsubject = subject.getCHAT();
 	
-	if (!chatissuer.get(0).value.equals(chatsubject.get(0).value)) {
+	var rolesubject = chatsubject.get(0).value;
+	if (!chatissuer.get(0).value.equals(rolesubject)) {
 		throw new GPError("TrustAnchor", GPError.INVALID_DATA, APDU.SW_INVDATA, "Role mismatch");
 	}
 
@@ -201,7 +221,7 @@ TrustAnchor.prototype.checkCertificate = function(issuer, subject, dateProvider)
 		throw new GPError("TrustAnchor", GPError.INVALID_DATA, APDU.SW_INVDATA, "Public key algorithm mismatch");
 	}
 
-	var date = dateProvider.getDate().valueOf();
+	var date = dataProvider.getDate().valueOf();
 	if (typesubject != 0xC0) {			// CVCA certificates do not expire
 		if (subject.getCXD().valueOf() < date) {
 			throw new GPError("TrustAnchor", GPError.INVALID_DATA, APDU.SW_INVDATA, "Certificate is expired");
@@ -209,11 +229,14 @@ TrustAnchor.prototype.checkCertificate = function(issuer, subject, dateProvider)
 	} else {
 		print("Add to chain: " + subject);
 		this.chain.push(subject);							// Add new CVCA link to the chain
+		if (rolesubject.equals(TrustAnchor.idIS)) {
+			this.updateEFCVCA(dataProvider);					// Update /DF.ePass/EF.CVCA
+		}
 	}
 
 	if ((rightsissuer.byteAt(0) & 0xC0) != 0x40) {			// Trust all except foreign DVCAs
 		if (subject.getCED().valueOf() > date) {
-			dateProvider.setDate(subject.getCED());
+			dataProvider.setDate(subject.getCED());
 		}
 	}
 }
@@ -225,15 +248,15 @@ TrustAnchor.prototype.checkCertificate = function(issuer, subject, dateProvider)
  *
  * @param {Crypto} crypto the crypto object to use for verification
  * @param {CVC} cert the certificate to validate
- * @param {Object} dateProvider object implementing getDate() and setDate()
+ * @param {Object} dataProvider object implementing getDate(), setDate() and updateEFCVCA()
  */
-TrustAnchor.prototype.validateCertificateIssuedByCVCA = function(crypto, cert, dateProvider) {
+TrustAnchor.prototype.validateCertificateIssuedByCVCA = function(crypto, cert, dataProvider) {
 	cc = this.getCertificateFor(cert.getCAR());
 	puk = this.getPublicKeyFor(cert.getCAR());
 	if (!puk || !cert.verifyWith(crypto, puk, cc.getPublicKeyOID())) {
 		throw new GPError("TrustAnchor", GPError.INVALID_DATA, APDU.SW_INVDATA, "Could not verify certificate signature");
 	}
-	this.checkCertificate(cc, cert, dateProvider);
+	this.checkCertificate(cc, cert, dataProvider);
 }
 
 
@@ -244,13 +267,13 @@ TrustAnchor.prototype.validateCertificateIssuedByCVCA = function(crypto, cert, d
  * @param {Crypto} crypto the crypto object to use for verification
  * @param {CVC} cert the certificate to validate
  * @param {CVC} dvca the issuing certificate
- * @param {Object} dateProvider object implementing getDate() and setDate()
+ * @param {Object} dataProvider object implementing getDate(), setDate() and updateEFCVCA()
  */
-TrustAnchor.prototype.validateCertificateIssuedByDVCA = function(crypto, cert, dvca, dateProvider) {
+TrustAnchor.prototype.validateCertificateIssuedByDVCA = function(crypto, cert, dvca, dataProvider) {
 	var dp = this.getPublicKeyFor(dvca.getCAR());
 //	print(dp);
 	if (!dp || !cert.verifyWith(crypto, dvca.getPublicKey(dp), dvca.getPublicKeyOID())) {
 		throw new GPError("TrustAnchor", GPError.INVALID_DATA, APDU.SW_INVDATA, "Could not verify certificate signature");
 	}
-	this.checkCertificate(dvca, cert, dateProvider);
+	this.checkCertificate(dvca, cert, dataProvider);
 }
