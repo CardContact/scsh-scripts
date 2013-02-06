@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<wsdl:definitions xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+	xmlns:tns="http://www.openscdp.org/CAService" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+	xmlns:xsd="http://www.w3.org/2001/XMLSchema" name="CAService"
+	targetNamespace="http://www.openscdp.org/CAService">
+	<wsdl:types>
+		<xsd:schema targetNamespace="http://www.openscdp.org/CAService">
+
+			<xsd:simpleType name="ReturnCodeType">
+				<xsd:restriction base="xsd:string">
+					<xsd:enumeration value="ok" />
+					<xsd:enumeration value="failure_syntax" />
+					<xsd:enumeration value="failure_signature" />
+					<xsd:enumeration value="failure_not_allowed" />
+					<xsd:enumeration value="failure_excessive_tries_limit" />
+					<xsd:enumeration value="activation_code_required" />
+					<xsd:enumeration value="activation_code_wrong" />
+					<xsd:enumeration value="failure_internal_error" />
+				</xsd:restriction>
+			</xsd:simpleType>
+
+			<xsd:element name="RequestCertificate">
+				<xsd:complexType>
+					<xsd:sequence>
+						<xsd:element name="CertificateSigningRequest" type="xsd:base64Binary"
+							maxOccurs="1" minOccurs="1">
+							<xsd:annotation>
+								<xsd:documentation>
+									Card generated certificate signing request.
+								</xsd:documentation>
+							</xsd:annotation>
+						</xsd:element>
+						<xsd:element name="DeviceCertificate" type="xsd:base64Binary"
+							maxOccurs="1" minOccurs="1">
+							<xsd:annotation>
+								<xsd:documentation>
+									Device certificates, a concatenation of device and issuer certificate as read from EF_DevAut (2F02)
+								</xsd:documentation>
+							</xsd:annotation>
+						</xsd:element>
+						<xsd:element name="CommonName" type="xsd:string"
+							maxOccurs="1" minOccurs="1">
+							<xsd:annotation>
+								<xsd:documentation>
+									Requested common name for the certificate
+								</xsd:documentation>
+							</xsd:annotation>
+						</xsd:element>
+						<xsd:element name="eMailAddress" type="xsd:string"
+							maxOccurs="1" minOccurs="1">
+							<xsd:annotation>
+								<xsd:documentation>
+									Requested e-mail address for the certificate
+								</xsd:documentation>
+							</xsd:annotation>
+						</xsd:element>
+						<xsd:element name="ActivationCode" type="xsd:string"
+							maxOccurs="1" minOccurs="0">
+							<xsd:annotation>
+								<xsd:documentation>
+									Activation code received by e-Mail
+								</xsd:documentation>
+							</xsd:annotation>
+						</xsd:element>
+					</xsd:sequence>
+				</xsd:complexType>
+			</xsd:element>
+
+			<xsd:element name="RequestCertificateResponse">
+				<xsd:complexType>
+					<xsd:sequence>
+						<xsd:element name="ReturnCode" type="tns:ReturnCodeType"
+							maxOccurs="1" minOccurs="1">
+						</xsd:element>
+						<xsd:element name="Certificates">
+							<xsd:complexType>
+								<xsd:sequence>
+								<xsd:element name="Certificate" type="xsd:base64Binary"
+									minOccurs="0"/>
+								</xsd:sequence>
+							</xsd:complexType>
+						</xsd:element>
+					</xsd:sequence>
+				</xsd:complexType>
+			</xsd:element>
+		</xsd:schema>
+	</wsdl:types>
+	
+	<wsdl:message name="RequestCertificateRequest">
+		<wsdl:part element="tns:RequestCertificate" name="parameters" />
+	</wsdl:message>
+	<wsdl:message name="RequestCertificateResponse">
+		<wsdl:part element="tns:RequestCertificateResponse" name="parameters" />
+	</wsdl:message>
+	
+	<wsdl:portType name="CAService">
+		<wsdl:documentation>Interface for getting certificates based on card
+			generated certificate signing requests</wsdl:documentation>
+		<wsdl:operation name="RequestCertificate">
+			<wsdl:input message="tns:RequestCertificateRequest" />
+			<wsdl:output message="tns:RequestCertificateResponse" />
+		</wsdl:operation>
+	</wsdl:portType>
+	
+	<wsdl:binding name="CAService" type="tns:CAService">
+		<soap:binding style="document"
+			transport="http://schemas.xmlsoap.org/soap/http" />
+		<wsdl:operation name="RequestCertificate">
+			<soap:operation
+				soapAction="http://www.openscdp.org/CAService/RequestCertificate" />
+			<wsdl:input>
+				<soap:body use="literal" />
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal" />
+			</wsdl:output>
+		</wsdl:operation>
+	</wsdl:binding>
+	
+	<wsdl:service name="CAService">
+		<wsdl:documentation>Service endpoint for the issuing of certificates
+		</wsdl:documentation>
+		<wsdl:port binding="tns:CAService" name="CAServiceSOAPPort">
+			<soap:address location="http://devnet.cardcontact.de/se/caws" />
+		</wsdl:port>
+	</wsdl:service>
+</wsdl:definitions>
