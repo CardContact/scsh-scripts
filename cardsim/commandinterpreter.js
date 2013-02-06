@@ -274,19 +274,22 @@ CommandInterpreter.prototype.manageSecurityEnvironment = function(apdu) {
 	}
 	
 	var tlv = new ASN1(p2, apdu.getCData());
-	tlv = new ASN1(tlv.getBytes());		// Dirty trick to deserialize as TLV tree
 
 	if (p1 & 0x80) {					// Verification, Encryption, External Authentication and Key Agreement
-		se.VEXK.add(tlv);
+		var t = new ASN1(tlv.getBytes());		// Dirty trick to deserialize as TLV tree
+		se.VEXK.add(t);
 	}
 	if (p1 & 0x40) {					// Calculation, Decryption, Internal Authentication and Key Agreement
-		se.CDIK.add(tlv);
+		var t = new ASN1(tlv.getBytes());		// Dirty trick to deserialize as TLV tree
+		se.CDIK.add(t);
 	}
 	if (p1 & 0x20) {					// Secure Messaging Response
-		se.SMRES.add(tlv);
+		var t = new ASN1(tlv.getBytes());		// Dirty trick to deserialize as TLV tree
+		se.SMRES.add(t);
 	}
 	if (p1 & 0x10) {					// Secure Messaging Command
-		se.SMCOM.add(tlv);
+		var t = new ASN1(tlv.getBytes());		// Dirty trick to deserialize as TLV tree
+		se.SMCOM.add(t);
 	}
 	apdu.setSW(APDU.SW_OK);
 }
