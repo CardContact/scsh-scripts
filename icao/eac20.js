@@ -112,7 +112,8 @@ EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
 	var id_CA_DH = new ByteString("id-CA-DH", OID);
 	var id_CA_ECDH = new ByteString("id-CA-ECDH", OID);
 	var id_TA = new ByteString("id-TA", OID);
-	
+	var id_PT = new ByteString("id-PT", OID);
+
 	for (var i = 0; i < si.elements; i++) {
 		var o = si.get(i);
 		assert((o.elements >= 1) && (o.elements <= 3));
@@ -252,6 +253,9 @@ EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
 
 				this.RIInfos[id] = rii;
 			}
+		} else if (oid.value.equals(id_PT)) {
+			this.log("PrivilegedTerminalInfo : " + o);
+			this.processSecurityInfos(o.get(1), fromCardSecurity);
 		}
 	}
 }
@@ -572,12 +576,15 @@ EAC20.prototype.getCADomainParameterInfos = function() {
  * @return the key id
  * @type 
  */
-EAC20.prototype.getCAKeyId = function() {
+EAC20.prototype.getCAKeyId = function(privileged) {
 	for (var i in this.CAInfos) {		// Locate first entry in list
 		if (this.CAInfos[i].keyId) {
-			return this.CAInfos[i].keyId;
+			if (privileged) {
+				privileged = false;		// Select second key if privileged key requested
+			} else {
+				return this.CAInfos[i].keyId;
+			}
 		}
-		return 0;
 	}
 	return 0;
 }
