@@ -1299,10 +1299,11 @@ EAC20.prototype.performChipAuthentication = function(keyid) {
  *
  * @param {Number} keyId restricted identification key identifier
  * @param {ByteString} sectorPublicKey the sector public key data
+ * @param {Number} sectorPublicKeyIndex optional argument that allows to select a specific sector public key in the terminal certificate
  * @return the sector specific identifier
  * @type ByteString
  */
-EAC20.prototype.performRestrictedIdentification = function(keyId, sectorPublicKey) {
+EAC20.prototype.performRestrictedIdentification = function(keyId, sectorPublicKey, sectorPublicKeyIndex) {
 	var bb = new ByteBuffer();
 	bb.append(new ASN1(0x80, new ByteString("id-RI-ECDH-SHA-256", OID)).getBytes());
 	
@@ -1314,8 +1315,13 @@ EAC20.prototype.performRestrictedIdentification = function(keyId, sectorPublicKe
 	this.log(msedata);
 	this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x22, 0x41, 0xA4, msedata, [0x9000]);
 	
+	var tag = 0xA0;
+	if (sectorPublicKeyIndex) {
+		tag = 0xA0 + (sectorPublicKeyIndex << 1);
+	}
+	
 	// ToDo change to sectorPublicKey.value
-	var dado = new ASN1(0x7C, new ASN1(0xA0, sectorPublicKey.bytes(5)));
+	var dado = new ASN1(0x7C, new ASN1(tag, sectorPublicKey.bytes(5)));
 
 	this.log("GA Input: " + dado.getBytes());
 	

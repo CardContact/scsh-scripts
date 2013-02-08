@@ -258,6 +258,41 @@ CVC.getSignatureMech = function(oid) {
 
 
 /**
+ * Return hash mechanism for object identifier
+ *
+ * @param {ByteString} oid the object identifer from the public key object
+ * @returns the hash mechanism as Crypto. constant or -1 if not defined
+ * @type Number
+ */
+CVC.getHashMech = function(oid) {
+	if (oid.equals(CVC.id_TA_ECDSA_SHA_1))
+		return Crypto.SHA_1;
+	if (oid.equals(CVC.id_TA_ECDSA_SHA_224))
+		return Crypto.SHA_224;
+	if (oid.equals(CVC.id_TA_ECDSA_SHA_256))
+		return Crypto.SHA_256;
+	if (oid.equals(CVC.id_TA_ECDSA_SHA_384))
+		return Crypto.SHA_384;
+	if (oid.equals(CVC.id_TA_ECDSA_SHA_512))
+		return Crypto.SHA_512;
+	if (oid.equals(CVC.id_TA_RSA_v1_5_SHA_1))
+		return Crypto.SHA1;
+	if (oid.equals(CVC.id_TA_RSA_v1_5_SHA_256))
+		return Crypto.SHA_256;
+//	if (oid.equals(CVC.id_TA_RSA_v1_5_SHA_512))
+//		return Crypto.SHA_512;
+	if (oid.equals(CVC.id_TA_RSA_PSS_SHA_1))
+		return Crypto.SHA_1;
+	if (oid.equals(CVC.id_TA_RSA_PSS_SHA_256))
+		return Crypto.SHA_256;
+//	if (oid.equals(CVC.id_TA_RSA_PSS_SHA_512))
+//		return Crypto.SHA_512;
+	return -1;
+}
+
+
+
+/**
  * Return true of the object identifier starts with id-TA-ECDSA
  *
  * @type boolean
@@ -458,26 +493,13 @@ CVC.prototype.getPublicKeyOID = function() {
 
 
 /**
- * Returns the EC public key contained in the certificate.
+ * Decode a public key from the TR-03110 format
  *
- * @param {Key} domParam optional domain parameter if they are not contained in certificate
- * @return the public key object
- * @type Key
+ * @param {ASN1} pdo the public key data object
+ * @param {Key} key the key object to fill
  */
-CVC.prototype.getECPublicKey = function(domParam) {
-	if (typeof(domParam) != "undefined") {
-		var key = new Key(domParam);
-	} else {
-		var key = new Key();
-	}
-	
-	key.setType(Key.PUBLIC);
-	
-	var pdo = this.body.find(CVC.TAG_PUK);
-	if (pdo == null) {
-		throw new GPError("CVC", GPError.OBJECT_NOT_FOUND, 0, "Certificate does not contain a public key");
-	}
-	
+CVC.decodeECPublicKey = function(pdo, key) {
+
 	var d = pdo.find(0x86);		// Public point
 	if (d == null) {
 		throw new GPError("CVC", GPError.OBJECT_NOT_FOUND, 0, "Certificate does not contain a public key value");
@@ -518,7 +540,33 @@ CVC.prototype.getECPublicKey = function(domParam) {
 	if (d != null) {
 		key.setComponent(Key.ECC_H, d.value);
 	}
-	
+}
+
+
+
+/**
+ * Returns the EC public key contained in the certificate.
+ *
+ * @param {Key} domParam optional domain parameter if they are not contained in certificate
+ * @return the public key object
+ * @type Key
+ */
+CVC.prototype.getECPublicKey = function(domParam) {
+	if (typeof(domParam) != "undefined") {
+		var key = new Key(domParam);
+	} else {
+		var key = new Key();
+	}
+
+	key.setType(Key.PUBLIC);
+
+	var pdo = this.body.find(CVC.TAG_PUK);
+	if (pdo == null) {
+		throw new GPError("CVC", GPError.OBJECT_NOT_FOUND, 0, "Certificate does not contain a public key");
+	}
+
+	CVC.decodeECPublicKey(pdo, key);
+
 	return key;
 }
 
