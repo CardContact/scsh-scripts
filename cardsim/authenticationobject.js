@@ -158,8 +158,13 @@ AuthenticationObject.prototype.changeReferenceData = function(qualifier, value) 
 	if (!this.allowChangeReferenceData) {
 		throw new GPError("AuthenticationObject", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "Change reference data not allowed for authentication object");
 	}
-	if ((qualifier == 0x01) && !this.isTerminated) {
-		throw new GPError("AuthenticationObject", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "Change reference data with P1=01 not allowed non terminated authentication object");
+	if (qualifier == 0x01) {
+		if (!this.isTerminated) {
+			throw new GPError("AuthenticationObject", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "Change reference data with P1=01 not allowed non terminated authentication object");
+		}
+		if (this.associatedKey && !this.associatedKey.isTerminated) {
+			throw new GPError("AuthenticationObject", GPError.INVALID_DATA, APDU.SW_REFDATANOTUSABLE, "Associated key is not terminated");
+		}
 	}
 	if ((qualifier == 0x00) && (value.length <= this.value.length)) {
 		throw new GPError("AuthenticationObject", GPError.INVALID_DATA, APDU.SW_INVDATA, "Command data does not contain a new PIN value for P1=00");
