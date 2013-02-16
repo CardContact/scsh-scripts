@@ -610,6 +610,30 @@ EAC20.prototype.getRIKeyId = function(authOnly) {
 
 
 /**
+ * Decode document number from 2 or 3 line MRZ
+ *
+ * <p>This method supports a document number in a three line MRZ longer than 10 digits.</p>
+ *
+ * @param {String} mrz the concatenation of the MRZ lines
+ * @type String
+ * @return the document number
+ */
+EAC20.decodeDocumentNumber = function(mrz) {
+	if (mrz.length == 88) {			// Two line MRZ
+		var docno = mrz.substr(44, 20);
+	} else {						// Three line MRZ
+		if (mrz.charAt(14) == "<") {
+			var sep = mrz.indexOf("<", 15);
+			var docno = mrz.substr(5,9).concat(mrz.substring(15,sep)); 
+		} else {
+			var docno = mrz.substr(5, 10);
+		}
+	}
+	return docno;
+}
+
+
+/**
  * Calculate the hash over document number, date of birth and date of expiration from 2 or 3 line MRZ
  *
  * <pre>
@@ -631,17 +655,16 @@ EAC20.prototype.getRIKeyId = function(authOnly) {
  * @return the SHA-1 hash over the concatenation of document number, date of birth and date of expiration
  */
 EAC20.prototype.hashMRZ = function(mrz) {
+	var hash_input = new ByteString(EAC20.decodeDocumentNumber(mrz), ASCII);
 	// Convert to byte string
 	var strbin = new ByteString(mrz, ASCII);
 
 	if (strbin.length == 88) {			// 2 line MRZ
-		// Extract Document Number, Date of Birth and Date of Expiration
-		var hash_input = strbin.bytes(44, 10);
+		// Extract Date of Birth and Date of Expiration
 		hash_input = hash_input.concat(strbin.bytes(57, 7));
 		hash_input = hash_input.concat(strbin.bytes(65, 7));
 	} else if (strbin.length == 90) {		// 3 line MRZ
-		// Extract Document Number, Date of Birth and Date of Expiration
-		var hash_input = strbin.bytes(5, 10);
+		// Extract Date of Birth and Date of Expiration
 		hash_input = hash_input.concat(strbin.bytes(30, 7));
 		hash_input = hash_input.concat(strbin.bytes(38, 7));
 	} else {
@@ -691,15 +714,7 @@ EAC20.prototype.calculateBACKey = function(mrz, keyno) {
  * @param {Key} kmac the key Kmac
  */
 EAC20.prototype.performBACWithMRZ = function(mrz) {
-	if (mrz.length == 90) {
-		var idpicc = mrz.substr(5, 10);
-	} else if (mrz.length == 88) {
-		var idpicc = mrz.substr(44, 10);
-	} else {
-		throw new GPError("EAC20", GPError.INVALID_DATA, 0, "MRZ must be either 88 or 90 character long");
-	}
-
-	this.setIDPICC(new ByteString(idpicc, ASCII));
+	this.setIDPICC(new ByteString(EAC20.decodeDocumentNumber(mrz), ASCII));
 
 	var kenc = this.calculateBACKey(mrz, 1);
 	var kmac = this.calculateBACKey(mrz, 2);
@@ -1103,12 +1118,12 @@ EAC20.prototype.performChipAuthenticationV1 = function(keyid) {
 
 	var cainfo = this.CAInfos[keyid];
 	if (typeof(cainfo) == "undefined") {
-		throw new GPError("EAC20", GPError.INVALID_DATA, 0, "Unknown keyId " + keyId + " for ChipAuthenticationInfo");
+		throw new GPError("EAC20", GPError.INVALID_DATA, 0, "Unknown keyId " + keyid + " for ChipAuthenticationInfo");
 	}
 
 	var capuk = this.CAPublicKeys[keyid];
 	if (typeof(capuk) == "undefined") {
-		throw new GPError("EAC20", GPError.INVALID_DATA, 0, "Unknown keyId " + keyId + " for ChipAuthenticationPublicKeyInfo");
+		throw new GPError("EAC20", GPError.INVALID_DATA, 0, "Unknown keyId " + keyid + " for ChipAuthenticationPublicKeyInfo");
 	}
 
 	var domainParameter = capuk.domainParameter;
@@ -1325,7 +1340,7 @@ EAC20.prototype.performRestrictedIdentification = function(keyId, sectorPublicKe
 
 	this.log("GA Input: " + dado.getBytes());
 	
-	var dadobin = this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO|Card.RENC, 0x00, 0x86, 0x00, 0x00, dado.getBytes(), 65535, [0x9000]);
+	var dadobin = this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO|Card.RENC, 0x00, 0x86, 0x00, 0x00, dado.getBytes(), 0, [0x9000]);
 	
 	this.log(dadobin);
 
