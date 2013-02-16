@@ -43,14 +43,14 @@ print("Revocation ID                   : " + pukRevId);
 
 
 // Transformation at DV for each sector with Hash(X-coordinate(prkSector * pukRevId));
-var prkSector = new Key("kp_prk_SectorKey.xml");
+var prkSector = new Key("kp_prk_SectorKey1.xml");
 var secrevid1 = crypto.digest(Crypto.SHA_256, crypto.decrypt(prkSector, Crypto.ECDH, pukRevId.bytes(1)));
 print("Sector Revocation ID at DV      : " + secrevid1);
 
 
 // Calculation of the sector revocation id in the document
 var prkId = new Key("kp_prk_IDKey.xml");
-var pukSector = new Key("kp_puk_SectorKey.xml");
+var pukSector = new Key("kp_puk_SectorKey1.xml");
 var inp = pukSector.getComponent(Key.ECC_QX).concat(pukSector.getComponent(Key.ECC_QY));
 var secrevid2 = crypto.digest(Crypto.SHA_256, crypto.decrypt(prkId, Crypto.ECDH, inp));
 print("Sector Revocation ID at document: " + secrevid2);

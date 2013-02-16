@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gp:KeyProfile xmlns:gp="http://namespaces.globalplatform.org/systems-profiles/1.1.0" ErrataVersion="0" ProfileVersion="1.1.0" UniqueID="2B0601040181C31F100006">
-  <gp:Description>PrK_SectorKey ECDSA Private Key</gp:Description>
+  <gp:Description>PrK_SectorKey1 ECDSA Private Key</gp:Description>
   <gp:Revisions arrayElement="Revision" arrayIndex="#">
     <gp:Revision By="www.smartcard-hsm.org" Date="2011-11-11" Digest="00000000" Time="00:00:00" Version="1.0.0"/>
   </gp:Revisions>
@@ -9,6 +9,6 @@
   <gp:Usage Decrypt="true" DecryptEncrypt="true" Derive="true" Encrypt="true" Sign="true" Unwrap="true" UnwrapWrap="true" Verify="true" Wrap="true"/>
   <gp:Value Format="ECPRIVATE" arrayElement="Component" arrayIndex="#">
     <gp:Component Encoding="HEX" Name="ECC_CURVE_OID" Value="2B2403030208010107"/>
-    <gp:Component Encoding="HEX" Name="ECC_D" Value="34BCD80C68E56ED7F9602AD14AECE4197C857337D7E1368454CA12C4CE0B45E4"/>
+    <gp:Component Encoding="HEX" Name="ECC_D" Value="A06DBD964768C498806C230C9FC86CC695A3CDC6B834D6F515E7C256DC8763CA"/>
   </gp:Value>
 </gp:KeyProfile>

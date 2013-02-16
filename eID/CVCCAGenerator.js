@@ -24,35 +24,63 @@
  * @fileoverview Script to generate a full reference EAC PKI
  */
  
-load("../icao/cvca/cvcca.js");
+load("../icao/cvcca.js");
 load("../icao/pace.js");
 
  
  
+/**
+ * Generate a complete CVC PKI setup for testing purposes
+ *
+ * @param {Crypto} crypto the crypto provider to use
+ * @param {CVCertificateStore} certstore place to store keys and certificates
+ */ 
 function CVCCAGenerator(crypto, certstore) {
 	this.crypto = crypto;
 	this.certstore = certstore;
 	this.keyspec = new Key();
 	this.keyspec.setComponent(Key.ECC_CURVE_OID, new ByteString("brainpoolP256r1", OID));
 	this.taAlgorithmIdentifier = new ByteString("id-TA-ECDSA-SHA-256", OID);
+	this.verbose = false;
 }
 
 
 
+/**
+ * Log message
+ *
+ * @param {String} msg the message
+ */
+CVCCAGenerator.prototype.log = function(msg) {
+	if (this.verbose) {
+		GPSystem.trace(msg);
+	}
+}
+
+
+
+/**
+ * Create a CVCA at the given path and with the defined policy.
+ *
+ * <p>Calling this method a second time will create a link certificate.</p>
+ *
+ * @param {String} path a path of certificate holder names
+ * @param {Object} policy the certificate policy
+ */
 CVCCAGenerator.prototype.createCVCA = function(path, policy) {
 	var cvca = new CVCCA(this.crypto, this.certstore, null, null, path);
 	cvca.setKeySpec(this.keyspec, this.taAlgorithmIdentifier);
 	
 	// Create a new request
 	var req = cvca.generateRequest(null, false);
-	print("Request: " + req);
-	print(req.getASN1());
+	this.log("Request: " + req);
+	this.log(req.getASN1());
 
 	assert(req.verifyWith(this.crypto, req.getPublicKey()));
 
 	var cert = cvca.generateCertificate(req, policy);
-	print("Certificate: " + cert);
-	print(cert.getASN1());
+	this.log("Certificate: " + cert);
+	this.log(cert.getASN1());
 
 	// Import certificate into store, making it the most current certificate
 	cvca.importCertificate(cert);
@@ -60,6 +88,12 @@ CVCCAGenerator.prototype.createCVCA = function(path, policy) {
 
 
 
+/**
+ * Create a DVCA at the given path and with the defined policy.
+ *
+ * @param {String} path a path of certificate holder names
+ * @param {Object} policy the certificate policy
+ */
 CVCCAGenerator.prototype.createDVCA = function(path, policy) {
 	var cvca = new CVCCA(this.crypto, this.certstore, null, null, CVCertificateStore.parentPathOf(path));
 	cvca.setKeySpec(this.keyspec, this.taAlgorithmIdentifier);
@@ -69,14 +103,14 @@ CVCCAGenerator.prototype.createDVCA = function(path, policy) {
 
 	// Create a new request
 	var req = dvca.generateRequest(null, false);
-	print("Request: " + req);
-	print(req.getASN1());
+	this.log("Request: " + req);
+	this.log(req.getASN1());
 
 	assert(req.verifyWith(this.crypto, req.getPublicKey()));
 
 	var cert = cvca.generateCertificate(req, policy);
-	print("Certificate: " + cert);
-	print(cert.getASN1());
+	this.log("Certificate: " + cert);
+	this.log(cert.getASN1());
 
 	// Import certificate into store, making it the most current certificate
 	dvca.importCertificate(cert);
@@ -84,6 +118,12 @@ CVCCAGenerator.prototype.createDVCA = function(path, policy) {
 
 
 
+/**
+ * Create a terminal at the given path and with the defined policy.
+ *
+ * @param {String} path a path of certificate holder names
+ * @param {Object} policy the certificate policy
+ */
 CVCCAGenerator.prototype.createTerminal = function(path, policy) {
 	var dvca = new CVCCA(this.crypto, this.certstore, null, null, CVCertificateStore.parentPathOf(path));
 	dvca.setKeySpec(this.keyspec, this.taAlgorithmIdentifier);
@@ -93,169 +133,170 @@ CVCCAGenerator.prototype.createTerminal = function(path, policy) {
 
 	// Create a new request
 	var req = term.generateRequest(null, false);
-	print("Request: " + req);
-	print(req.getASN1());
+	this.log("Request: " + req);
+	this.log(req.getASN1());
 
 	assert(req.verifyWith(this.crypto, req.getPublicKey()));
 
 	var cert = dvca.generateCertificate(req, policy);
-	print("Certificate: " + cert);
-	print(cert.getASN1());
+	this.log("Certificate: " + cert);
+	this.log(cert.getASN1());
 
 	// Import certificate into store, making it the most current certificate
 	term.importCertificate(cert);
 }
 
 
+CVCCAGenerator.CWD = GPSystem.mapFilename("", GPSystem.CWD);
 
-var crypto = new Crypto();
-var ss = new CVCertificateStore(GPSystem.mapFilename("cvc", GPSystem.CWD));
-var g = new CVCCAGenerator(crypto, ss);
 
-// Create CVCAs
-var policy = { certificateValidityDays: 365,
-			   chatRoleOID: new ByteString("id-IS", OID),
+/**
+ * Setup EAC PKI
+ */
+CVCCAGenerator.setup = function() {
+	var crypto = new Crypto();
+	var ss = new CVCertificateStore(CVCCAGenerator.CWD + "/cvc");
+	var g = new CVCCAGenerator(crypto, ss);
+//	g.verbose = true;
+
+	// Create CVCAs
+	var policy = { certificateValidityDays: 3650,
+			chatRoleOID: new ByteString("id-IS", OID),
 			   chatRights: new ByteString("C3", HEX),
-			   includeDomainParameter: true,
-			   extensions: []
+			   includeDomainParameter: true
 			 };
-g.createCVCA("/UTISCVCA", policy);
+	g.createCVCA("/UTISCVCA", policy);
 
 
-var policy = { certificateValidityDays: 365,
+	var policy = { certificateValidityDays: 3650,
 			   chatRoleOID: new ByteString("id-AT", OID),
 			   chatRights: new ByteString("FFFFFFFFFF", HEX),
-			   includeDomainParameter: true,
-			   extensions: []
+			   includeDomainParameter: true
 			 };
-g.createCVCA("/UTATCVCA", policy);
+	g.createCVCA("/UTATCVCA", policy);
 
 
-var policy = { certificateValidityDays: 365,
+	var policy = { certificateValidityDays: 3650,
 			   chatRoleOID: new ByteString("id-ST", OID),
 			   chatRights: new ByteString("C3", HEX),
-			   includeDomainParameter: true,
-			   extensions: []
+			   includeDomainParameter: true
 			 };
-g.createCVCA("/UTSTCVCA", policy);
+	g.createCVCA("/UTSTCVCA", policy);
 
 
 
-// Create DVCAs
-var policy = { certificateValidityDays: 365,
+	// Create DVCAs
+	var policy = { certificateValidityDays: 3650,
 			   chatRoleOID: new ByteString("id-IS", OID),
 			   chatRights: new ByteString("83", HEX),
-			   includeDomainParameter: false,
-			   extensions: []
+			   includeDomainParameter: false
 			 };
-g.createDVCA("/UTISCVCA/UTISDVCAOD", policy);
+	g.createDVCA("/UTISCVCA/UTISDVCAOD", policy);
 
 
-var policy = { certificateValidityDays: 365,
+	var policy = { certificateValidityDays: 3650,
 			   chatRoleOID: new ByteString("id-IS", OID),
 			   chatRights: new ByteString("43", HEX),
-			   includeDomainParameter: false,
-			   extensions: []
+			   includeDomainParameter: false
 			 };
-g.createDVCA("/UTISCVCA/UTISDVCAOF", policy);
+	g.createDVCA("/UTISCVCA/UTISDVCAOF", policy);
 
 
-var policy = { certificateValidityDays: 365,
+	var policy = { certificateValidityDays: 3650,
 			   chatRoleOID: new ByteString("id-AT", OID),
 			   chatRights: new ByteString("BFFFFFFFFF", HEX),
-			   includeDomainParameter: false,
-			   extensions: []
+			   includeDomainParameter: false
 			 };
-g.createDVCA("/UTATCVCA/UTATDVCAOD", policy);
+	g.createDVCA("/UTATCVCA/UTATDVCAOD", policy);
 
 
-var policy = { certificateValidityDays: 365,
+	var policy = { certificateValidityDays: 3650,
 			   chatRoleOID: new ByteString("id-AT", OID),
 			   chatRights: new ByteString("7FFFFFFFFF", HEX),
-			   includeDomainParameter: false,
-			   extensions: []
+			   includeDomainParameter: false
 			 };
-g.createDVCA("/UTATCVCA/UTATDVCANO", policy);
+	g.createDVCA("/UTATCVCA/UTATDVCANO", policy);
 
 
-var policy = { certificateValidityDays: 365,
+	var policy = { certificateValidityDays: 3650,
 			   chatRoleOID: new ByteString("id-ST", OID),
 			   chatRights: new ByteString("83", HEX),
-			   includeDomainParameter: true,
-			   extensions: []
+			   includeDomainParameter: false
 			 };
-g.createDVCA("/UTSTCVCA/UTSTDVCAAB", policy);
+	g.createDVCA("/UTSTCVCA/UTSTDVCAAB", policy);
 
 
-var policy = { certificateValidityDays: 365,
+	var policy = { certificateValidityDays: 3650,
 			   chatRoleOID: new ByteString("id-ST", OID),
 			   chatRights: new ByteString("43", HEX),
-			   includeDomainParameter: true,
-			   extensions: []
+			   includeDomainParameter: false
 			 };
-g.createDVCA("/UTSTCVCA/UTSTDVCACP", policy);
+	g.createDVCA("/UTSTCVCA/UTSTDVCACP", policy);
 
 
 
-// Create terminals
-var policy = { certificateValidityDays: 365,
+	// Create terminals
+	var policy = { certificateValidityDays: 3650,
 			   chatRoleOID: new ByteString("id-IS", OID),
 			   chatRights: new ByteString("03", HEX),
-			   includeDomainParameter: false,
-			   extensions: []
+			   includeDomainParameter: false
 			 };
-g.createTerminal("/UTISCVCA/UTISDVCAOD/UTTERM", policy);
+	g.createTerminal("/UTISCVCA/UTISDVCAOD/UTTERM", policy);
 
 
-var policy = { certificateValidityDays: 365,
+	var policy = { certificateValidityDays: 3650,
 			   chatRoleOID: new ByteString("id-IS", OID),
 			   chatRights: new ByteString("03", HEX),
-			   includeDomainParameter: false,
-			   extensions: []
+			   includeDomainParameter: false
 			 };
-g.createTerminal("/UTISCVCA/UTISDVCAOF/UTTERM", policy);
+	g.createTerminal("/UTISCVCA/UTISDVCAOF/UTTERM", policy);
 
 
-var policy = { certificateValidityDays: 365,
+	var policy = { certificateValidityDays: 3650,
 			   chatRoleOID: new ByteString("id-AT", OID),
 			   chatRights: new ByteString("3FFFFFFFFF", HEX),
-			   includeDomainParameter: false,
-			   extensions: []
+			   includeDomainParameter: false
 			 };
-g.createTerminal("/UTATCVCA/UTATDVCAOD/UTTERM", policy);
+	g.createTerminal("/UTATCVCA/UTATDVCAOD/UTTERM", policy);
 
-var sectorPublicKey = new Key("kp_puk_SectorKey.xml");
-sectorPublicKey.setComponent(Key.ECC_CURVE_OID, sectorPublicKey.getComponent(Key.ECC_CURVE_OID));
-var encodedSectorPublicKey = PACE.encodePublicKey("id-RI-ECDH-SHA-256", sectorPublicKey, true).getBytes();
-var encodedSectorPublicKeyHash = crypto.digest(Crypto.SHA_256, encodedSectorPublicKey);
 
-var sectorId = new ASN1(0x73,
-			new ASN1(ASN1.OBJECT_IDENTIFIER, new ByteString("id-sector", OID)),
-			new ASN1(0x80, encodedSectorPublicKeyHash)
-		);
+	var sectorPublicKey1 = new Key(CVCCAGenerator.CWD + "/kp_puk_SectorKey1.xml");
+	sectorPublicKey1.setComponent(Key.ECC_CURVE_OID, sectorPublicKey1.getComponent(Key.ECC_CURVE_OID));
+	var encodedSectorPublicKey1 = PACE.encodePublicKey("id-RI-ECDH-SHA-256", sectorPublicKey1, true).getBytes();
+	var encodedSectorPublicKeyHash1 = crypto.digest(Crypto.SHA_256, encodedSectorPublicKey1);
 
-var policy = { certificateValidityDays: 365,
+	var sectorPublicKey2 = new Key(CVCCAGenerator.CWD + "/kp_puk_SectorKey2.xml");
+	sectorPublicKey2.setComponent(Key.ECC_CURVE_OID, sectorPublicKey2.getComponent(Key.ECC_CURVE_OID));
+	var encodedSectorPublicKey2 = PACE.encodePublicKey("id-RI-ECDH-SHA-256", sectorPublicKey2, true).getBytes();
+	var encodedSectorPublicKeyHash2 = crypto.digest(Crypto.SHA_256, encodedSectorPublicKey2);
+
+	var sectorId = new ASN1(0x73,
+				new ASN1(ASN1.OBJECT_IDENTIFIER, new ByteString("id-sector", OID)),
+				new ASN1(0x80, encodedSectorPublicKeyHash1),
+				new ASN1(0x81, encodedSectorPublicKeyHash2)
+			);
+
+	var policy = { certificateValidityDays: 3650,
 			   chatRoleOID: new ByteString("id-AT", OID),
 			   chatRights: new ByteString("3FFFFFFFFF", HEX),
 			   includeDomainParameter: false,
 			   extensions: [ sectorId ]
 			 };
-g.createTerminal("/UTATCVCA/UTATDVCANO/UTTERM", policy);
+	g.createTerminal("/UTATCVCA/UTATDVCANO/UTTERM", policy);
 
 
-var policy = { certificateValidityDays: 365,
+	var policy = { certificateValidityDays: 3650,
 			   chatRoleOID: new ByteString("id-ST", OID),
 			   chatRights: new ByteString("03", HEX),
-			   includeDomainParameter: true,
-			   extensions: []
+			   includeDomainParameter: false
 			 };
-g.createTerminal("/UTSTCVCA/UTSTDVCAAB/UTTERM", policy);
+	g.createTerminal("/UTSTCVCA/UTSTDVCAAB/UTTERM", policy);
 
 
-var policy = { certificateValidityDays: 365,
+	var policy = { certificateValidityDays: 3650,
 			   chatRoleOID: new ByteString("id-ST", OID),
 			   chatRights: new ByteString("03", HEX),
-			   includeDomainParameter: true,
-			   extensions: []
+			   includeDomainParameter: false
 			 };
-g.createTerminal("/UTSTCVCA/UTSTDVCACP/UTTERM", policy);
+	g.createTerminal("/UTSTCVCA/UTSTDVCACP/UTTERM", policy);
+}

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gp:KeyProfile xmlns:gp="http://namespaces.globalplatform.org/systems-profiles/1.1.0" ErrataVersion="0" ProfileVersion="1.1.0" UniqueID="2B0601040181C31F100006">
+  <gp:Description>PrK_UniqueCAKey ECDSA Private Key</gp:Description>
+  <gp:Revisions arrayElement="Revision" arrayIndex="#">
+    <gp:Revision By="www.smartcard-hsm.org" Date="2011-11-11" Digest="00000000" Time="00:00:00" Version="1.0.0"/>
+  </gp:Revisions>
+  <gp:KeyInfo Mode="TEST" Name="ECPrivate" Size="256" SubType="EC" Type="PRIVATE"/>
+  <gp:Attribute Exportable="true" Importable="true" Sensitive="false"/>
+  <gp:Usage Decrypt="true" DecryptEncrypt="true" Derive="true" Encrypt="true" Sign="true" Unwrap="true" UnwrapWrap="true" Verify="true" Wrap="true"/>
+  <gp:Value Format="ECPRIVATE" arrayElement="Component" arrayIndex="#">
+    <gp:Component Encoding="HEX" Name="ECC_CURVE_OID" Value="2B2403030208010107"/>
+    <gp:Component Encoding="HEX" Name="ECC_D" Value="38C13F8269B9D055324C8FB1152CCC9F96832E9AC9C2F184D9C6BE399AF3D99B"/>
+  </gp:Value>
+</gp:KeyProfile>

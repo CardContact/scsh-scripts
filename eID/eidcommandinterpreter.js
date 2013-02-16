@@ -21,7 +21,7 @@
  *  along with OpenSCDP; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
- * @fileoverview Implementation of a eID specific command interpreter
+ * @fileoverview Implementation of an eID specific command interpreter
  */
 
 load("../cardsim/commandinterpreter.js");
@@ -43,12 +43,80 @@ function eIDCommandInterpreter(fileSelector) {
 	this.pacedp.setComponent(Key.ECC_CURVE_OID, new ByteString("1.3.36.3.3.2.8.1.1.7", OID));
 	this.challenge = null;
 	this.crypto = new Crypto();
+	this.trustedDVCA = null;
+	this.trustedTerminal = null;
+	this.effectiveRights = null;
 }
 
 
 // Inherit from CommandInterpreter
 eIDCommandInterpreter.prototype = new CommandInterpreter();
 eIDCommandInterpreter.constructor = eIDCommandInterpreter;
+
+
+
+/**
+ * Determine if the terminal has been authenticated
+ *
+ * @type boolean
+ * @return true if authenticated
+ */
+eIDCommandInterpreter.prototype.isAuthenticatedTerminal = function() {
+	return (this.effectiveRights != null);
+}
+
+
+
+/**
+ * Return terminal role from CHAT
+ * @type ByteString
+ * @return the object identifier value
+ */
+eIDCommandInterpreter.prototype.getTerminalRole = function() {
+	if (this.isAuthenticatedTerminal()) {
+		return this.trustedTerminal.getCHAT().get(0).value;
+	}
+}
+
+
+
+/**
+ * Determine the current date
+ *
+ * @type Date
+ * @return the current Date
+ */
+eIDCommandInterpreter.prototype.getDate = function() {
+	var dateobj = this.fileSelector.getMeta("currentDate");
+//	print("getDate() = " + dateobj.currentDate);
+	return dateobj.currentDate;
+}
+
+
+
+/**
+ * Set the current date
+ *
+ * @param {Date} date the new date
+ */
+eIDCommandInterpreter.prototype.setDate = function(date) {
+	var dateobj = this.fileSelector.getMeta("currentDate");
+//	print("setDate() = " + date);
+	dateobj.currentDate = date;
+}
+
+
+
+/**
+ * Update EF.CVCA to indicate new trust anchor for id-IS
+ *
+ * @param {Date} date the new date
+ */
+eIDCommandInterpreter.prototype.updateEFCVCA = function(content) {
+	var ef = this.fileSelector.getMeta("efCVCA");
+	ef.content = content;
+//	print(ef.content);
+}
 
 
 
@@ -174,7 +242,10 @@ eIDCommandInterpreter.prototype.performPACE = function(apdu) {
 			
 			var ephKey = this.pace.getEphemeralPublicKey();
 			response.add(new ASN1(0x84, ephKey));
-			
+
+			// Store idPICC for later terminal authentication
+			this.idPICC = ephKey.bytes(1, (ephKey.length - 1) >> 1);
+
 			this.pace.performKeyAgreement(a.value);
 			break;
 		case 0x85:
@@ -195,16 +266,13 @@ eIDCommandInterpreter.prototype.performPACE = function(apdu) {
 
 			response.add(new ASN1(0x86, authToken));
 			if (this.chat) {
-				var pki = this.chat.get(0).value;
-				if (pki.equals(new ByteString("id-IS", OID))) {
-					response.add(new ASN1(0x87, new ByteString("UTISCVCA00001", ASCII)));
-				} else if (pki.equals(new ByteString("id-AT", OID))) {
-					response.add(new ASN1(0x87, new ByteString("UTATCVCA00001", ASCII)));
-				} else if (pki.equals(new ByteString("id-ST", OID))) {
-					response.add(new ASN1(0x87, new ByteString("UTSTCVCA00001", ASCII)));
-				} else {
+				// ToDo: Refactor to use TrustAnchor objects
+				var pkiid = this.chat.get(0).value.right(1).toUnsigned();
+				var anchor = this.fileSelector.getObject(TrustAnchor.TYPE, pkiid);
+				if (!anchor) {
 					throw new GPError("EACSIM", GPError.INVALID_DATA, 0, "Invalid PKI in chat");
 				}
+				anchor.addCARforPACE(response);
 			}
 
 			var symalgo = this.pace.getSymmetricAlgorithm();
@@ -311,18 +379,55 @@ eIDCommandInterpreter.prototype.performChipAuthenticationV2 = function(apdu) {
 	var a = new ASN1(apdu.getCData());
 	var response = new ASN1(0x7C);
 
-	var groupChipAuthenticationInfo = this.fileSelector.getMeta("groupChipAuthenticationInfo");
-	var groupChipAuthenticationPublicKey = this.fileSelector.getMeta("groupChipAuthenticationPublicKey");
-	var groupChipAuthenticationPrivateKey = this.fileSelector.getMeta("groupChipAuthenticationPrivateKey");
+	var chipAuthenticationInfo = this.fileSelector.getMeta("groupChipAuthenticationInfo");
+	var chipAuthenticationPublicKey = this.fileSelector.getMeta("groupChipAuthenticationPublicKey");
+	var chipAuthenticationPrivateKey = this.fileSelector.getMeta("groupChipAuthenticationPrivateKey");
 
-	assert(groupChipAuthenticationInfo);
-	assert(groupChipAuthenticationPublicKey);
-	assert(groupChipAuthenticationPrivateKey);
+	assert(chipAuthenticationInfo);
+	assert(chipAuthenticationPublicKey);
+	assert(chipAuthenticationPrivateKey);
 
-	// ToDo: Select key based on MSE SET
-	var ca = new ChipAuthentication(this.crypto, groupChipAuthenticationInfo.protocol, groupChipAuthenticationPublicKey);
+	var uniqueChipAuthenticationInfo = this.fileSelector.getMeta("uniqueChipAuthenticationInfo");
+	var uniqueChipAuthenticationPublicKey = this.fileSelector.getMeta("uniqueChipAuthenticationPublicKey");
+	var uniqueChipAuthenticationPrivateKey = this.fileSelector.getMeta("uniqueChipAuthenticationPrivateKey");
 
-	ca.setKeyPair(groupChipAuthenticationPrivateKey, groupChipAuthenticationPublicKey);
+	var se = this.fileSelector.getSecurityEnvironment().CDIK;
+
+	if (!se.t.AT) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_RDNOTFOUND, "No security environment found");
+	}
+
+	var keyref = se.t.AT.find(0x84);
+	if (keyref) {
+		var uniqueChipAuthenticationInfo = this.fileSelector.getMeta("uniqueChipAuthenticationInfo");
+		if (uniqueChipAuthenticationInfo && (uniqueChipAuthenticationInfo.keyId == keyref.value.toUnsigned())) {
+			var ac = this.fileSelector.getMeta("accessController");
+
+			if (ac && !ac.checkRight(this, apdu, 3)) {
+				throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_SECSTATNOTSAT, "No privileged terminal right to access unique chip authentication key");
+			}
+
+			chipAuthenticationInfo = uniqueChipAuthenticationInfo;
+			chipAuthenticationPublicKey = this.fileSelector.getMeta("uniqueChipAuthenticationPublicKey");
+			chipAuthenticationPrivateKey = this.fileSelector.getMeta("uniqueChipAuthenticationPrivateKey");
+		} else {
+			if (chipAuthenticationInfo.keyId && (keyref.value.toUnsigned() != chipAuthenticationInfo.keyId)) {
+				throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_RDNOTFOUND, "Key id " + keyref.value.toUnsigned() + " does not match a chip authentication key");
+			}
+		}
+	}
+
+	// Extract idIFD and make sure it's the same used in TA
+	var idIFD = a.get(0).value.bytes(1);		// Skip '04' and extract public key
+	idIFD = idIFD.left(idIFD.length >> 1);
+
+	if (!idIFD.equals(this.idIFD)) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_INVDATA, "Terminal public key does not match key signed in terminal authentication");
+	}
+
+	var ca = new ChipAuthentication(this.crypto, chipAuthenticationInfo.protocol, chipAuthenticationPublicKey);
+
+	ca.setKeyPair(chipAuthenticationPrivateKey, chipAuthenticationPublicKey);
 
 	var nonce = this.crypto.generateRandom(8);
 
@@ -356,11 +461,237 @@ eIDCommandInterpreter.prototype.performChipAuthenticationV2 = function(apdu) {
 
 
 /**
+ * Locate public key either in trust anchor, trusted DVCA or trusted terminal
+ *
+ * @param {PublicKeyReference} keyid the public key reference to look for
+ * @type object
+ * @return object with properties level (issuer is 0-CVCA, 1-DVCA or 2-Terminal) and anchor (Trust Anchor)
+ */
+eIDCommandInterpreter.prototype.locatePublicKey = function(keyid) {
+	var idlist = this.fileSelector.enumerateObjects(TrustAnchor.TYPE);
+//	print(idlist);
+
+	for each (var i in idlist) {
+		var anchor = this.fileSelector.getObject(TrustAnchor.TYPE, i);
+//		print(anchor.root.getCHR().toString());
+		if (anchor.isIssuer(keyid)) {
+			return { level: 0, anchor: anchor };
+		}
+	}
+
+	if (this.trustedDVCA && (this.trustedDVCA.getCHR().equals(keyid))) {
+		var r = this.locatePublicKey(this.trustedDVCA.getCAR());
+		r.level = 1;
+		return r;
+	}
+
+	if (this.trustedTerminal && (this.trustedTerminal.getCHR().equals(keyid))) {
+		var r = this.locatePublicKey(this.trustedDVCA.getCAR());
+		r.level = 2;
+		return r;
+	}
+	return null;
+}
+
+
+
+/**
  * Process PSO VERIFY CERTIFICATE command
  *
  * @param {APDU} the apdu
  */
 eIDCommandInterpreter.prototype.verifyCertificate = function(apdu) {
+
+	if (apdu.isChained()) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CHAINNOTSUPPORTED, "Chaining not supported in PSO VERIFY CERTIFICATE");
+	}
+	
+	if (!apdu.hasCData()) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_INVDATA, "Command data expected in PSO VERIFY CERTIFICATE");
+	}
+	
+	if ((apdu.getP1() != 0x00) || (apdu.getP2() != 0xBE)) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_INCP1P2, "Invalid P1 or P2");
+	}
+
+	// Reconstruct CVC
+	var a = new ASN1(0x7F21, apdu.getCData());
+	try	{
+		a = new ASN1(a.getBytes());
+	}
+	catch(e) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_INVDATA, "Invalid certificate format");
+	}
+
+	// Do some basic format checking
+	if ((a.elements != 2) || (a.get(0).tag != 0x7F4e) || (a.get(1).tag != 0x5F37)) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_INVDATA, "Invalid certificate format");
+	}
+
+	var cvc = new CVC(a);
+
+//	print(cvc);
+
+	// Determine public key for checking CVC signature
+	var se = this.fileSelector.getSecurityEnvironment().VEXK;
+//	print(se);
+
+	if (!se.t.DST) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "No public key set in MANAGE SE for verification");
+	}
+
+	var keyref = se.t.DST.find(0x83);
+	if (!keyref) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "No public key set in MANAGE SE for verification");
+	}
+
+	var keyid = new PublicKeyReference(keyref.value);
+//	print("KeyID: " + keyid);
+
+	var rc = this.locatePublicKey(keyid);
+	if (rc == null) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_RDNOTFOUND, "Referenced public key " + keyid + " not found");
+	}
+
+	var anchor = rc.anchor;
+//	print(anchor);
+//	print(rc.level);
+	
+	switch(rc.level) {
+		case 0:
+			anchor.validateCertificateIssuedByCVCA(this.crypto, cvc, this);
+
+			var chat = cvc.getCHAT();
+			var certtype = chat.get(1).value.byteAt(0) & 0xC0;
+
+			if ((certtype == 0x80) || (certtype == 0x40)) {
+				this.trustedDVCA = cvc;
+			}
+			break;
+		case 1:
+			anchor.validateCertificateIssuedByDVCA(this.crypto, cvc, this.trustedDVCA, this);
+			this.trustedTerminal = cvc;
+			break;
+		default:
+			throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_INVDATA, "Referenced public key " + keyid + " is a terminal key");
+	}
+
+	apdu.setSW(APDU.SW_OK);
+}
+
+
+
+/**
+ * Process EXTERNAL AUTHENTICATE command to perform terminal authentication
+ *
+ * @param {APDU} the apdu
+ * @param {SecurityEnvironment} se the security environment for external authentication
+ */
+eIDCommandInterpreter.prototype.externalAuthenticateForTA = function(apdu, se) {
+	if (apdu.isChained()) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CHAINNOTSUPPORTED, "Chaining not supported in EXTERNAL AUTHENTICATE");
+	}
+
+	if (!apdu.hasCData()) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_INVDATA, "Command data expected in EXTERNAL AUTHENTICATE");
+	}
+
+	if ((apdu.getP1() != 0x00) || (apdu.getP2() != 0x00)) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_INCP1P2, "Invalid P1 or P2");
+	}
+
+	if (this.isAuthenticatedTerminal()) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "Terminal authentication can only be performed once in a session");
+	}
+
+	if (!this.challenge) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "Must obtain challenge before external authenticate");
+	}
+
+	if (this.challenge.length < 8) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "Challenge must be larger or equal 8 bytes");
+	}
+
+	// Invalidate challenge
+	var challenge = this.challenge;
+	this.challenge = null;
+
+	if (this.trustedTerminal == null) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "No terminal certificate found");
+	}
+
+	if (this.chat) {
+		var tchat = this.trustedTerminal.getCHAT();
+		if (!tchat.get(0).value.equals(this.chat.get(0).value)) {
+			throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "CHAT in terminal certificate does not match CHAT in PACE");
+		}
+		if (tchat.get(1).value.length != this.chat.get(1).value.length) {
+			throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "CHAT in terminal certificate has different length than CHAT in PACE");
+		}
+	}
+
+	var keyref = se.t.AT.find(0x83);
+	if (!keyref) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "No public key set in MANAGE SE for terminal authentication");
+	}
+
+	var keyid = new PublicKeyReference(keyref.value);
+//	print("KeyID: " + keyid);
+
+	var rc = this.locatePublicKey(keyid);
+	if (rc == null) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_RDNOTFOUND, "Referenced public key " + keyid + " not found");
+	}
+
+	if (rc.level != 2) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_RDNOTFOUND, "Referenced public key is not a terminal key");
+	}
+
+	var dp = rc.anchor.getPublicKeyFor(this.trustedDVCA.getCAR());
+	var puk = this.trustedTerminal.getPublicKey(dp);
+
+	var cakey = se.t.AT.find(0x91);
+	if (!cakey) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "No chip authentication ephemeral key found");
+	}
+	this.idIFD = cakey.value;
+
+	if (typeof(this.idPICC) == "undefined") {
+		this.idPICC = this.fileSelector.getMeta("idPICC");
+	}
+
+	var bb = new ByteBuffer();
+	bb.append(this.idPICC);
+	bb.append(challenge);
+	bb.append(this.idIFD);
+
+	var auxdata = se.t.AT.find(0x67);
+
+	if (auxdata) {
+		bb.append(auxdata.getBytes());
+	}
+	var signatureInput = bb.toByteString();
+
+	var signature = ECCUtils.wrapSignature(apdu.getCData());
+	var mech = CVC.getSignatureMech(this.trustedTerminal.getPublicKeyOID(dp));
+	if (!this.crypto.verify(puk, mech, signatureInput, signature)) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_WARNINGNVCHG, "Verification of terminal authentication signature failed");
+	}
+
+	// Determine effective rights
+	var cvc = rc.anchor.getCertificateFor(this.trustedDVCA.getCAR());
+	var er = cvc.getCHAT().get(1).value;
+
+	er = er.and(this.trustedDVCA.getCHAT().get(1).value);
+	er = er.and(this.trustedTerminal.getCHAT().get(1).value);
+
+	if (this.chat) {
+		er = er.and(this.chat.get(1).value);
+	}
+
+//	print("Effective rights : " + er);
+	this.effectiveRights = er;
+
 	apdu.setSW(APDU.SW_OK);
 }
 
@@ -383,7 +714,7 @@ eIDCommandInterpreter.prototype.performRestrictedIdentification = function(apdu)
 	var rikeys = this.fileSelector.getMeta("RIKeys");
 	assert(rikeys, "No RI keys defined im meta data");
 
-	var se = this.fileSelector.getSecurityEnvironment().VEXK;
+	var se = this.fileSelector.getSecurityEnvironment().CDIK;
 //	print(se);
 
 	var keyid = 0;
@@ -400,20 +731,66 @@ eIDCommandInterpreter.prototype.performRestrictedIdentification = function(apdu)
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_RDNOTFOUND, "Restricted identification key not found");
 	}
 
+	var ri = rikeys[keyid];
+	
+	var ac = this.fileSelector.getMeta("accessController");
+
+	if (ac && ri.authorizedOnly) {
+		if (!ac.checkRight(this, apdu, 2)) {
+			throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_SECSTATNOTSAT, "Restricted identification requires right in id-AT");
+		}
+	}
+
 	var a = new ASN1(apdu.getCData());
+	var rido = a.get(0);
+	
 	var response = new ASN1(0x7C);
 
-	if (a.get(0).tag == 0xA0) {
-		response.add(new ASN1(0x81, rikeys[keyid]));
-	} else if (a.get(0).tag == 0xA0) {
-		response.add(new ASN1(0x81, rikeys[keyid]));
+	var pk = new ASN1(0x7F49, rido.value);
+	pk = new ASN1(pk.getBytes());		// Rebuild tree after replacing tag
+
+//	print(pk);
+	var mech = CVC.getHashMech(this.trustedDVCA.getPublicKeyOID());
+	var hash = this.crypto.digest(mech, pk.getBytes());
+//	print(hash);
+
+	var ext = this.trustedTerminal.getExtension(new ByteString("id-sector", OID));
+	if (!ext) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_RDNOTFOUND, "Terminal certificate does not contain a sector-id");
+	}
+
+	if (rido.tag == 0xA0) {
+		var stag = 0x80;
+		var rtag = 0x81;
+	} else if (rido.tag == 0xA2) {
+		var stag = 0x81;
+		var rtag = 0x83;
 	} else {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_INVDATA, "Dynamic data for restricted identification requires either 'A0' or 'A2' data element");
 	}
 
+	var hashdo = ext.find(stag);
+	if (!hashdo) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_RDNOTFOUND, "Sector-id extension does not contain a hash value");
+	}
+
+	if (!hashdo.value.equals(hash)) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_INVDATA, "Sector-id does not match provided public key");
+	}
+
+	var sectorPuK = new Key();
+	sectorPuK.setType(Key.PUBLIC);
+	CVC.decodeECPublicKey(pk, sectorPuK);
+
+	var inp = sectorPuK.getComponent(Key.ECC_QX).concat(sectorPuK.getComponent(Key.ECC_QY));
+	var id = this.crypto.digest(mech, this.crypto.decrypt(ri.prk, Crypto.ECDH, inp));
+
+	response.add(new ASN1(rtag, id));
+
 	apdu.setRData(response.getBytes());
 	apdu.setSW(APDU.SW_OK);
 }
+
 
 
 /**
@@ -435,7 +812,6 @@ eIDCommandInterpreter.prototype.getChallenge = function(apdu) {
 	}
 	
 	var l = apdu.getNe();
-	
 	this.challenge = this.crypto.generateRandom(l);
 	apdu.setRData(this.challenge);
 	
@@ -462,13 +838,16 @@ eIDCommandInterpreter.prototype.externalAuthenticateForBAC = function(apdu) {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_WRONGLENGTH, "Command requires C-data");
 	}
 
-	if (!apdu.hasCData()) {
-		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_WRONGLENGTH, "Command requires C-data");
-	}
-
 	if (!this.challenge) {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "Must obtain challenge before external authenticate");
 	}
+
+	if (this.challenge.length < 8) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "Challenge must be larger or equal 8 bytes");
+	}
+
+	var challenge = this.challenge;
+	this.challenge = null;
 
 	var cryptogram = apdu.getCData();
 
@@ -496,7 +875,7 @@ eIDCommandInterpreter.prototype.externalAuthenticateForBAC = function(apdu) {
 	var rndicc = plain.bytes(8, 8);
 	var kifd = plain.bytes(16, 16);
 
-	if (!rndicc.equals(this.challenge)) {
+	if (!rndicc.equals(challenge)) {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_WARNINGNVCHG, "RNDicc in cryptogram does not match last response in GET CHALLENGE");
 	}
 
@@ -535,6 +914,11 @@ eIDCommandInterpreter.prototype.externalAuthenticateForBAC = function(apdu) {
 
 
 
+/**
+ * Process VERIFY(AD)
+ *
+ * @param {APDU} the apdu
+ */
 eIDCommandInterpreter.prototype.verifyAuxiliaryData = function(apdu) {
 	if (apdu.isChained()) {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CHAINNOTSUPPORTED, "Chaining not supported in VERIFY(AUX)");
@@ -587,7 +971,12 @@ eIDCommandInterpreter.prototype.verifyAuxiliaryData = function(apdu) {
 
 //	print("RefData: " + refdata.toString(ASCII));
 
+	var ac = this.fileSelector.getMeta("accessController");
+	
 	if (oid.equals(new ByteString("id-CommunityID", OID))) {
+		if (ac && !ac.checkRight(this, apdu, 1)) {
+			throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_SECSTATNOTSAT, "Community ID Verification not allowed");
+		}
 		var id = this.fileSelector.getMeta("CommunityID");
 		assert(id, "Community ID not defined as part of meta data");
 		id = new ByteString(id, ASCII);
@@ -605,6 +994,9 @@ eIDCommandInterpreter.prototype.verifyAuxiliaryData = function(apdu) {
 			apdu.setSW(APDU.SW_WARNINGNVCHG);
 		}
 	} else {
+		if (ac && !ac.checkRight(this, apdu, 0)) {
+			throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_SECSTATNOTSAT, "Age Verification not allowed");
+		}
 		var dob = this.fileSelector.getMeta("DateOfBirth");
 		assert(dob, "Data of birth not defined as part of meta data");
 		if (refdata.toString(ASCII) >= dob) {
@@ -626,9 +1018,7 @@ eIDCommandInterpreter.prototype.externalAuthenticate = function(apdu) {
 	var se = this.fileSelector.getSecurityEnvironment().VEXK;
 
 	if (se.t.AT) {
-//		print(se);
-		// ToDo implement TA
-		apdu.setSW(APDU.SW_OK);
+		this.externalAuthenticateForTA(apdu, se);
 	} else {
 		this.externalAuthenticateForBAC(apdu);
 	}
@@ -658,6 +1048,11 @@ eIDCommandInterpreter.prototype.manageActiveState = function(apdu) {
 	var paceao = pacekeys[apdu.getP2()];
 	if (!paceao) {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_RDNOTFOUND, "PACE password not found");
+	}
+
+	var ac = this.fileSelector.getMeta("accessController");
+	if (!(ac && ac.checkRight(this, apdu, 5))) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_SECSTATNOTSAT, "Activate requires right 5 in id-AT");
 	}
 
 	if (apdu.getINS() == APDU.INS_ACTIVATE) {
@@ -702,6 +1097,17 @@ eIDCommandInterpreter.prototype.resetRetryCounterPACE = function(apdu) {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_RDNOTFOUND, "PACE password not found");
 	}
 
+	if (!apdu.isSecureMessaging()) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_SECSTATNOTSAT, "Secure messaging required for reset retry counter");
+	}
+
+	var ac = this.fileSelector.getMeta("accessController");
+
+	if (!(	this.fileSelector.isAuthenticated(true, paceao) ||
+			((typeof(paceao.unblockAuthenticationObject) != "undefined") && this.fileSelector.isAuthenticated(true, paceao.unblockAuthenticationObject)) ||
+			(ac && ac.checkRight(this, apdu, 5))   )) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_SECSTATNOTSAT, "Security condition for reset retry counter not satisfied");
+	}
 	paceao.resetRetryCounter(apdu.getCData());
 
 	apdu.setSW(APDU.SW_OK);
@@ -756,6 +1162,10 @@ eIDCommandInterpreter.prototype.terminateKey = function(apdu) {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_RDNOTFOUND, "Key with reference " + id + " not found");
 	}
 
+	if (!key.useAuthenticationObject.isTerminated) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_REFDATANOTUSABLE, "Authentication object is not terminated");
+	}
+	
 	key.terminate();
 	apdu.setSW(APDU.SW_OK);
 }
@@ -802,7 +1212,7 @@ eIDCommandInterpreter.prototype.generateAsymmetricKeyPair = function(apdu) {
 	}
 	var a = new ASN1(0x30, apdu.getCData());
 	a = new ASN1(a.getBytes());
-	print(a);
+//	print(a);
 
 	var crt = a.get(0);
 	if (crt.tag != 0xB6) {
@@ -842,7 +1252,8 @@ eIDCommandInterpreter.prototype.generateAsymmetricKeyPair = function(apdu) {
 
 	keyobj.privateKey = new Key();
 	keyobj.privateKey.setType(Key.PRIVATE);
-
+	keyobj.isTerminated = false;
+	
 	this.crypto.generateKeyPair(Crypto.EC, puk, keyobj.privateKey);
 
 	var encpuk = PACE.encodePublicKey("ecdsa-plain-signatures", puk, true);
@@ -867,9 +1278,9 @@ eIDCommandInterpreter.prototype.computeDigitalSignature = function(apdu) {
 	}
 
 	var se = this.fileSelector.getSecurityEnvironment().CDIK;
-	print(se);
+//	print(se);
 
-	var keyid = 0;
+	var keyid = 0x81;
 	if (se.t.DST) {
 		var keyref = se.t.DST.find(0x84);
 		if (keyref) {
@@ -877,13 +1288,17 @@ eIDCommandInterpreter.prototype.computeDigitalSignature = function(apdu) {
 		}
 	}
 
-	print("KeyID: " + keyid);
+//	print("KeyID: " + keyid);
 
 	var keyobj = this.fileSelector.getObject(SignatureKey.TYPE_KEY, keyid);
 	if (!keyobj) {
-		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_RDNOTFOUND, "Key with reference " + id + " not found");
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_RDNOTFOUND, "Key with reference " + keyid + " not found");
 	}
 
+	if (keyobj.isTerminated) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_REFDATANOTUSABLE, "Key is terminated");
+	}
+	
 	var signature = this.crypto.sign(keyobj.privateKey, Crypto.ECDSA, apdu.getCData());
 
 	apdu.setRData(ECCUtils.unwrapSignature(signature), keyobj.privateKey.getComponent(Key.ECC_P).length);

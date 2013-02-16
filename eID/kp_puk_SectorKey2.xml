@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gp:KeyProfile xmlns:gp="http://namespaces.globalplatform.org/systems-profiles/1.1.0" ErrataVersion="0" ProfileVersion="1.1.0" UniqueID="2B0601040181C31F100008">
+  <gp:Description>PuK_SectorKey2 ECDSA Public Key</gp:Description>
+  <gp:Revisions arrayElement="Revision" arrayIndex="#">
+    <gp:Revision By="www.smartcard-hsm.org" Date="2011-11-11" Digest="00000000" Time="00:00:00" Version="1.0.0"/>
+  </gp:Revisions>
+  <gp:KeyInfo Mode="TEST" Name="ECPublic" Size="256" SubType="EC" Type="PUBLIC"/>
+  <gp:Attribute Exportable="true" Importable="true" Sensitive="false"/>
+  <gp:Usage Decrypt="true" DecryptEncrypt="true" Derive="true" Encrypt="true" Sign="true" Unwrap="true" UnwrapWrap="true" Verify="true" Wrap="true"/>
+  <gp:Value Format="ECPUBLIC" arrayElement="Component" arrayIndex="#">
+    <gp:Component Encoding="HEX" Name="ECC_CURVE_OID" Value="2B2403030208010107"/>
+    <gp:Component Encoding="HEX" Name="ECC_QX" Value="9E888883099A3CA0F9EDE93FAA303FBC29E28D2640B1156708E36A559ED629BF"/>
+    <gp:Component Encoding="HEX" Name="ECC_QY" Value="77DBA4180D967574B701DC6363CF2FB710FB8B864EB528A8A33079B9840867DA"/>
+  </gp:Value>
+</gp:KeyProfile>
