@@ -215,10 +215,10 @@ CVC.id_TA_ECDSA_SHA_384 = new ByteString("id-TA-ECDSA-SHA-384", OID);
 CVC.id_TA_ECDSA_SHA_512 = new ByteString("id-TA-ECDSA-SHA-512", OID);
 CVC.id_TA_RSA_v1_5_SHA_1 = new ByteString("id-TA-RSA-v1-5-SHA-1", OID);
 CVC.id_TA_RSA_v1_5_SHA_256 = new ByteString("id-TA-RSA-v1-5-SHA-256", OID);
-//CVC.id_TA_RSA_v1_5_SHA_512 = new ByteString("id-TA-RSA-v1-5-SHA-512", OID);
+CVC.id_TA_RSA_v1_5_SHA_512 = new ByteString("id-TA-RSA-v1-5-SHA-512", OID);
 CVC.id_TA_RSA_PSS_SHA_1 = new ByteString("id-TA-RSA-PSS-SHA-1", OID);
 CVC.id_TA_RSA_PSS_SHA_256 = new ByteString("id-TA-RSA-PSS-SHA-256", OID);
-//CVC.id_TA_RSA_PSS_SHA_512 = new ByteString("id-TA-RSA-PSS-SHA-512", OID);
+CVC.id_TA_RSA_PSS_SHA_512 = new ByteString("id-TA-RSA-PSS-SHA-512", OID);
 
 
 
@@ -244,14 +244,14 @@ CVC.getSignatureMech = function(oid) {
 		return Crypto.RSA_SHA1;
 	if (oid.equals(CVC.id_TA_RSA_v1_5_SHA_256))
 		return Crypto.RSA_SHA256;
-//	if (oid.equals(CVC.id_TA_RSA_v1_5_SHA_512))
-//		return Crypto.RSA_SHA512;
+	if (oid.equals(CVC.id_TA_RSA_v1_5_SHA_512))
+		return Crypto.RSA_SHA512;
 	if (oid.equals(CVC.id_TA_RSA_PSS_SHA_1))
 		return Crypto.RSA_PSS_SHA1;
 	if (oid.equals(CVC.id_TA_RSA_PSS_SHA_256))
 		return Crypto.RSA_PSS_SHA256;
-//	if (oid.equals(CVC.id_TA_RSA_PSS_SHA_512))
-//		return Crypto.RSA_PSS_SHA512;
+	if (oid.equals(CVC.id_TA_RSA_PSS_SHA_512))
+		return Crypto.RSA_PSS_SHA512;
 	return -1;
 }
 
@@ -279,14 +279,14 @@ CVC.getHashMech = function(oid) {
 		return Crypto.SHA1;
 	if (oid.equals(CVC.id_TA_RSA_v1_5_SHA_256))
 		return Crypto.SHA_256;
-//	if (oid.equals(CVC.id_TA_RSA_v1_5_SHA_512))
-//		return Crypto.SHA_512;
+	if (oid.equals(CVC.id_TA_RSA_v1_5_SHA_512))
+		return Crypto.SHA_512;
 	if (oid.equals(CVC.id_TA_RSA_PSS_SHA_1))
 		return Crypto.SHA_1;
 	if (oid.equals(CVC.id_TA_RSA_PSS_SHA_256))
 		return Crypto.SHA_256;
-//	if (oid.equals(CVC.id_TA_RSA_PSS_SHA_512))
-//		return Crypto.SHA_512;
+	if (oid.equals(CVC.id_TA_RSA_PSS_SHA_512))
+		return Crypto.SHA_512;
 	return -1;
 }
 

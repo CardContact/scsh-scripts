@@ -154,7 +154,7 @@ var cardAccess = new ASN1(ASN1.SET,
 							chipAuthenticationDomainParameterInfo.toTLV(),
 							ciInfo,
 							new ASN1(ASN1.SEQUENCE,
-								new ASN1(ASN1.OBJECT_IDENTIFIER, new ByteString("bsi-de protocols(2) smartcard(2) 8", OID)),
+								new ASN1(ASN1.OBJECT_IDENTIFIER, new ByteString("id-PT", OID)),
 								new ASN1(ASN1.SET,
 									privChipAuthenticationInfo.toTLV(),
 									privChipAuthenticationDomainParameterInfo.toTLV()
