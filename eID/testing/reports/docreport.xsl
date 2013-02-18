@@ -34,7 +34,7 @@
 
 				<table border="1">
 				<colgroup><col width="250"/><col/><col width="60"/></colgroup>
-				<tr><th>Id</th><th>Description</th><th>Verdict</th></tr>
+				<tr><th>Id</th><th>Name</th><th>Verdict</th></tr>
 				<xsl:apply-templates select="testcaseresult" mode="table"/>
 				</table>
 				
@@ -47,7 +47,7 @@
 	<xsl:template match="testcaseresult" mode="table">
 
 	<tr>
-	<td><xsl:value-of select="@id"/></td><td><xsl:value-of select="description"/></td>
+	<td><xsl:value-of select="@id"/></td><td><xsl:value-of select="name"/></td>
 	
 	<xsl:if test="verdict='Passed'">
 		<td style="background-color:green;color:white"><xsl:value-of select="verdict"/></td>

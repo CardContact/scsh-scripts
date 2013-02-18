@@ -1,4 +1,4 @@
-/*
+/**
  *  ---------
  * |.##> <##.|  Open Smart Card Development Platform (www.openscdp.org)
  * |#       #|  
@@ -21,10 +21,7 @@
  *  along with OpenSCDP; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
- * @fileoverview
- * BlackListGenerator - Simple generator for black lists
- * based on TR-03129, Version 1.0
- *
+ * @fileoverview BlackListGenerator - Simple generator for black lists based on TR-03129, Version 1.0
  */
 
 // Some constants for blacklist types
