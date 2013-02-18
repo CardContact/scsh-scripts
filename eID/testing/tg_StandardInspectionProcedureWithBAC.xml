@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="doctg.xsl" ?>
+<testgroup 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="http://www.openscdp.org/schema/testframework-1.0.xsd"
+	id="tg_StandardInspectionProcedureWithBAC" arrayElement="testcase,function" arrayIndex="id,Name">
+	<name>Standard Inspection Procedure using Basic Access Control</name>
+	<description>
+		<p>This group of tests verify the implementation of the standard inspection procedure using basic access control</p>
+	</description>
+	<reference>
+		<p>ISO 7816-4</p>
+	</reference>
+
+<!-- Initializing the test group environment -->
+<!-- Enable this if you want your own constructor
+	<constructor Param="name, parameter">
+		<Script><![CDATA[
+	
+	// Call constructor of super class TestGroup and define name of test group
+	TestGroup.call(this, name, parameter);
+	
+		]]></Script>
+	</constructor>
+-->
+
+	
+<!-- Setup method called before each test case is executed -->
+	<setup>
+		<Script><![CDATA[
+
+		this.card = new Card(_scsh3.reader);
+		this.card.reset(Card.RESET_COLD);
+
+		]]></Script>
+	</setup>
+
+
+	
+<!-- Teardown method called after each test case is executed -->
+	<teardown>
+		<Script><![CDATA[
+		
+//	print("TestGroup.teardown() called.");
+
+		]]></Script>
+	</teardown>
+
+
+
+<!-- Each test case must be declared with an id that starts with a 3 digit number -->
+	<testcase id="001PerformBAC">
+		<name>Perform Basic Access Control and read DG1</name>
+		<description>
+			<p></p>
+		</description>
+		<requirement>
+			<p>The system must support Basic Access Control and establish a secure channel in order to read data groups from the logical data structure.</p>
+		</requirement>
+		<reference>
+			<p>ICAO 9303</p>
+		</reference>
+		<Script><![CDATA[
+
+		var eac = newEAC20(this.parameter.crypto, this.card);
+
+		eac.selectLDS();
+		eac.performBACWithMRZ(this.parameter.MRZ);
+
+		var dg1 = eac.readEFwithSFI(1);
+		print(dg1);
+
+		]]></Script>
+	</testcase>
+</testgroup>

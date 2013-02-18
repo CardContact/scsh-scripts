@@ -175,9 +175,9 @@ function generateSectorKeyPair(name) {
 
 
 
-// generateECCKeyPair("GroupCAKey");
+generateECCKeyPair("GroupCAKey");
 generateECCKeyPair("UniqueCAKey");
-// generateECCKeyPair("RevocationKey");
+generateECCKeyPair("RevocationKey");
 generateSectorKeyPair("SectorKey1");
 generateSectorKeyPair("SectorKey2");
-// generateECCKeyPair("IDKey");
+generateECCKeyPair("IDKey");

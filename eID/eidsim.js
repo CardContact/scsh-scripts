@@ -35,12 +35,16 @@ load("eidcommandinterpreter.js");
 load("eidaccesscontroller.js");
 load("../cardsim/securechannel.js");
 
+load("../icao/eac20.js");
 load("../icao/cvc.js");
 load("../icao/pace.js");
 load("../icao/chipauthentication.js");
 load("../icao/restrictedidentification.js");
 
 
+var mrz =	"TPD<<T220001293<<<<<<<<<<<<<<<" +
+			"6408125<1010318D<<<<<<<<<<<<<6" +
+			"MUSTERMANN<<ERIKA<<<<<<<<<<<<<";
 
 var paceInfo = new PACEInfo();
 paceInfo.protocol = new ByteString("id-PACE-ECDH-GM-AES-CBC-CMAC-128", OID);
@@ -150,7 +154,7 @@ var cardAccess = new ASN1(ASN1.SET,
 							chipAuthenticationDomainParameterInfo.toTLV(),
 							ciInfo,
 							new ASN1(ASN1.SEQUENCE,
-								new ASN1(ASN1.OBJECT_IDENTIFIER, new ByteString("id-PT", OID)),
+								new ASN1(ASN1.OBJECT_IDENTIFIER, new ByteString("bsi-de protocols(2) smartcard(2) 8", OID)),
 								new ASN1(ASN1.SET,
 									privChipAuthenticationInfo.toTLV(),
 									privChipAuthenticationDomainParameterInfo.toTLV()
@@ -251,6 +255,8 @@ function eIDSimulation() {
  * Initialize card runtime
  */
 eIDSimulation.prototype.createFileSystem = function() {
+	var eac = new EAC20(new Crypto());
+
 	this.mf = new DF(FCP.newDF("3F00", null),
 						new TransparentEF(FCP.newTransparentEF("011C", 0x1C, 100), cardAccess.getBytes()),
 						new TransparentEF(FCP.newTransparentEF("011D", 0x1D, 100), signedCardSecurity),
@@ -266,19 +272,19 @@ eIDSimulation.prototype.createFileSystem = function() {
 	this.mf.addMeta("uniqueChipAuthenticationInfo", privChipAuthenticationInfo);
 
 	this.mf.addMeta("paceInfo", paceInfo);
-	this.mf.addMeta("idPICC", new ByteString("YV30003670", ASCII));
+	this.mf.addMeta("idPICC", new ByteString(EAC20.decodeDocumentNumber(mrz), ASCII));
 	this.mf.addObject(cvcis);
 	this.mf.addObject(cvcat);
 	this.mf.addObject(cvcst);
 	this.mf.addMeta("currentDate", { currentDate: currentDate} );
 
 	var pacemrz = new AuthenticationObject("PACE_MRZ", AuthenticationObject.TYPE_PACE, 1, 
-									new ByteString("BC5CED1FC3775214F8AD22EA86C37E86FD27F717", HEX));
+									eac.hashMRZ(mrz));
 	pacemrz.initialretrycounter = 0;
 	this.mf.addObject(pacemrz);
 
 	var pacecan = new AuthenticationObject("PACE_CAN", AuthenticationObject.TYPE_PACE, 2, 
-									new ByteString("488444", ASCII));
+									new ByteString("500540", ASCII));
 	pacecan.initialretrycounter = 0;
 	pacecan.allowResetRetryCounter = true;
 	pacecan.allowResetValue = true;
@@ -307,19 +313,22 @@ eIDSimulation.prototype.createFileSystem = function() {
 
 	this.mf.addMeta("efCVCA", efCVCA);
 
+	var dg1 = (new ASN1(0x61, new ASN1(0x5F1F, new ByteString(mrz, ASCII)))).getBytes();
+	print(dg1);
+	
 	var dFePass = 		new DF(FCP.newDF(null, new ByteString("A0000002471001", HEX)),
 							new TransparentEF(FCP.newTransparentEF("011E", 0x1E, 100),		// EF.COM
-								new ByteString("60175f0104303130375f36063034303030305c056175676b6c", HEX)),
+								new ByteString("7E00", HEX)),
 							new TransparentEF(FCP.newTransparentEF("011D", 0x1D, 100),		// EF.SOD
-								new ByteString("60175f0104303130375f36063034303030305c056175676b6c", HEX)),
+								new ByteString("7D00", HEX)),
 							new TransparentEF(FCP.newTransparentEF("0101", 0x01, 100),		// EF.DG1
-								new ByteString("60175f0104303130375f36063034303030305c056175676b6c", HEX)),
+								dg1),
 							new TransparentEF(FCP.newTransparentEF("0102", 0x02, 100),		// EF.DG2
-								new ByteString("60175f0104303130375f36063034303030305c056175676b6c", HEX)),
+								new ByteString("6200", HEX)),
 							new TransparentEF(FCP.newTransparentEF("0103", 0x03, 100),		// EF.DG3
-								new ByteString("60175f0104303130375f36063034303030305c056175676b6c", HEX)),
+								new ByteString("6300", HEX)),
 							new TransparentEF(FCP.newTransparentEF("0104", 0x04, 100),		// EF.DG4
-								new ByteString("60175f0104303130375f36063034303030305c056175676b6c", HEX)),
+								new ByteString("6400", HEX)),
 							new TransparentEF(FCP.newTransparentEF("010E", 0x0E, 100),		// EF.DG14
 								dg14.getBytes()),
 							efCVCA
@@ -327,13 +336,8 @@ eIDSimulation.prototype.createFileSystem = function() {
 
 	dFePass.addMeta("accessController", new ePassAccessController());
 	
-	var k_enc_bac = new Key();
-	k_enc_bac.setComponent(Key.DES, new ByteString("46D05FA43C0D9ABB95F02C7EFFE22755", HEX));
-	dFePass.addMeta("KENC", k_enc_bac);
-
-	var k_mac_bac = new Key();
-	k_mac_bac.setComponent(Key.DES, new ByteString("F0B777EDB5CAF9B6E849842C77607098", HEX));
-	dFePass.addMeta("KMAC", k_mac_bac);
+	dFePass.addMeta("KENC", eac.calculateBACKey(mrz, 1));
+	dFePass.addMeta("KMAC", eac.calculateBACKey(mrz, 2));
 
 	dFePass.addMeta("chipAuthenticationPrivateKey", groupCAPrk);
 	dFePass.addMeta("chipAuthenticationPublicKey", groupCAPuk);
@@ -386,7 +390,7 @@ eIDSimulation.prototype.createFileSystem = function() {
 						);
 
 	dFeID.addMeta("accessController", new eIDAccessController());
-	dFeID.addMeta("DateOfExpiry", "20121231");
+	dFeID.addMeta("DateOfExpiry", "20161231");
 	dFeID.addMeta("DateOfBirth", "19661109");
 	dFeID.addMeta("CommunityID", "1234");
 	dFeID.addMeta("RIKeys", rIKeys);

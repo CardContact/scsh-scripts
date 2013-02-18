@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="doctg.xsl" ?>
+<testgroup 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="http://www.openscdp.org/schema/testframework-1.0.xsd"
+	id="tg_GeneralAuthenticationProcedure" arrayElement="testcase,function" arrayIndex="id,Name">
+	<name>General Authentication Procedure</name>
+	<description>
+		<p>This group of tests verify the implementation of the general authentication procedure</p>
+	</description>
+	<reference>
+		<p>ISO 7816-4</p>
+	</reference>
+
+<!-- Initializing the test group environment -->
+<!-- Enable this if you want your own constructor
+	<constructor Param="name, parameter">
+		<Script><![CDATA[
+	
+	// Call constructor of super class TestGroup and define name of test group
+	TestGroup.call(this, name, parameter);
+	
+		]]></Script>
+	</constructor>
+-->
+
+	
+<!-- Setup method called before each test case is executed -->
+	<setup>
+		<Script><![CDATA[
+
+		this.card = new Card(_scsh3.reader);
+		this.card.reset(Card.RESET_COLD);
+
+		]]></Script>
+	</setup>
+
+
+	
+<!-- Teardown method called after each test case is executed -->
+	<teardown>
+		<Script><![CDATA[
+		
+//	print("TestGroup.teardown() called.");
+
+		]]></Script>
+	</teardown>
+
+
+
+<!-- Each test case must be declared with an id that starts with a 3 digit number -->
+	<testcase id="001PerformGAP">
+		<name>Perform General Authentication Procedure and read DG3</name>
+		<description>
+			<p></p>
+		</description>
+		<requirement>
+			<p>The system must support the General Authentication Procedure with EAC 2.05 to establish a secure channel in order to read data groups from the logical data structure.</p>
+		</requirement>
+		<reference>
+			<p>ICAO 9303</p>
+		</reference>
+		<Script><![CDATA[
+
+		var eac = newEAC20(this.parameter.crypto, this.card);
+
+		print("Reading EF.CardInfo");
+		eac.readCardInfo();
+
+		var chat = new ASN1(0x7F4C, 
+						new ASN1(ASN1.OBJECT_IDENTIFIER, new ByteString("id-IS", OID)),
+						new ASN1(0x53, new ByteString("03", HEX))
+					);
+
+		// Determine MRZ hash as PACE password
+		var pwd = eac.hashMRZ(this.parameter.MRZ);
+		print("Performing PACE with chat");
+		print(chat);
+		eac.performPACE(0, EAC20.ID_MRZ, pwd, chat);
+
+		var certstore = this.parameter.certstore;
+		var takeypath = this.parameter.isodcertpath;
+		var chr = certstore.getCurrentCHR(takeypath);
+		if (chr == null) {
+			throw new GPError("EAC", GPError.OBJECT_NOT_FOUND, 0, "Could not determine current terminal key for " + takeypath);
+		}
+
+		var fromcar = eac.getTrustAnchorCAR();
+		var cvcchain = certstore.getCertificateChain(takeypath, chr, fromcar);
+		this.assertTrue(cvcchain, "Could not build certificate chain from " + fromcar + " to " + chr);
+
+		print("Verify certificate chain");
+		eac.verifyCertificateChain(cvcchain);
+
+		// Get key for terminal certificate
+		var termkey = certstore.getPrivateKey(takeypath, chr);
+
+		print("Prepare for chip authentication");
+		eac.prepareChipAuthentication(eac.getCAKeyId());
+
+		print("Perform terminal authentication");
+		eac.performTerminalAuthentication(termkey);
+		
+		print("Reading EF.CardSecurity");
+		eac.readCardSecurity();
+
+		print("Performing chip authentication");
+		assert(eac.performChipAuthentication(), "Chip authentication failed");
+
+		eac.selectLDS();
+		var dg3 = eac.readEFwithSFI(3);
+		print(dg3);
+
+		]]></Script>
+	</testcase>
+</testgroup>

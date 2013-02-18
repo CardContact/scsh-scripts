@@ -37,10 +37,25 @@
 <div id="main">
 <!-- #BeginEditable "BODY" -->
 <h1>German eID Card (Neuer Personalausweis)</h1>
-<p><a href="jsdoc/index.html">Scripts</a> for the German eID Card (nPA) are located in 
-the <code>eID</code> directory. They make extensive use of the EAC 2.0 classes defined
-in the <a href="../icao/jsdoc/index.html">icao section</a>.</p>
-<p>A full simulation of the nPA is provided by the eidsim.js file.</p>
+<p>The <a href="jsdoc/index.html">eID</a> directory contains a full simulation and test setup for an eID card implementing BAC,SAC,PACE and EAC.</p>
+<h2>Using the simulation</h2>
+<p>The simulation makes use of the <a href="../cardsim/index.html">CardSimulationAdapter</a>, providing an APDU interface on port 8050 at 
+the local machine. The protocol at this port is compatible with the JCOP JavaCard simulator provided by NXP. Select the "JCOPSimulation" 
+card reader in the Smart Card Shell to access the running simulation.</p>
+<p>To start the simulation you will need to run a separate instance of the Smart Card Shell and load the eidsim.js scripts with :</p>
+<pre>
+&gt; load("eID/eidsim.js");
+</pre>
+<p>The script will create and personalize the simulator's file system and then wait for incoming command APDUs.</p>
+<h2>Running the tests</h2>
+<p>A test environment is provided in the <code>testing</code> directory.</p>
+<p>To run the tests you will need to start a Smart Card Shell separate from the running simulation and load the tests with :</p>
+<pre>
+&gt; load("eID/testing/loadtests.js");
+</pre>
+<p>You can of course use the same setup to test a real world eID card or ePassport. Just select a different card reader and
+provide the required settings in the loadtests.js file.</p>
+<p>Please <a href="http://www.cardcontact.de/company/contact.html">contact us</a> for a full eID / ePassport test setup.</p>
 <!-- #EndEditable -->
 <br>
 <p class="copyright">&copy; Copyright 2003 - 2010 <a href="http://www.cardcontact.de">CardContact</a>
