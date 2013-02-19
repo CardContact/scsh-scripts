@@ -37,7 +37,8 @@
 <div id="main">
 <!-- #BeginEditable "BODY" -->
 <h1>German eID Card (Neuer Personalausweis)</h1>
-<p>The <a href="jsdoc/index.html">eID</a> directory contains a full simulation and test setup for an eID card implementing BAC,SAC,PACE and EAC.</p>
+<p>The <a href="jsdoc/index.html">eID</a> directory contains a full simulation and test setup for a card providing an ePassport, eID and eSign
+   application as defined in TR-03110 2.1 implementing BAC, SAC, PACE and EAC (1.11+2.1).</p>
 <p>The eID scripts require at least version 3.7.1476 of the <a href="http://www.openscdp.org/scsh3/download.html">Smart Card Shell</a>.
 The scripts do not work with the 3.6.989 version of the Eclipse Plug-In.</p>
 <h2>Using the simulation</h2>
@@ -49,6 +50,9 @@ card reader in the Smart Card Shell to access the running simulation.</p>
 &gt; load("eID/eidsim.js");
 </pre>
 <p>The script will create and personalize the simulator's file system and then wait for incoming command APDUs.</p>
+<p>For using the simulation with hardware from <a href="http://www.micropross.com/">Micropross</a>, 
+   <a href="http://www.comprion.com">Comprion</a> or 
+   <a href="http://www.proxmark3.com/">Proxmark</a> please <a href="http://www.cardcontact.de/company/contact.html">contact us</a>.</p>
 <h2>Running the tests</h2>
 <p>A test environment is provided in the <code>testing</code> directory.</p>
 <p>To run the tests you will need to start a Smart Card Shell separate from the running simulation and load the tests with :</p>
