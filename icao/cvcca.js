@@ -191,7 +191,7 @@ CVCCA.prototype.generateRequestPKCS8 = function(car, forceinitial, signinitial) 
 	
 	// Generate key pair
 	this.crypto.generateKeyPair(keyalg, puk, prk);
-	
+
 	// Save private key
 	this.certstore.storePrivateKey(this.path, nextchr, prk);
 	
@@ -349,6 +349,9 @@ CVCCA.prototype.generateCertificate = function(req, policy) {
 	generator.setCAR(car);
 	generator.setCHR(req.getCHR());
 	var effDate = new Date();
+	if (policy.ced) {
+		effDate = policy.ced;
+	}
 	effDate.setHours(12, 0, 0, 0);
 	var expDate = new Date((policy.certificateValidityDays - 1) * (1000 * 60 * 60 * 24) + effDate.getTime());
 	expDate.setHours(12, 0, 0, 0);
@@ -374,7 +377,6 @@ CVCCA.prototype.generateCertificate = function(req, policy) {
 	generator.setExtensions(policy.extensions);
 	var prk = this.certstore.getPrivateKey(this.path, car);
 	
-	print(prk);
 	var cvc = generator.generateCVCertificate(prk, signingTAAlgorithmIdentifier);
 	
 	return cvc;
@@ -407,7 +409,7 @@ CVCCA.prototype.importCertificate = function(cert) {
 	}
 	var c = this.certstore.getCertificate(this.path, cert.getCHR());
 	if (c != null) {
-		print("### Certificate " + c + " already stored");
+		GPSystem.trace("### Certificate " + c + " already stored");
 	}
 	if (this.isRootCA() && !this.isOperational()) {
 		this.certstore.storeCertificate(this.path, cert, (c == null));
