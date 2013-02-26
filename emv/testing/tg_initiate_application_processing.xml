@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="doctg.xsl" ?>
+<testgroup 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="http://www.openscdp.org/schema/testframework-1.0.xsd"
+	id="tg_initiate_application_processing" arrayElement="testcase,function" arrayIndex="id,Name">
+	<name>Initiate Application Processing Test Group</name>
+	<description>
+		<p>This group of tests verifies the implementation of Initiate Application Processing as defined in EMV 4.3/Book 3/Chapter 10.1</p>
+	</description>
+	<reference>
+		<p>EMV 4.3 Book 3</p>
+	</reference>
+
+<!-- Initializing the test group environment -->
+<!-- Enable this if you want your own constructor
+	<constructor Param="name, parameter">
+		<Script><![CDATA[
+	
+	// Call constructor of super class TestGroup and define name of test group
+	TestGroup.call(this, name, parameter);
+	
+		]]></Script>
+	</constructor>
+-->
+
+
+<!-- Setup method called before each test case is executed -->
+	<setup>
+		<Script><![CDATA[
+
+	this.card = this.parameter.card;
+
+	this.card.reset(Card.RESET_COLD);
+
+		]]></Script>
+	</setup>
+
+
+
+<!-- Teardown method called after each test case is executed -->
+	<teardown>
+		<Script><![CDATA[
+
+//	print("TestGroup.teardown() called.");
+
+		]]></Script>
+	</teardown>
+
+
+
+<!-- Each test case must be declared with an id that starts with a 3 digit number -->
+	<testcase id="001InitiateApplicationProcessing">
+		<name>Initiate Application Processing</name>
+		<description>
+			<p>Initiate Application Processing</p>
+		</description>
+		<requirement>
+			<p></p>
+		</requirement>
+		<reference>
+			<p></p>
+		</reference>
+		<Script><![CDATA[
+
+	var emv = newEMV(this.card, this.parameter.crypto);
+
+	var aid = this.parameter.aid;
+	if (!aid) {
+		emv.selectPSE(this.parameter.contactless);
+		aid = emv.getAID();
+		this.assertTrue(aid, "Could not automatically determine an AID. Please set param[\"AID\"] in loadtests.js");
+	}
+
+	emv.selectADF(aid);
+
+	emv.initApplProc();
+
+		]]></Script>
+	</testcase>
+
+</testgroup>

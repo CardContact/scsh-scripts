@@ -354,7 +354,3 @@ DataAuthentication.prototype.dynamicDataAuthentication = function(iccPublicKeyMo
 	assert(hashConcat.equals(hashSDAD));
 	print("<-----------------------------DDA was successful------------------------------>\n");
 }
-
-
-
-			

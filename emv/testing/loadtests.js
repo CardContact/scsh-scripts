@@ -21,7 +21,7 @@
  *  along with OpenSCDP; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
- * @fileoverview Script to load all tests for the card simulation test suite into the GUI test runner
+ * @fileoverview Script to load all tests for the EMV simulation test suite into the GUI test runner
  */
 
 //
@@ -33,26 +33,40 @@ load("tools/TestRunner.js");
 load("tools/TestGroup.js");
 load("tools/TestProcedure.js");
 
-load("../datamodel.js");
+load("../emv.js");
+load("../emvView.js");
 
 
 var param = new Array();
 
-param["dataModel"] = new CardDataModel();
-param["card"] = new Card();
+param["card"] = new Card(_scsh3.reader);
 param["crypto"] = new Crypto();
 
-var testRunner = new TestRunner("Card Simulation Test Suite");
+param["contactless"] = false;			// Use 1PAY.SYS.DDF01 or 2PAY.SYSDDF01
 
-testRunner.addTestProcedureFromXML("tp_fci.xml");
-testRunner.addTestGroupFromXML("tg_select.xml", param);
-testRunner.addTestGroupFromXML("tg_readbinary_even_ins.xml", param);
-testRunner.addTestGroupFromXML("tg_readbinary_odd_ins.xml", param);
-testRunner.addTestGroupFromXML("tg_readbinary_sw.xml", param);
-testRunner.addTestGroupFromXML("tg_updatebinary_even_ins.xml", param);
-testRunner.addTestGroupFromXML("tg_updatebinary_odd_ins.xml", param);
-testRunner.addTestGroupFromXML("tg_updatebinary_sw.xml", param);
-testRunner.addTestGroupFromXML("tg_readrecord_even_ins.xml", param);
-testRunner.addTestGroupFromXML("tg_secmsg.xml", param);
+
+
+/**
+ * Create new instance of EMV class for tests.
+ *
+ * <p>This method allows to tailor some global settings for the tests.</p>
+ * @param {Card} card the EMV card
+ * @param {Crypto} crypto the crypto provider to use
+ * @type EMV
+ * @return a new instance of the EMV class
+ */
+function newEMV(card, crypto) {
+	var emv = new EMV(card, crypto);
+	emv.verbose = true;
+	return emv;
+}
+
+
+
+var testRunner = new TestRunner("EMV Simulation Test Suite");
+
+testRunner.addTestGroupFromXML("tg_application_selection.xml", param);
+testRunner.addTestGroupFromXML("tg_initiate_application_processing.xml", param);
+testRunner.addTestGroupFromXML("tg_read_application_data.xml", param);
 
 print("Test-Suite loaded...");

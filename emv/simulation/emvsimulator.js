@@ -21,42 +21,66 @@
  *  along with OpenSCDP; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
- * @fileoverview A simple card simulation
+ * @fileoverview A simple EMV card simulation
  */
 
-load("filesystem.js");
-load("commandinterpreter.js");
-load("securechannel.js");
+load("../../cardsim/filesystem.js");
+load("../emv.js");
+
+load("emvcommandinterpreter.js");
+load("emvdatamodel.js");
+
+
+var dataModel = new EMVDataModel();
 
 
 /**
  * Create a card simulation object
  *
- * @class Class implementing a simple ISO 7816-4 card simulation
+ * @class Class implementing a simple EMV card simulation
  * @constructor
  */
-function SimpleCardSimulator() {
-	var aid = new ByteString("A0000000010101", HEX);
+function EMVSimulator() {
+	this.mf = new DF(FCP.newDF("3F00", null));
 
-	var efdir_example = new ASN1(0x61,
+	var aid = new ByteString("A000000000", HEX);
+	var fcipt = new ASN1("FCI Proprietary Template", 0xA5,
+							new ASN1("SFI of the Directory Elementary File", 0x88, ByteString.valueOf(1))
+						);
+
+	var psd = new ASN1(0x70,
+							new ASN1(0x61,
 								new ASN1(0x4F, aid),
-								new ASN1(0x50, new ByteString("Example Application", ASCII))
-							);
+								new ASN1(0x50, new ByteString("EMV Simulator", ASCII))
+							)
+						);
+	var records = [ psd.getBytes() ];
+	var paysysddf = new DF(FCP.newDF(null, EMV.PSE1, fcipt.getBytes()),
+							new LinearEF(FCP.newLinearEF("EF01", 1, FCP.LINEARVARIABLE, 1, 100), records)
+						);
 
-	var efdir = [ efdir_example.getBytes() ];
+	this.mf.add(paysysddf);
 
-	this.mf = new DF(FCP.newDF("3F00", null),
-						new LinearEF(FCP.newLinearEF("2F00", 30, FCP.LINEARVARIABLE, 20, 10), efdir),
-						new TransparentEF(FCP.newTransparentEF("2F02", 1, 100), new ByteString("5A0A00010203040506070809", HEX)),
-						new TransparentEF(FCP.newTransparentEF("EF01", 2, 100), new ByteString("4041424344", HEX)),
-						new DF(FCP.newDF("DF01", this.aid),
-							new TransparentEF(FCP.newTransparentEF("EF01", 0, 100)),
-							new TransparentEF(FCP.newTransparentEF("EF02", 0, 100))
-						)
-					);
+	var fcipt = new ASN1("FCI Proprietary Template", 0xA5,
+							new ASN1("Application Label", 0x50, new ByteString("EMV Simulator", ASCII))
+						);
+
+	var adf = new DF(FCP.newDF(null, aid, fcipt.getBytes())
+						);
+
+	adf.addMeta("ApplicationInterchangeProfile", dataModel.getApplicationInterchangeProfile());
+	adf.addMeta("ApplicationFileLocator", dataModel.getApplicationFileLocator());
+
+	// Create file system from data model
+	for each (var file in dataModel.getFiles()) {
+		var fid = ByteString.valueOf(0xEF00 + file.sfi, 2).toString(HEX);
+		adf.add(new LinearEF(FCP.newLinearEF(fid, file.sfi, FCP.LINEARVARIABLE, file.records.length, 256), file.records));
+	}
+
+	this.mf.add(adf);
 
 	print(this.mf.dump(""));
-	
+
 	this.initialize();
 }
 
@@ -65,25 +89,9 @@ function SimpleCardSimulator() {
 /**
  * Initialize card runtime
  */
-SimpleCardSimulator.prototype.initialize = function() {
+EMVSimulator.prototype.initialize = function() {
 	this.fileSelector = new FileSelector(this.mf);
-	this.commandInterpreter = new CommandInterpreter(this.fileSelector);
-	
-	var sm = new SecureChannel(new Crypto());
-	
-	sm.setSendSequenceCounterPolicy(IsoSecureChannel.SSC_SYNC_ENC_POLICY);
-
-	var k = new Key();
-	k.setComponent(Key.AES, new ByteString("7CA110454A1A6E570131D9619DC1376E4A1A6E570131D961", HEX));
-	sm.setMacKey(k);
-
-	var k = new Key();
-	k.setComponent(Key.AES, new ByteString("0131D9619DC1376E7CA110454A1A6E579DC1376E7CA11045", HEX));
-	sm.setEncKey(k);
-	
-	sm.setMACSendSequenceCounter(new ByteString("00000000000000000000000000000000", HEX));
-	
-	this.commandInterpreter.setSecureChannel(sm);
+	this.commandInterpreter = new EMVCommandInterpreter(this.fileSelector);
 }
 
 
@@ -95,11 +103,11 @@ SimpleCardSimulator.prototype.initialize = function() {
  * @type ByteString
  * @return the response APDU
  */ 
-SimpleCardSimulator.prototype.processAPDU = function(capdu) {
+EMVSimulator.prototype.processAPDU = function(capdu) {
 	print("Command APDU : " + capdu);
 
 	var apdu;
-	
+
 	try	{
 		apdu = new APDU(capdu);
 	}
@@ -109,14 +117,11 @@ SimpleCardSimulator.prototype.processAPDU = function(capdu) {
 		if (e instanceof GPError) {
 			sw = e.reason;
 		}
-		var bb = new ByteBuffer();
-		bb.append(sw >> 8);
-		bb.append(sw & 0xFF);
-		return bb.toByteString();
+		return ByteString.valueOf(sw, 2);
 	}
 
 	this.commandInterpreter.processAPDU(apdu);
-	
+
 	var rapdu = apdu.getResponseAPDU();
 	print("Response APDU: " + rapdu);
 	return rapdu;
@@ -131,7 +136,7 @@ SimpleCardSimulator.prototype.processAPDU = function(capdu) {
  * @type ByteString
  * @return answer to reset
  */
-SimpleCardSimulator.prototype.reset = function(type) {
+EMVSimulator.prototype.reset = function(type) {
 	print("Reset type: " + type);
 
 	this.initialize();
@@ -146,8 +151,8 @@ SimpleCardSimulator.prototype.reset = function(type) {
  * Create new simulation and register with existing or newly created adapter singleton.
  *
  */
-SimpleCardSimulator.newInstance = function() {
-	var sim = new SimpleCardSimulator();
+EMVSimulator.newInstance = function() {
+	var sim = new EMVSimulator();
 
 	if (typeof(CARDSIM) == "undefined") {
 		var adapter = new CardSimulationAdapter("JCOPSimulation", "8050");
@@ -163,4 +168,4 @@ SimpleCardSimulator.newInstance = function() {
 
 
 
-SimpleCardSimulator.newInstance();
+EMVSimulator.newInstance();

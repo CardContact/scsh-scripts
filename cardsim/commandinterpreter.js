@@ -171,6 +171,50 @@ CommandInterpreter.prototype.updateBinary = function(apdu) {
 
 
 /**
+ * Process a READ RECORD APDU
+ *
+ * @param {APDU} apdu the command and response APDU
+ */
+CommandInterpreter.prototype.readRecord = function(apdu) {
+	if (!apdu.hasLe()) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_WRONGLENGTH, "Wrong length - missing Le field");
+	}
+
+	if (apdu.isChained()) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CHAINNOTSUPPORTED, "Chaining not supported in READ RECORD");
+	}
+
+	var recno = apdu.getP1();
+	var sfi = apdu.getP2() >> 3;
+	var qualifier = apdu.getP2() & 0x7;
+
+	if (sfi > 0) {
+		ef = this.fileSelector.selectSFI(sfi);
+	} else {
+		ef = this.fileSelector.getCurrentEF();
+
+		if (ef == null) {
+			throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_COMNOTALLOWNOEF, "No current EF in READ RECORD");
+		}
+	}
+
+	if (!(ef instanceof LinearEF)) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_COMINCOMPATIBLE, "EF is not a linear file in READ RECORD");
+	}
+
+	var ac = this.fileSelector.getMeta("accessController");
+	if (ac && !ac.checkFileReadAccess(this, apdu, ef)) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_SECSTATNOTSAT, "Read access not allowed as determined by " + ac);
+	}
+
+	var data = ef.readRecord(apdu, recno, qualifier, apdu.getNe());
+
+	apdu.setRData(data);
+}
+
+
+
+/**
  * Performs a VERIFY command
  *
  * @param {APDU} the apdu
@@ -353,6 +397,9 @@ CommandInterpreter.prototype.dispatch = function(apdu, ins) {
 			break;
 		case APDU.INS_UPDATE_BINARY:
 			this.updateBinary(apdu);
+			break;
+		case APDU.INS_READ_RECORD:
+			this.readRecord(apdu);
 			break;
 		case APDU.INS_VERIFY:
 			this.verify(apdu);

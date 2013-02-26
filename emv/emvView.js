@@ -24,6 +24,8 @@
  * @fileoverview The class EMVView displays data stored on emv cards.
  */
 
+
+
 /**
  * EMVView class constructor
  *
@@ -36,6 +38,8 @@ function EMVView(emv) {
 	this.emv = emv;
 }
 
+
+
 /**
  * Display the data elements into a human readable form
  */
@@ -44,9 +48,8 @@ EMVView.prototype.displayDataElements = function(){
 	print();
 	var cardDE = this.emv.getCardDataElements();
 	
-	print("cardDE.length=" + cardDE.length);
 	for (var i = 0; i < cardDE.length; i++) {
-		if(cardDE[i] != undefined){
+		if (cardDE[i] != undefined){
 			var tag = i; 
 			var value= cardDE[i];
 			this.decodeDataElement(tag, value);
@@ -54,6 +57,8 @@ EMVView.prototype.displayDataElements = function(){
 	}
 	print("------------------------------------------------------------------------------>\n");
 }
+
+
 
 /**
  * Decodes a template containing TLV data object into a human readable form
@@ -160,6 +165,8 @@ EMVView.prototype.decodeDataElement = function(tag, value) {
 		}
 }
 
+
+
 /**
  * Decode a data object list into a human readable form
  *
@@ -171,7 +178,7 @@ EMVView.prototype.decodeDataElement = function(tag, value) {
 EMVView.prototype.decodeDataObjectList = function(dol) {
 	while (dol.length > 0) {
 		var b = dol.byteAt(0);
-		if((b&0x1F)==0x1F){
+		if ((b & 0x1F) == 0x1F){
 			var tag = dol.left(2).toUnsigned();
 			var length = dol.byteAt(2);		
 			var dol = dol.bytes(3);	//Remove Tag and Length Byte		
@@ -184,6 +191,8 @@ EMVView.prototype.decodeDataObjectList = function(dol) {
 		print("  " + tag.toString(HEX) + " - " + length + " - " + DOL[tag]);
 	}
 }
+
+
 
 /**
  * Decode an action code into a human readable form
@@ -205,6 +214,8 @@ EMVView.prototype.decodeActionCode = function(actionCode) {
 	}
 }
 
+
+
 /**
  * Decode an application interchange profile into a human readable form
  *
@@ -223,6 +234,8 @@ EMVView.prototype.decodeAIP = function(aip) {
 		}
 	}
 }
+
+
 
 /**
  * Decode an application file locator into a human readable form
@@ -258,6 +271,8 @@ EMVView.prototype.decodeAFL = function(afl) {
 	}
 }
 
+
+
 /**
  * Decode a Cardholder Verification Method List into a human readable form
  *
@@ -277,6 +292,8 @@ EMVView.prototype.decodeCVM = function(cvmlist) {
 		print();
 	}
 }
+
+
 
 /**
  * Decode the Application Usage Control into a human readable form

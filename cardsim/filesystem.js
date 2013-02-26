@@ -186,13 +186,13 @@ FCP.newDF = function(fid, aid, supl) {
  * @param {String|ByteString} fid the file identifier (2 Bytes)
  * @param {Number} sfi the short file identifier or -1 or 0 if not defined
  * @param {Number} type the file type, one of FCP.LINEARFIXED or FCP.LINEARVARIABLE
- * @param {Number} recsize the maximum or fixed record size
  * @param {Number} recno the maximum number of records
+ * @param {Number} recsize the maximum or fixed record size
  * @param {ByteString} supl supplemental information
  * @type FCP
  * @return the newly constructed FCP object
  */
-FCP.newLinearEF = function(fid, sfi, type, recsize, recno, supl) {
+FCP.newLinearEF = function(fid, sfi, type, recno, recsize, supl) {
 	if (typeof(recsize) != "number") {
 		throw new GPError("FCP", GPError.INVALID_TYPE, 3, "Argument recsize must be of type Number");
 	}
@@ -277,6 +277,28 @@ FCP.prototype.getBytes = function() {
 	}
 	
 	return(fcp.getBytes());
+}
+
+
+
+/**
+ * Returns the FCI
+ *
+ * @type ASN1
+ * @return the FCI
+ */
+FCP.prototype.getFCI = function() {
+	var fci = new ASN1("fci", 0x6F);
+
+	if (typeof(this.aid) != "undefined") {
+		fci.add(new ASN1("dFName", 0x84, this.aid));
+	}
+
+	if (this.supl) {
+		fci.add(new ASN1(this.supl));
+	}
+
+	return(fci);
 }
 
 
@@ -498,7 +520,8 @@ function LinearEF(fcp, records) {
 	if (!(fcp instanceof FCP)) {
 		throw new GPError("LinearEF", GPError.INVALID_TYPE, APDU.SW_GENERALERROR, "Argument 1 must be of type FCP");
 	}
-	if ((typeof(records) != "undefined") && (records != null) && (typeof(records) != "array")) {
+	print(typeof(records));
+	if ((typeof(records) != "undefined") && (records != null) && (typeof(records) != "object")) {
 		throw new GPError("LinearEF", GPError.INVALID_TYPE, APDU.SW_GENERALERROR, "Argument 2 must be of type ByteString[]");
 	}
 
@@ -508,6 +531,59 @@ function LinearEF(fcp, records) {
 
 LinearEF.prototype = new FSNode();
 LinearEF.prototype.constructor = LinearEF;
+
+
+
+/**
+ * Reads a record from a linear EF
+ *
+ * @param {APDU} apdu the APDU used for reading
+ * @param {Number} recno the record number
+ * @param {Number} qualifier the qualifier as encoded in bit b3 - b1 of P1
+ * @param {Number} length the length in bytes or 0 for all in short APDU or 65536 for all in extended APDUs
+ * @type ByteString
+ * @return the data read
+ */
+LinearEF.prototype.readRecord = function(apdu, recno, qualifier, length) {
+	if (typeof(recno) != "number") {
+		throw new GPError("LinearEF", GPError.INVALID_TYPE, APDU.SW_GENERALERROR, "Record number must be type Number");
+	}
+	if (typeof(qualifier) != "number") {
+		throw new GPError("LinearEF", GPError.INVALID_TYPE, APDU.SW_GENERALERROR, "Qualifier must be type Number");
+	}
+
+	if (recno == 0) {
+		throw new GPError("LinearEF", GPError.INVALID_DATA, APDU.SW_INCP1P2, "Current record referencing with P1=00 not support");
+	}
+	recno--;
+
+	if (recno >= this.records.length) {
+		throw new GPError("LinearEF", GPError.INVALID_DATA, APDU.SW_RECORDNOTFOUND, "Record number exeeds number of defined records");
+	}
+
+	if (qualifier != 4) {
+		throw new GPError("LinearEF", GPError.INVALID_DATA, APDU.SW_INCP1P2, "Only absolute record references supported");
+	}
+
+	var record = this.records[recno];
+
+	var rlen = length;
+	if ((length == 0) || (length == 65536)) {
+		rlen = record.length;
+		if ((length == 0) && (rlen > 256)) {
+			rlen = 256;
+		}
+	}
+
+	if (rlen > record.length) {
+		apdu.setSW(APDU.SW_EOF);
+		rlen = record.length;
+	} else {
+		apdu.setSW(APDU.SW_OK);
+	}
+
+	return record.left(rlen);
+}
 
 
 
@@ -550,7 +626,7 @@ DF.prototype.constructor = DF;
 DF.prototype.add = function(node) {
 	this.childs.push(node);
 	node.setParent(this);
-	
+
 	var f = node.getFCP();
 	
 	var fid = f.getFID();
@@ -1044,16 +1120,13 @@ FileSelector.prototype.processSelectAPDU = function(apdu) {
 	var p2 = apdu.getP2();
 	switch(p2) {
 	case 0x00:
-		if (p1 != 0x00) {
-			throw new GPError("FileSelector", GPError.INVALID_DATA, APDU.SW_INCP1P2, "Incorrect parameter P2 (" + p2.toString(16) + ")");
-		}
-		response = new ByteString("", HEX);
+		apdu.setRData(node.getFCP().getFCI().getBytes());
 		break;
 	case 0x04:
 		apdu.setRData(node.getFCP().getBytes());
 		break;
 	case 0x0C:
-		response = new ByteString("", HEX);
+		apdu.setRData(new ByteString("", HEX));
 		break;
 	default:
 		throw new GPError("FileSelector", GPError.INVALID_DATA, APDU.SW_INCP1P2, "Incorrect parameter P2 (" + p2.toString(16) + ")");
@@ -1086,7 +1159,7 @@ FileSelector.prototype.toString = function() {
 
 
 
-function test() {
+FileSelector.test = function() {
 
 	var aid = new ByteString("A0000000010101", HEX);
 
