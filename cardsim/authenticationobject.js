@@ -198,7 +198,7 @@ AuthenticationObject.prototype.verify = function(value) {
 	}
 	this.decreaseRetryCounter();
 	if (!this.value.equals(value)) {
-		var sw = APDU.SW_WARNINGNVCHG | this.retrycounter;
+		var sw = APDU.SW_WARNINGCOUNT | this.retrycounter;
 		throw new GPError("AuthenticationObject", GPError.INVALID_DATA, sw, "Authentication failed");
 	}
 	this.restoreRetryCounter();
