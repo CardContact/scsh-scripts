@@ -39,6 +39,7 @@ function TrustAnchor(root) {
 
 	this.chain = [];
 	this.chain.push(root);
+	this.recentCAROnly = false;					// Maintain only the latest trust anchor
 
 	// Save in file system under id, which is the last byte in the CHAT OID
 	var chat = root.getCHAT();
@@ -76,7 +77,7 @@ TrustAnchor.prototype.getType = function() {
 TrustAnchor.prototype.addCARforPACE = function(response) {
 	var cl = this.chain.length;
 	response.add(new ASN1(0x87, this.chain[cl - 1].getCHR().getBytes()));
-	if (cl > 1) {
+	if ((cl > 1) && !this.recentCAROnly) {
 		response.add(new ASN1(0x88, this.chain[cl - 2].getCHR().getBytes()));
 	}
 }
@@ -147,7 +148,7 @@ TrustAnchor.prototype.getCertificateFor = function(chr) {
 	if (this.chain[cl - 1].getCHR().toString() == chr) {
 		return this.chain[cl - 1];
 	}
-	if (cl > 1) {
+	if ((cl > 1) && !this.recentCAROnly) {
 		if (this.chain[cl - 2].getCHR().toString() == chr) {
 			return this.chain[cl - 2];
 		}
@@ -166,7 +167,7 @@ TrustAnchor.prototype.updateEFCVCA = function(dataProvider) {
 	var cl = this.chain.length - 1;
 	var bb = new ByteBuffer();
 	bb.append((new ASN1(0x42, this.chain[cl].getCHR().getBytes())).getBytes());
-	if (cl > 0) {
+	if ((cl > 0) && !this.recentCAROnly) {
 		bb.append((new ASN1(0x42, this.chain[cl - 1].getCHR().getBytes())).getBytes());
 	}
 	bb.append(0);
