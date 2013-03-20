@@ -185,6 +185,18 @@ TrustAnchor.prototype.updateEFCVCA = function(dataProvider) {
  * @param {Object} dataProvider object implementing getDate(), setDate() and updateEFCVCA()
  */
 TrustAnchor.prototype.checkCertificate = function(issuer, subject, dataProvider) {
+	// Some basic sanity checks
+	if (subject.getCXD().valueOf() < subject.getCED().valueOf()) {
+		throw new GPError("TrustAnchor", GPError.INVALID_DATA, APDU.SW_INVDATA, "Certificate expiration is before effective date");
+	}
+	
+	try	{
+		subject.getPublicKey();
+	}
+	catch(e) {
+		throw new GPError("TrustAnchor", GPError.INVALID_DATA, APDU.SW_INVDATA, e.message);
+	}
+	
 	var chatissuer = issuer.getCHAT();
 	var chatsubject = subject.getCHAT();
 	
@@ -215,7 +227,7 @@ TrustAnchor.prototype.checkCertificate = function(issuer, subject, dataProvider)
 
 	if (((typesubject >= typeissuer) && (typeissuer != 0xC0)) || 
 		((typesubject == 0x00) && (typeissuer == 0xC0))) {
-		throw new GPError("TrustAnchor", GPError.INVALID_DATA, APDU.SW_INVDATA, "Certificate hierachie invalid");
+		throw new GPError("TrustAnchor", GPError.INVALID_DATA, APDU.SW_INVDATA, "Certificate hierachy invalid");
 	}
 
 	if (!issuer.getPublicKeyOID().equals(subject.getPublicKeyOID())) {
