@@ -725,14 +725,13 @@ eIDCommandInterpreter.prototype.performRestrictedIdentification = function(apdu)
 		}
 	}
 
-//	print("KeyID: " + keyid);
-
 	if (!rikeys[keyid]) {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_RDNOTFOUND, "Restricted identification key not found");
 	}
 
 	var ri = rikeys[keyid];
-	
+	GPSystem.trace("Selected key " + keyid + " for restricted identification(authorizedOnly=" + (ri.authorizedOnly ? "true" : "false") + ")");
+
 	var ac = this.fileSelector.getMeta("accessController");
 
 	if (ac && ri.authorizedOnly) {
