@@ -26,7 +26,7 @@
 
 
 load("emv.js");
-load("emvview.js");
+load("emvView.js");
 load("dataAuthentication.js");
 //load("transaction.js");
 
