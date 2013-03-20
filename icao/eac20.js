@@ -1063,12 +1063,18 @@ EAC20.prototype.performTerminalAuthenticationSetup = function(auxdata) {
 
 	var bb = new ByteBuffer();
 
-	bb.append(new ASN1(0x80, this.terminalCert.getPublicKeyOID()).getBytes());
-	bb.append(new ASN1(0x83, this.terminalCert.getCHR().getBytes()).getBytes());
-	if (auxdata) {
-		bb.append(auxdata);
+	if (typeof(this.cakeyId) != "undefined") {
+		bb.append(new ASN1(0x80, this.terminalCert.getPublicKeyOID()).getBytes());
 	}
-	bb.append(new ASN1(0x91, idIFD).getBytes());
+	
+	bb.append(new ASN1(0x83, this.terminalCert.getCHR().getBytes()).getBytes());
+	
+	if (typeof(this.cakeyId) != "undefined") {
+		if (auxdata) {
+			bb.append(auxdata);
+		}
+		bb.append(new ASN1(0x91, idIFD).getBytes());
+	}
 
 	var msedata = bb.toByteString();
 	this.log("Manage SE data:");
