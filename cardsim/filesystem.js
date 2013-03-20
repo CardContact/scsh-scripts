@@ -1073,6 +1073,11 @@ FileSelector.prototype.processSelectAPDU = function(apdu) {
 	var node;
 	var reponse;
 
+	var p2 = apdu.getP2();
+	if ((p2 != 0x00) && (p2 != 0x04) && (p2 != 0x0C)) {
+		throw new GPError("FileSelector", GPError.INVALID_DATA, APDU.SW_INCP1P2, "Incorrect parameter P2 (" + p2.toString(16) + ")");
+	}
+
 	var data = apdu.getCData();
 	var p1 = apdu.getP1();
 	switch(p1) {
@@ -1117,7 +1122,6 @@ FileSelector.prototype.processSelectAPDU = function(apdu) {
 		throw new GPError("FileSelector", GPError.INVALID_DATA, APDU.SW_INCP1P2, "Incorrect parameter P1 (" + p1.toString(16) + ")");
 	}
 	
-	var p2 = apdu.getP2();
 	switch(p2) {
 	case 0x00:
 		apdu.setRData(node.getFCP().getFCI().getBytes());
@@ -1125,10 +1129,6 @@ FileSelector.prototype.processSelectAPDU = function(apdu) {
 	case 0x04:
 		apdu.setRData(node.getFCP().getBytes());
 		break;
-	case 0x0C:
-		break;
-	default:
-		throw new GPError("FileSelector", GPError.INVALID_DATA, APDU.SW_INCP1P2, "Incorrect parameter P2 (" + p2.toString(16) + ")");
 	}
 
 	apdu.setSW(APDU.SW_OK);
