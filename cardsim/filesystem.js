@@ -1126,7 +1126,6 @@ FileSelector.prototype.processSelectAPDU = function(apdu) {
 		apdu.setRData(node.getFCP().getBytes());
 		break;
 	case 0x0C:
-		apdu.setRData(new ByteString("", HEX));
 		break;
 	default:
 		throw new GPError("FileSelector", GPError.INVALID_DATA, APDU.SW_INCP1P2, "Incorrect parameter P2 (" + p2.toString(16) + ")");
