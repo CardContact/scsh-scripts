@@ -390,6 +390,7 @@ CommandInterpreter.prototype.handleSecMsgResponseAPDU = function(apdu) {
 CommandInterpreter.prototype.dispatch = function(apdu, ins) {
 	if (!apdu.isISO()) {
 		apdu.setSW(APDU.SW_INVCLA);
+		return;
 	}
 	switch(ins) {
 		case APDU.INS_SELECT:
