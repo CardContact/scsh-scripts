@@ -313,6 +313,18 @@ APDU.prototype.getCLA = function() {
 
 
 /**
+ * Test if command is an ISO command
+ *
+ * @type boolean
+ * @return true if command has ISO class byte
+ */
+APDU.prototype.isISO = function() {
+	return (this.cla & 0x80) == 0x00;
+}
+
+
+
+/**
  * Test if command chaining is indicated
  *
  * @type boolean

@@ -388,6 +388,9 @@ CommandInterpreter.prototype.handleSecMsgResponseAPDU = function(apdu) {
  * @param {Number} ins instruction code
  */
 CommandInterpreter.prototype.dispatch = function(apdu, ins) {
+	if (!apdu.isISO()) {
+		apdu.setSW(APDU.SW_INVCLA);
+	}
 	switch(ins) {
 		case APDU.INS_SELECT:
 			this.fileSelector.processSelectAPDU(apdu);
