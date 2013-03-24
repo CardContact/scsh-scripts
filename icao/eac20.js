@@ -620,7 +620,7 @@ EAC20.prototype.getRIKeyId = function(authOnly) {
  */
 EAC20.decodeDocumentNumber = function(mrz) {
 	if (mrz.length == 88) {			// Two line MRZ
-		var docno = mrz.substr(44, 20);
+		var docno = mrz.substr(44, 10);
 	} else {						// Three line MRZ
 		if (mrz.charAt(14) == "<") {
 			var sep = mrz.indexOf("<", 15);
