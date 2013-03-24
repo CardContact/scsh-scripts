@@ -92,7 +92,7 @@ function savePicture(dg2) {
 	var offset = bin.find(new ByteString("0000000C6A5020200D0A870A", HEX));
 
 	if (offset >= 0) {
-		writeFileOnDisk("face.jp2", bin.bytes(offset2));
+		writeFileOnDisk("face.jp2", bin.bytes(offset));
     } else {
 		var offset = bin.find(new ByteString("FFD8", HEX));
 	
