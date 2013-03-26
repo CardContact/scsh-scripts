@@ -588,13 +588,17 @@ ChipAuthentication.prototype.decodeEphemeralPublicKey = function(encodedKey) {
  * @param {ByteString} publicKey the public key in encoded format
  */
 ChipAuthentication.prototype.performKeyAgreement = function(publicKey, nonce) {
-	if (publicKey.byteAt(0) != 0x04) 
+	if (publicKey.byteAt(0) != 0x04)
 		throw new GPError("ChipAuthentication", GPError.INVALID_DATA, 0, "Public key must start with '04'");
 
 	if ((nonce != undefined) && !(nonce instanceof ByteString))
 		throw new GPError("ChipAuthentication", GPError.INVALID_TYPE, 0, "nonce must be of type ByteString");
 
 	var l = (publicKey.length - 1) >> 1;
+	if (l != this.prkCA.getComponent(Key.ECC_P).length) {
+		throw new GPError("ChipAuthentication", GPError.INVALID_DATA, 0, "Public key size does not match private key size");
+	}
+
 	this.otherPuK = new Key(this.domparam);
 	this.otherPuK.setComponent(Key.ECC_QX, publicKey.bytes(    1, l));
 	this.otherPuK.setComponent(Key.ECC_QY, publicKey.bytes(l + 1, l));

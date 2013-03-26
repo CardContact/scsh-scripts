@@ -266,7 +266,7 @@ PACE.prototype.deriveKey = function(input, counter, nonce) {
 		var digest = this.crypto.digest(Crypto.SHA_256, input);
 		key.setComponent(Key.AES, digest);
 	} else {
-		throw new GPError("pace", GPError.INVALID_MECH, 0, "Algorithm not supported");
+		throw new GPError("pace", GPError.INVALID_MECH, 0x6A80, "Algorithm not supported");
 	}
 	return key;
 }
@@ -372,11 +372,16 @@ PACE.prototype.getMappingData = function() {
  */
 PACE.prototype.performMapping = function(mappingData) {
 	if (mappingData.byteAt(0) != 0x04) 
-		throw new GPError("PACE", GPError.INVALID_DATA, 0, "Public key must start with '04'");
+		throw new GPError("PACE", GPError.INVALID_DATA, 0x6A80, "Public key must start with '04'");
 
 	if (typeof(this.nonce) == "undefined")
-		throw new GPError("PACE", GPError.INVALID_MECH, 0, "Nonce is not yet defined");
+		throw new GPError("PACE", GPError.INVALID_MECH, 0x6985, "Nonce is not yet defined");
 
+	var l = (mappingData.length - 1) >> 1;
+	if (l != this.prk.getComponent(Key.ECC_P).length) {
+		throw new GPError("PACE", GPError.INVALID_DATA, 0, "Public key size does not match private key size");
+	}
+	
 	var h = this.crypto.decrypt(this.prk, Crypto.ECDHP, mappingData.bytes(1));
 	
 	var l = h.length >> 1;
@@ -424,12 +429,16 @@ PACE.prototype.getEphemeralPublicKey = function() {
  */
 PACE.prototype.performKeyAgreement = function(publicKey) {
 	if (publicKey.byteAt(0) != 0x04) 
-		throw new GPError("PACE", GPError.INVALID_DATA, 0, "Public key must start with '04'");
+		throw new GPError("PACE", GPError.INVALID_DATA, 0x6A80, "Public key must start with '04'");
 
 	if (typeof(this.nonce) == "undefined")
-		throw new GPError("PACE", GPError.INVALID_MECH, 0, "Nonce is not yet defined");
+		throw new GPError("PACE", GPError.INVALID_MECH, 0x6985, "Nonce is not yet defined");
 
 	var l = (publicKey.length - 1) >> 1;
+	if (l != this.prk.getComponent(Key.ECC_P).length) {
+		throw new GPError("PACE", GPError.INVALID_DATA, 0, "Public key size does not match private key size");
+	}
+
 	this.otherPuK = new Key(this.ephDomParam);
 	this.otherPuK.setComponent(Key.ECC_QX, publicKey.bytes(    1, l));
 	this.otherPuK.setComponent(Key.ECC_QY, publicKey.bytes(l + 1, l));
