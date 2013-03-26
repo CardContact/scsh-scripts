@@ -1071,7 +1071,6 @@ FileSelector.prototype.selectSFI = function(sfi) {
  */
 FileSelector.prototype.processSelectAPDU = function(apdu) {
 	var node;
-	var reponse;
 
 	var p2 = apdu.getP2();
 	if ((p2 != 0x00) && (p2 != 0x04) && (p2 != 0x0C)) {

@@ -392,6 +392,11 @@ CommandInterpreter.prototype.dispatch = function(apdu, ins) {
 		apdu.setSW(APDU.SW_INVCLA);
 		return;
 	}
+
+	if (apdu.isChained()) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CHAINNOTSUPPORTED, "Chaining not supported");
+	}
+
 	switch(ins) {
 		case APDU.INS_SELECT:
 			this.fileSelector.processSelectAPDU(apdu);
@@ -438,6 +443,11 @@ CommandInterpreter.prototype.processAPDU = function(apdu) {
 		var tlv = (ins & 1) == 1;
 		ins &= 0xFE;
 		
+		var ac = this.fileSelector.getMeta("accessController");
+		if (ac && !ac.checkCommandAccess(this, apdu)) {
+			throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_SECSTATNOTSAT, "Command not allowed as determined by " + ac);
+		}
+
 		this.dispatch(apdu, ins);
 	}
 	catch(e) {

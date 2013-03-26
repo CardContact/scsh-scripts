@@ -64,6 +64,19 @@ AccessController.prototype.checkFileWriteAccess = function(ci, apdu, node) {
 
 
 
+/**
+ * Check if command is allowed
+ *
+ * @param {APDU} apdu the APDU to check
+ * @type boolean
+ * @return true if access is allowed
+ */
+AccessController.prototype.checkCommandAccess = function(ci, apdu) {
+	return true;
+}
+
+
+
 AccessController.prototype.toString = function() {
 	return this.name;
 }

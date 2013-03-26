@@ -183,15 +183,19 @@ TrustAnchor.prototype.updateEFCVCA = function(dataProvider) {
  * @param {CVC} issuer the issuing certificate
  * @param {CVC} subject the subjects certificate
  * @param {Object} dataProvider object implementing getDate(), setDate() and updateEFCVCA()
+ * @param {Key} dp domain parameter for checking the public key
  */
-TrustAnchor.prototype.checkCertificate = function(issuer, subject, dataProvider) {
+TrustAnchor.prototype.checkCertificate = function(issuer, subject, dataProvider, dp) {
 	// Some basic sanity checks
 	if (subject.getCXD().valueOf() < subject.getCED().valueOf()) {
 		throw new GPError("TrustAnchor", GPError.INVALID_DATA, APDU.SW_INVDATA, "Certificate expiration is before effective date");
 	}
 	
 	try	{
-		subject.getPublicKey();
+		var puk = subject.getPublicKey(dp);
+		if (puk.getComponent(Key.ECC_QX).length + puk.getComponent(Key.ECC_QY).length != (puk.getComponent(Key.ECC_P).length << 1)) {
+			throw new GPError("TrustAnchor", GPError.INVALID_DATA, APDU.SW_INVDATA, "Invalid public key");
+		}
 	}
 	catch(e) {
 		throw new GPError("TrustAnchor", GPError.INVALID_DATA, APDU.SW_INVDATA, e.message);
@@ -269,7 +273,7 @@ TrustAnchor.prototype.validateCertificateIssuedByCVCA = function(crypto, cert, d
 	if (!puk || !cert.verifyWith(crypto, puk, cc.getPublicKeyOID())) {
 		throw new GPError("TrustAnchor", GPError.INVALID_DATA, APDU.SW_INVDATA, "Could not verify certificate signature");
 	}
-	this.checkCertificate(cc, cert, dataProvider);
+	this.checkCertificate(cc, cert, dataProvider, puk);
 }
 
 
@@ -288,5 +292,5 @@ TrustAnchor.prototype.validateCertificateIssuedByDVCA = function(crypto, cert, d
 	if (!dp || !cert.verifyWith(crypto, dvca.getPublicKey(dp), dvca.getPublicKeyOID())) {
 		throw new GPError("TrustAnchor", GPError.INVALID_DATA, APDU.SW_INVDATA, "Could not verify certificate signature");
 	}
-	this.checkCertificate(dvca, cert, dataProvider);
+	this.checkCertificate(dvca, cert, dataProvider, dvca.getPublicKey(dp));
 }
