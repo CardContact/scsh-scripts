@@ -180,6 +180,22 @@ ePassAccessController.prototype.checkRight = function(ci, apdu, bit) {
 
 
 /**
+ * Check if command is allowed
+ *
+ * @param {APDU} apdu the APDU to check
+ * @type boolean
+ * @return true if access is allowed
+ */
+ePassAccessController.prototype.checkCommandAccess = function(ci, apdu) {
+	if ((apdu.getINS() == 0xA4) && (apdu.getP1() != 0x04)) {
+		return apdu.isSecureMessaging();
+	}
+	return true;
+}
+
+
+
+/**
  * Create an access controller for the eID application
  * @Class Class implementing an access controller for the eID application
  * @constructor

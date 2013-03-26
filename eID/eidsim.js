@@ -77,6 +77,7 @@ privChipAuthenticationDomainParameterInfo.keyId = 17;
 
 var groupCAPrk = new Key("kp_prk_GroupCAKey.xml");
 var groupCAPuk = new Key("kp_puk_GroupCAKey.xml");
+groupCAPrk.setComponent(Key.ECC_CURVE_OID, groupCAPrk.getComponent(Key.ECC_CURVE_OID));
 
 var chipAuthenticationPublicKeyInfo = new ChipAuthenticationPublicKeyInfo();
 chipAuthenticationPublicKeyInfo.protocol = new ByteString("id-PK-ECDH", OID);
@@ -92,6 +93,7 @@ chipAuthenticationPublicKeyInfoDG14.publicKey = groupCAPuk;
 
 var chipCAPrk = new Key("kp_prk_UniqueCAKey.xml");
 var chipCAPuk = new Key("kp_puk_UniqueCAKey.xml");
+chipCAPrk.setComponent(Key.ECC_CURVE_OID, chipCAPrk.getComponent(Key.ECC_CURVE_OID));
 
 var privChipAuthenticationPublicKeyInfo = new ChipAuthenticationPublicKeyInfo();
 privChipAuthenticationPublicKeyInfo.protocol = new ByteString("id-PK-ECDH", OID);
@@ -192,7 +194,7 @@ var chipSecurity = new ASN1(ASN1.SET,
 print("ChipSecurity:");
 print(chipSecurity);
 
-var dg14 = new ASN1(0x64,
+var dg14 = new ASN1(0x6E,
 					new ASN1(ASN1.SET,
 							terminalAuthenticationInfoDG14,
 							chipAuthenticationInfoDG14.toTLV(),
@@ -308,27 +310,33 @@ eIDSimulation.prototype.createFileSystem = function() {
 
 	pacepin.unblockAuthenticationObject = pacepuk;
 
-	var efCVCA = new TransparentEF(FCP.newTransparentEF("011C", 0x1C, 100),		// EF.CVCA
-								(new ASN1(0x42, new ByteString("UTISCVCA00001", ASCII))).getBytes().concat(new ByteString("00", HEX)));
+	var binCVCA = (new ASN1(0x42, new ByteString("UTISCVCA00001", ASCII))).getBytes();
+	var binCVCA = binCVCA.concat((new ByteString("000000000000000000000000000000000000000000000000000000000000000000000000", HEX)).bytes(binCVCA.length));
+	var efCVCA = new TransparentEF(FCP.newTransparentEF("011C", 0x1C, 36), binCVCA);			// EF.CVCA
 
 	this.mf.addMeta("efCVCA", efCVCA);
 
+	var com = (new ASN1(0x60, 
+					new ASN1(0x5F01, new ByteString("0107", ASCII)),
+					new ASN1(0x5F36, new ByteString("040000", ASCII)),
+					new ASN1(0x5C, new ByteString("6175637664", HEX))
+				)).getBytes();
 	var dg1 = (new ASN1(0x61, new ASN1(0x5F1F, new ByteString(mrz, ASCII)))).getBytes();
 	print(dg1);
 	
 	var dFePass = 		new DF(FCP.newDF(null, new ByteString("A0000002471001", HEX)),
 							new TransparentEF(FCP.newTransparentEF("011E", 0x1E, 100),		// EF.COM
-								new ByteString("7E00", HEX)),
+								com),
 							new TransparentEF(FCP.newTransparentEF("011D", 0x1D, 100),		// EF.SOD
-								new ByteString("7D00", HEX)),
+								new ByteString("77050123456789", HEX)),
 							new TransparentEF(FCP.newTransparentEF("0101", 0x01, 100),		// EF.DG1
 								dg1),
 							new TransparentEF(FCP.newTransparentEF("0102", 0x02, 100),		// EF.DG2
-								new ByteString("6200", HEX)),
+								new ByteString("75037F6101AA", HEX)),
 							new TransparentEF(FCP.newTransparentEF("0103", 0x03, 100),		// EF.DG3
-								new ByteString("6300", HEX)),
+								new ByteString("63037F6101AA", HEX)),
 							new TransparentEF(FCP.newTransparentEF("0104", 0x04, 100),		// EF.DG4
-								new ByteString("6400", HEX)),
+								new ByteString("76037F6101AA", HEX)),
 							new TransparentEF(FCP.newTransparentEF("010E", 0x0E, 100),		// EF.DG14
 								dg14.getBytes()),
 							efCVCA

@@ -46,6 +46,7 @@ function eIDCommandInterpreter(fileSelector) {
 	this.trustedDVCA = null;
 	this.trustedTerminal = null;
 	this.effectiveRights = null;
+	this.lastINS = 0;
 }
 
 
@@ -159,6 +160,10 @@ eIDCommandInterpreter.prototype.performPACE = function(apdu) {
 	var response = new ASN1(0x7C);
 
 	if (a.elements == 0) {		// 1st General Authenticate
+		if (!apdu.isChained()) {
+			throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "Command must be chained");
+		}
+		
 		var se = this.fileSelector.getSecurityEnvironment().VEXK;
 
 		if (!se.t.AT) {
@@ -219,9 +224,12 @@ eIDCommandInterpreter.prototype.performPACE = function(apdu) {
 
 		switch(a.tag) {
 		case 0x81:
-			if (!this.pace.hasNonce())
-				throw new GPError("EACSIM", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "Invalid sequence. First GA missing");
+			if (!apdu.isChained())
+				throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "Command must be chained");
 
+			if ((this.lastINS != APDU.INS_GENERAL_AUTHENTICATE) || !this.pace.hasNonce())
+				throw new GPError("EACSIM", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "Invalid sequence. First GA missing");
+			
 			if (this.pace.hasMapping())
 				throw new GPError("EACSIM", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "Invalid sequence. Steps was already performed");
 
@@ -234,7 +242,10 @@ eIDCommandInterpreter.prototype.performPACE = function(apdu) {
 			this.pace.performMapping(a.value);
 			break;
 		case 0x83:
-			if (!this.pace.hasMapping())
+			if (!apdu.isChained())
+				throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "Command must be chained");
+			
+			if ((this.lastINS != APDU.INS_GENERAL_AUTHENTICATE) || (!this.pace.hasMapping()))
 				throw new GPError("EACSIM", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "Invalid sequence. Second GA missing");
 			
 			if (a.value.byteAt(0) != 0x04) 
@@ -249,6 +260,12 @@ eIDCommandInterpreter.prototype.performPACE = function(apdu) {
 			this.pace.performKeyAgreement(a.value);
 			break;
 		case 0x85:
+			if (apdu.isChained())
+				throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_LASTCMDEXPECTED, "Last PACE command must not be chained");
+			
+			if (this.lastINS != APDU.INS_GENERAL_AUTHENTICATE)
+				throw new GPError("EACSIM", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "Invalid sequence. Second GA missing");
+
 			if (!this.pace.verifyAuthenticationToken(a.value)) {
 				var sw = APDU.SW_WARNINGNVCHG;
 				if (this.paceao.initialretrycounter) {
@@ -266,7 +283,6 @@ eIDCommandInterpreter.prototype.performPACE = function(apdu) {
 
 			response.add(new ASN1(0x86, authToken));
 			if (this.chat) {
-				// ToDo: Refactor to use TrustAnchor objects
 				var pkiid = this.chat.get(0).value.right(1).toUnsigned();
 				var anchor = this.fileSelector.getObject(TrustAnchor.TYPE, pkiid);
 				if (!anchor) {
@@ -343,6 +359,14 @@ eIDCommandInterpreter.prototype.performChipAuthenticationV1 = function(apdu) {
 	var a = new ASN1(0x30, apdu.getCData());
 	a = new ASN1(a.getBytes());
 
+	if ((a.elements == 0) || (a.elements > 2)) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_INVDATA, "Command data must contain 1..2 TLV elements");
+	}
+
+	if (a.get(0).tag != 0x91) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_INVDATA, "Public key data elements must have tag '91'");
+	}
+
 	var chipAuthenticationInfo = this.fileSelector.getMeta("chipAuthenticationInfo");
 	var chipAuthenticationPublicKey = this.fileSelector.getMeta("chipAuthenticationPublicKey");
 	var chipAuthenticationPrivateKey = this.fileSelector.getMeta("chipAuthenticationPrivateKey");
@@ -356,7 +380,10 @@ eIDCommandInterpreter.prototype.performChipAuthenticationV1 = function(apdu) {
 
 	ca.setKeyPair(chipAuthenticationPrivateKey, chipAuthenticationPublicKey);
 
-	ca.performKeyAgreement(a.get(0).value);
+	var puk = a.get(0).value;
+	ca.performKeyAgreement(puk);
+
+	this.idIFD = puk.bytes(1).left(puk.length >> 1);
 
 	var sm = new SecureChannel(this.crypto);
 	sm.setMacKey(ca.kmac);
@@ -375,6 +402,10 @@ eIDCommandInterpreter.prototype.performChipAuthenticationV1 = function(apdu) {
  * @param {APDU} the apdu
  */
 eIDCommandInterpreter.prototype.performChipAuthenticationV2 = function(apdu) {
+
+	if (apdu.isChained()) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CHAINNOTSUPPORTED, "Chaining not supported in GENERAL AUTHENTICATE for chip authentication");
+	}
 
 	var a = new ASN1(apdu.getCData());
 	var response = new ASN1(0x7C);
@@ -600,6 +631,10 @@ eIDCommandInterpreter.prototype.externalAuthenticateForTA = function(apdu, se) {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_INCP1P2, "Invalid P1 or P2");
 	}
 
+	if (!apdu.isSecureMessaging()) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "Terminal authentication can only be performed with secure messaging");
+	}
+
 	if (this.isAuthenticatedTerminal()) {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "Terminal authentication can only be performed once in a session");
 	}
@@ -650,11 +685,13 @@ eIDCommandInterpreter.prototype.externalAuthenticateForTA = function(apdu, se) {
 	var dp = rc.anchor.getPublicKeyFor(this.trustedDVCA.getCAR());
 	var puk = this.trustedTerminal.getPublicKey(dp);
 
-	var cakey = se.t.AT.find(0x91);
-	if (!cakey) {
-		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "No chip authentication ephemeral key found");
+	if (typeof(this.idIFD) == "undefined") {			// CA not already performed ? Then we do EAC 2.x
+		var cakey = se.t.AT.find(0x91);
+		if (!cakey) {
+			throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "No chip authentication ephemeral key found");
+		}
+		this.idIFD = cakey.value;
 	}
-	this.idIFD = cakey.value;
 
 	if (typeof(this.idPICC) == "undefined") {
 		this.idPICC = this.fileSelector.getMeta("idPICC");
@@ -703,6 +740,10 @@ eIDCommandInterpreter.prototype.externalAuthenticateForTA = function(apdu, se) {
  * @param {APDU} the apdu
  */
 eIDCommandInterpreter.prototype.performRestrictedIdentification = function(apdu) {
+	if (apdu.isChained()) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CHAINNOTSUPPORTED, "Chaining not supported in GENERAL AUTHENTICATE for chip authentication");
+	}
+
 	if (!apdu.hasLe()) {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_WRONGLENGTH, "Wrong length - missing Le field");
 	}
@@ -835,6 +876,10 @@ eIDCommandInterpreter.prototype.externalAuthenticateForBAC = function(apdu) {
 	
 	if (!apdu.hasCData()) {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_WRONGLENGTH, "Command requires C-data");
+	}
+
+	if ((apdu.getP1() != 0x00) || (apdu.getP2() != 0x00)) {
+		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_INCP1P2, "Invalid P1 or P2");
 	}
 
 	if (!this.challenge) {
@@ -1313,6 +1358,11 @@ eIDCommandInterpreter.prototype.computeDigitalSignature = function(apdu) {
  * @param {Number} ins the normalized instruction code
  */
 eIDCommandInterpreter.prototype.dispatch = function(apdu, ins) {
+	if (!apdu.isISO() && (ins != APDU.INS_VERIFY)) {
+		apdu.setSW(APDU.SW_INVCLA);
+		return;
+	}
+
 	switch(ins) {
 	case APDU.INS_GENERAL_AUTHENTICATE:
 		this.generalAuthenticate(apdu);
@@ -1371,4 +1421,6 @@ eIDCommandInterpreter.prototype.dispatch = function(apdu, ins) {
 	default:
 		CommandInterpreter.prototype.dispatch.call(this, apdu, ins);
 	}
+
+	this.lastINS = ins;
 }
