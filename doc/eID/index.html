@@ -64,6 +64,16 @@ provide the required settings in the loadtests.js file.</p>
 <p>The test setup uses the <a href="../icao/eacpki.html">EAC-PKI</a> available as part of the 
    <a href="http://www.cardcontact.de/products/SmartCard-HSM_V1.1.pdf">SmartCard-HSM</a> support package.</p>
 <p>Please <a href="http://www.cardcontact.de/company/contact.html">contact us</a> for a full eID / ePassport test setup.</p>
+<h2>Compliance</h2>
+<p>The simulation passes layer 6 tests of the ICAO RF Protocol and Application Test Standard for e-Passport - Part 3, version 2.01 and the AFNOR/BSI test plan for EAC with the following exceptions:</p>
+<ol>
+<li>7816_I_9 - A (0,0) public key is not detected</li>
+<li>7816_I_16 - A public key not on the curve is not detected</li>
+<li>7816_K_17 - The simulation does not check the tags during the MANAGE SE command but later in EXTERNAL AUTHENTICATE. Step 5 fails, however the security functionality is given.</li>
+<li>7816_P_05 to 7816_P_10 and 7816_P_77 - The simulation does not check the tags during the MANAGE SE command but later in GENERAL AUTHENTICATE.</li>
+<li>7816_P_30 - A public key not on the curve is not detected</li>
+<li>7816_P_75 - The simulation does not support domain parameter selection</li>
+</ol>
 <!-- #EndEditable -->
 <br>
 <p class="copyright">&copy; Copyright 2003 - 2010 <a href="http://www.cardcontact.de">CardContact</a>
