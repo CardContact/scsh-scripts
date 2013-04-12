@@ -477,4 +477,14 @@ EMVView.DE[0x9F46] = "ICC Public Key Certificate: ";
 EMVView.DE[0x9F47] = "ICC Public Key Exponent: ";
 EMVView.DE[0x9F48] = "ICC Public Key Remainder: ";
 EMVView.DE[0x9F4A] = "Static Data Authentication Tag List: ";
-
+EMVView.DE[0x9F62] = "Track 1 Bit Map for CVC3 (Paypass): ";
+EMVView.DE[0x9F63] = "Track 1 Bit Map for UN and ATC (Paypass): ";
+EMVView.DE[0x9F64] = "Track 1 Number of ATC Digits (Paypass): ";
+EMVView.DE[0x9F65] = "Track 2 Bit Map for CVC3 (Paypass): ";
+EMVView.DE[0x9F66] = "Track 2 Bit Map for UN and ATC (Paypass): ";
+EMVView.DE[0x9F67] = "Track 2 Number of ATC Digits (Paypass): ";
+EMVView.DE[0x9F68] = "Mag Stripe CVM List (Paypass): ";
+EMVView.DE[0x9F6B] = "Track 2 Data (Paypass): ";
+EMVView.DE[0x9F6C] = "Mag Stripe Application Version Number (Card) (Paypass): ";
+EMVView.DE[0x9F1F] = "Track 1 Discretionary Data: ";
+EMVView.DE[0x9F6E] = "Third Party Data: ";
