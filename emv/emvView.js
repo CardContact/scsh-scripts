@@ -68,6 +68,10 @@ EMVView.prototype.displayDataElements = function(){
  */
 EMVView.prototype.decodeDataElement = function(tag, value) {
 	switch (tag) {
+		case 0x50:
+			print("Application Label: " + value.toString(HEX) + " - " + value.toString(ASCII));
+			print("\n");
+			break;
 		case 0x57:
 			var str = value.toString(HEX);
 			if (str.charAt(str.length-1) == 'F') {
@@ -91,6 +95,7 @@ EMVView.prototype.decodeDataElement = function(tag, value) {
 			print("Application Interchange Profile: " + value.toString(HEX))
 			this.decodeAIP(value);
 			print();
+			break;
 		case 0x8C:
 			print("Card Risk Management Data Object List 1 (CDOL1): " + value.toString(HEX));
 			this.decodeDataObjectList(value);
@@ -453,7 +458,6 @@ DOL[0x9F4C] = "ICC Dynamic Number";
 
 EMVView.DE = [];
 EMVView.DE[0x4F] = "Application Identifier (AID) - card: ";
-EMVView.DE[0x50] = "Application Label: ";
 EMVView.DE[0x5A] = "Application Primary Account Number (PAN): ";
 EMVView.DE[0x5F2D] = "Language Preference: ";
 
@@ -488,3 +492,4 @@ EMVView.DE[0x9F6B] = "Track 2 Data (Paypass): ";
 EMVView.DE[0x9F6C] = "Mag Stripe Application Version Number (Card) (Paypass): ";
 EMVView.DE[0x9F1F] = "Track 1 Discretionary Data: ";
 EMVView.DE[0x9F6E] = "Third Party Data: ";
+EMVView.DE[0x56] = "Track 1 Data: ";
