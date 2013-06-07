@@ -193,6 +193,66 @@ TCCConnection.prototype.getTASignature = function(keyCHR, digest) {
 
 
 /**
+ * Obtain a signature from the TCC for a hash or a block of data
+ *
+ * @param {PublicKeyReference} keyCHR the key to be used for signing
+ * @param {ByteString} digest the message digest or null if second variant is used
+ * @returns the signature as a concatenation of coordinates on the curve or null in case of error
+ * @type ByteString
+ */
+TCCConnection.prototype.getTASignature2 = function(idPICC, challengePICC, hashPK, keyCHR) {
+	
+	this.lastError = null;
+
+	var ns = new Namespace("uri:EAC-PKI-TermContr-Protocol/" + this.version);
+	var ns1 = new Namespace("uri:eacBT/" + this.version);
+	
+	var request =
+		<ns:GetTASignature xmlns:ns={ns} xmlns:ns1={ns1}>
+			<hashTBS>
+			</hashTBS>
+			<idPICC>
+			</idPICC>
+			<challengePICC>
+			</challengePICC>
+			<hashPK>
+			</hashPK>
+			<auxPCD>
+			</auxPCD>
+			<keyCHR>{keyCHR.getBytes().toString(BASE64)}</keyCHR>
+		</ns:GetTASignature>
+
+	request.idPICC.ns1::binary = <ns1:binary xmlns:ns1={ns1}>{idPICC.toString(BASE64)}</ns1:binary>;
+	request.challengePICC.ns1::binary = <ns1:binary xmlns:ns1={ns1}>{challengePICC.toString(BASE64)}</ns1:binary>;
+	request.hashPK.ns1::binary = <ns1:binary xmlns:ns1={ns1}>{hashPK.toString(BASE64)}</ns1:binary>;
+
+	if (this.verbose) {
+		GPSystem.trace(request.toXMLString());
+	}
+
+	var response = this.soapcon.call(this.url, request);
+
+	if (this.verbose) {
+		GPSystem.trace(response.toXMLString());
+	}
+	
+	var signature = null;
+	
+	if (response.Result.ns1::returnCode.toString() == "ok_signature_available") {
+		var signatureStr = response.Result.ns1::Signature.toString();
+		GPSystem.trace("Received signature from TCC: " + signatureStr);
+		signature = new ByteString(signatureStr, BASE64);
+		GPSystem.trace("Received signature from TCC: " + signature);
+	} else {
+		this.lastError = response.Result.ns1::returnCode.toString();
+	}
+
+	return signature;
+}
+
+
+
+/**
  * Perform a simple test
  */
 TCCConnection.test = function() {
