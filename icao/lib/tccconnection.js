@@ -106,11 +106,16 @@ TCCConnection.prototype.getCertificateChain = function(keyNameMRTD) {
 	var certmap = [];
 
 	if (response.Result.ns1::returnCode.toString() == "ok_cert_available") {
-		GPSystem.trace("Received certificates from TCC:");
+		if (this.verbose) {
+			GPSystem.trace("Received certificates from TCC:");
+		}
 		for each (var c in response.Result.ns1::certificateSeq.ns1::certificate) {
 			var cvc = new CVC(new ByteString(c, BASE64));
 			certmap[cvc.getCAR().toString()] = cvc;
-			GPSystem.trace(cvc);
+			if (this.verbose) {
+				GPSystem.trace(cvc.getCAR().toString());
+				GPSystem.trace(cvc);
+			}
 		}
 	} else {
 		this.lastError = response.Result.ns1::returnCode.toString();
@@ -121,10 +126,12 @@ TCCConnection.prototype.getCertificateChain = function(keyNameMRTD) {
 
 	var car = keyNameMRTD;
 	var cvc = certmap[car.toString()];
-	
+
 	while (typeof(cvc) != "undefined") {
 		certlist.push(cvc);
-		GPSystem.trace("Added: " + c);
+		if (this.verbose) {
+			GPSystem.trace("Added: " + cvc);
+		}
 		car = cvc.getCHR()
 		cvc = certmap[car.toString()]
 	}
@@ -180,9 +187,13 @@ TCCConnection.prototype.getTASignature = function(keyCHR, digest) {
 	
 	if (response.Result.ns1::returnCode.toString() == "ok_signature_available") {
 		var signatureStr = response.Result.ns1::Signature.toString();
-		GPSystem.trace("Received signature from TCC: " + signatureStr);
+		if (this.verbose) {
+			GPSystem.trace("Received signature from TCC: " + signatureStr);
+		}
 		signature = new ByteString(signatureStr, BASE64);
-		GPSystem.trace("Received signature from TCC: " + signature);
+		if (this.verbose) {
+			GPSystem.trace("Received signature from TCC: " + signature);
+		}
 	} else {
 		this.lastError = response.Result.ns1::returnCode.toString();
 	}
@@ -240,9 +251,13 @@ TCCConnection.prototype.getTASignature2 = function(idPICC, challengePICC, hashPK
 	
 	if (response.Result.ns1::returnCode.toString() == "ok_signature_available") {
 		var signatureStr = response.Result.ns1::Signature.toString();
-		GPSystem.trace("Received signature from TCC: " + signatureStr);
+		if (this.verbose) {
+			GPSystem.trace("Received signature from TCC: " + signatureStr);
+		}
 		signature = new ByteString(signatureStr, BASE64);
-		GPSystem.trace("Received signature from TCC: " + signature);
+		if (this.verbose) {
+			GPSystem.trace("Received signature from TCC: " + signature);
+		}
 	} else {
 		this.lastError = response.Result.ns1::returnCode.toString();
 	}
@@ -257,7 +272,8 @@ TCCConnection.prototype.getTASignature2 = function(idPICC, challengePICC, hashPK
  */
 TCCConnection.test = function() {
 	var c = new TCCConnection("http://localhost:8080/se/tcc");
-	
+//	var c = new TCCConnection("http://demo.openscdp.org/se/tcc");
+
 	var chr = new PublicKeyReference("UTCVCA00001");
 	var cl = c.getCertificateChain(chr);
 	
