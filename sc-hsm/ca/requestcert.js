@@ -20,6 +20,9 @@ var url = "http://devnet.cardcontact.de/se/caws";
 var userPIN = new ByteString("648219", ASCII);
 var initializationCode = new ByteString("57621880", ASCII);
 
+print("If you are behind a web proxy, then please edit the proxy settings in requestcert.js");
+// java.lang.System.setProperty("http.proxyHost", "myproxy.com");
+// java.lang.System.setProperty("http.proxyPort", "3128");
 
 
 /**
