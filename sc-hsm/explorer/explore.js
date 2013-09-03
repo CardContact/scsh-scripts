@@ -41,6 +41,7 @@ scHSMOutline.prototype.expandListener = function() {
 	var view = this.view;
 
 	try	{
+		this.factory.schsm = new SmartCardHSM(this.factory.card);
 		var files = this.factory.schsm.enumerateObjects();
 		
 		for (var i = 0; i < files.length; i += 2) {
@@ -55,7 +56,7 @@ scHSMOutline.prototype.expandListener = function() {
 				name = "Key " + fid.byteAt(1);
 			}
 			var profile = { fid: fid.toString(HEX), format: "asn1" };
-			var ef = this.factory.newOutlineEF(this.factory.schsm.df, name, profile);
+			var ef = this.factory.newOutlineEF(this.factory.schsm.card, name, profile);
 			view.insert(ef.view);
 		}
 	}
@@ -139,8 +140,8 @@ scHSMOutlineEF.prototype.expandListener = function() {
  * Class overwriting the default CardOutlineFactory
  *
  */
-function scHSMCardOutlineFactory(schsm) {
-	this.schsm = schsm;
+function scHSMCardOutlineFactory(card) {
+	this.card = card;
 }
 
 // Inherit from prototype
@@ -206,10 +207,9 @@ af.addApplicationProfile("ap_sc_hsm.xml");
 
 // Create card object
 var card = new Card(_scsh3.reader, "cp_sc_hsm.xml");
-var schsm = new SmartCardHSM(card);
 
 // Create card outline factory
-var of = new scHSMCardOutlineFactory(schsm);
+var of = new scHSMCardOutlineFactory(card);
 
 // Create list of AIDs, just in case the EF.DIR is empty
 // This is just temporary to make sure the explorer works

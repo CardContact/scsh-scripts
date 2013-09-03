@@ -24,7 +24,15 @@
  * @param {Card} card the card object
  */ 
 function SmartCardHSM(card) {
-	this.df = new CardFile(card, "#E82B0601040181C31F0201");
+	this.card = card;
+	this.maxAPDU = 1000;
+//	this.maxAPDU = 255;				// Enable for MicroSD card or set in calling application
+
+	// Check if SmartCard-HSM is already selected
+	this.card.sendSecMsgApdu(Card.ALL, 0x00, 0x20, 0x00, 0x81);
+	if ((this.card.SW == 0x6E00) || ((this.card.SW == 0x6900))) {
+		this.logout();		// Select application
+	}
 
 	this.namemap = [];
 	this.idmap = [];
@@ -73,7 +81,8 @@ SmartCardHSM.validateCertificateChain = function(crypto, devAutCert) {
 			print("Device certificate verification failed for CAR=DECA00001");
 			return null;
 		}
-		return { devicecert: cvc, publicKey:cvc.getPublicKey() };
+		var path = "/" + cvc.getCAR().getHolder() + "/" + cvc.getCHR().getHolder();
+		return { devicecert: cvc, publicKey:cvc.getPublicKey(), path:path };
 	}
 
 	// Decode device issuer certificate
@@ -98,7 +107,8 @@ SmartCardHSM.validateCertificateChain = function(crypto, devAutCert) {
 		return null;
 	}
 
-	return { srca: srca, dica: dica, devicecert: cvc, publicKey:cvc.getPublicKey(srcapuk) };
+	var path = "/" + srca.getCHR().getHolder() + "/" + dica.getCHR().getHolder() + "/" + cvc.getCHR().getHolder();
+	return { srca: srca, dica: dica, devicecert: cvc, publicKey:cvc.getPublicKey(srcapuk), path:path };
 }
 
 
@@ -142,13 +152,13 @@ SmartCardHSM.prototype.openSecureChannel = function(crypto, devAuthPK) {
 	var bb = new ByteBuffer();
 	bb.append(new ASN1(0x80, protocol).getBytes());
 
-	this.df.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x22, 0x41, 0xA4, bb.toByteString(), [0x9000]);
+	this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x22, 0x41, 0xA4, bb.toByteString(), [0x9000]);
 
 	var ephemeralPublicKeyIfd = ca.getEphemeralPublicKey();
 
 	var dado = new ASN1(0x7C, new ASN1(0x80, ephemeralPublicKeyIfd));
 
-	var dadobin = this.df.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO|Card.RENC, 0x00, 0x86, 0x00, 0x00, dado.getBytes(), 0, [0x9000]);
+	var dadobin = this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO|Card.RENC, 0x00, 0x86, 0x00, 0x00, dado.getBytes(), 0, [0x9000]);
 
 //	print(dadobin);
 
@@ -181,7 +191,7 @@ SmartCardHSM.prototype.openSecureChannel = function(crypto, devAuthPK) {
 	sm.setMacKey(ca.kmac);
 	sm.setMACSendSequenceCounter(new ByteString("0000000000000000", HEX));
 
-	this.df.setCredential(CardFile.ALL, Card.ALL, sm);
+	this.card.setCredential(sm);
 	return sm;
 }
 
@@ -195,11 +205,22 @@ SmartCardHSM.prototype.openSecureChannel = function(crypto, devAuthPK) {
  * @param {ByteString} data the data to write
  */
 SmartCardHSM.prototype.updateBinary = function(fid, offset, data) {
-	var t54 = new ASN1(0x54, ByteString.valueOf(offset, 2));
-	var t53 = new ASN1(0x53, data);
-	
-	var cdata = t54.getBytes().concat(t53.getBytes());
-	this.df.sendSecMsgApdu(Card.ALL, 0x00, 0xD7, fid.byteAt(0), fid.byteAt(1), cdata, [0x9000]);
+
+	var bytesLeft = data.length;
+	var offset = 0;
+
+	while (bytesLeft > 0) {
+		var toSend = bytesLeft >= this.maxAPDU ? this.maxAPDU : bytesLeft;
+
+		var t54 = new ASN1(0x54, ByteString.valueOf(offset, 2));
+		var t53 = new ASN1(0x53, data.bytes(offset, toSend));
+
+		var cdata = t54.getBytes().concat(t53.getBytes());
+		this.card.sendSecMsgApdu(Card.ALL, 0x00, 0xD7, fid.byteAt(0), fid.byteAt(1), cdata, [0x9000]);
+
+		bytesLeft -= toSend;
+		offset += toSend;
+	}
 }
 
 
@@ -217,12 +238,34 @@ SmartCardHSM.prototype.readBinary = function(fid, offset, length) {
 	if (typeof(offset) == "undefined") {
 		offset = 0;
 	}
-	if (typeof(length) == "undefined") {
-		length = 65536;
-	}
-	
-	var t54 = new ASN1(0x54, ByteString.valueOf(offset, 2));
-	return this.df.sendSecMsgApdu(Card.ALL, 0x00, 0xB1, fid.byteAt(0), fid.byteAt(1), t54.getBytes(), length, [0x9000]);
+
+	var rsp = new ByteBuffer();
+	do	{
+		var t54 = new ASN1(0x54, ByteString.valueOf(offset, 2));
+
+		if (length) {					// Is a length defined ?
+			var le = length > this.maxAPDU ? this.maxAPDU : length;			// Truncate if larger than maximum APDU size ?
+		} else {
+			var le = this.maxAPDU < 256 ? 0 : 65536;						// Get all with Le=0 in either short or extended APDU mode
+		}
+
+		var data = this.card.sendSecMsgApdu(Card.ALL, 0x00, 0xB1, fid.byteAt(0), fid.byteAt(1), t54.getBytes(), le, [0x9000, 0x6282]);
+
+		rsp.append(data);
+		offset += data.length;
+
+		if (le == 65536) {				// Only a single command required when send as extended length APDU
+			break;
+		}
+		if (length) {					// Length was defined, see if we already got everything
+			length -= data.length;
+			if (length <= 0) {
+				break;
+			}
+		}
+	} while ((this.card.SW == 0x9000) && (data.length > 0));
+
+	return rsp.toByteString();
 }
 
 
@@ -233,7 +276,7 @@ SmartCardHSM.prototype.readBinary = function(fid, offset, length) {
  * @param {ByteString} fid the two byte file object identifier
  */
 SmartCardHSM.prototype.deleteFile = function(fid) {
-	return this.df.sendSecMsgApdu(Card.ALL, 0x00, 0xE4, 0x02, 0x00, fid, [0x9000]);
+	return this.card.sendSecMsgApdu(Card.ALL, 0x00, 0xE4, 0x02, 0x00, fid, [0x9000]);
 }
 
 
@@ -406,7 +449,7 @@ SmartCardHSM.buildPrkDforRSA = function(keyid, label, modulussize) {
 							new ASN1(ASN1.SEQUENCE,
 								new ASN1(ASN1.OCTET_STRING, new ByteString("", HEX))
 							),
-						new ASN1(ASN1.INTEGER, ByteString.valueOf(modulussize))
+							new ASN1(ASN1.INTEGER, ByteString.valueOf(modulussize))
 						)
 					)
 				);
@@ -442,7 +485,14 @@ SmartCardHSM.dumpKeyData = function(keydata) {
  * @return the certificate signing request containing the new public key
  */
 SmartCardHSM.prototype.generateAsymmetricKeyPair = function(newkid, signkid, keydata) {
-	var rsp = this.df.sendSecMsgApdu(Card.ALL, 0x00, 0x46, newkid, signkid, keydata, 65536, [0x9000]);
+
+	if (this.maxAPDU > 255) { // Use extended length
+		var rsp = this.card.sendSecMsgApdu(Card.ALL, 0x00, 0x46, newkid, signkid, keydata, 65536, [0x9000]);
+	} else {
+		this.card.sendSecMsgApdu(Card.ALL, 0x00, 0x46, newkid, signkid, keydata, [0x9000]);
+		var rsp = this.readBinary(ByteString.valueOf(0xCE00 + newkid), 0);
+	}
+
 	return rsp;
 }
 
@@ -468,7 +518,7 @@ SmartCardHSM.prototype.initDevice = function(options, initialPIN, initialization
 	if (typeof(keyshares) != "undefined") {
 		s.add(new ASN1(0x92, ByteString.valueOf(keyshares)));
 	}
-	this.df.sendSecMsgApdu(Card.ALL, 0x80, 0x50, 0x00, 0x00, s.value, [0x9000]);
+	this.card.sendSecMsgApdu(Card.ALL, 0x80, 0x50, 0x00, 0x00, s.value, [0x9000]);
 }
 
 
@@ -482,14 +532,14 @@ SmartCardHSM.prototype.initDevice = function(options, initialPIN, initialization
  */
 SmartCardHSM.prototype.importKeyShare = function(keyshare) {
 	if (typeof(keyshare) != "undefined") {
-		var status = this.df.sendSecMsgApdu(Card.ALL, 0x80, 0x52, 0x00, 0x00, keyshare, 0);
+		var status = this.card.sendSecMsgApdu(Card.ALL, 0x80, 0x52, 0x00, 0x00, keyshare, 0);
 	} else {
-		var status = this.df.sendSecMsgApdu(Card.ALL, 0x80, 0x52, 0x00, 0x00, 0);
+		var status = this.card.sendSecMsgApdu(Card.ALL, 0x80, 0x52, 0x00, 0x00, 0);
 	}
 	if (status.length == 0) {
-		return { sw: this.df.SW };
+		return { sw: this.card.SW };
 	}
-	return { sw: this.df.SW, shares: status.byteAt(0), outstanding: status.byteAt(1), kcv: status.bytes(2) };
+	return { sw: this.card.SW, shares: status.byteAt(0), outstanding: status.byteAt(1), kcv: status.bytes(2) };
 }
 
 
@@ -502,7 +552,7 @@ SmartCardHSM.prototype.importKeyShare = function(keyshare) {
  * @return key blob with encrypted key value
  */
 SmartCardHSM.prototype.wrapKey = function(id) {
-	var keyblob = this.df.sendSecMsgApdu(Card.ALL, 0x80, 0x72, id, 0x92, 65536, [0x9000]);
+	var keyblob = this.card.sendSecMsgApdu(Card.ALL, 0x80, 0x72, id, 0x92, 65536, [0x9000]);
 	return keyblob;
 }
 
@@ -515,7 +565,7 @@ SmartCardHSM.prototype.wrapKey = function(id) {
  * @param {ByteString} keyblob the wrapped key
  */
 SmartCardHSM.prototype.unwrapKey = function(id, keyblob) {
-	this.df.sendSecMsgApdu(Card.ALL, 0x80, 0x74, id, 0x93, keyblob, [0x9000]);
+	this.card.sendSecMsgApdu(Card.ALL, 0x80, 0x74, id, 0x93, keyblob, [0x9000]);
 }
 
 
@@ -527,8 +577,8 @@ SmartCardHSM.prototype.unwrapKey = function(id, keyblob) {
  * @return the status word SW1/SW2 returned by the device
  */
 SmartCardHSM.prototype.verifyUserPIN = function(userPIN) {
-	this.df.sendSecMsgApdu(Card.ALL, 0x00, 0x20, 0x00, 0x81, userPIN);
-	return this.df.SW;
+	this.card.sendSecMsgApdu(Card.ALL, 0x00, 0x20, 0x00, 0x81, userPIN);
+	return this.card.SW;
 }
 
 
@@ -538,7 +588,7 @@ SmartCardHSM.prototype.verifyUserPIN = function(userPIN) {
  *
  */
 SmartCardHSM.prototype.logout = function() {
-	this.df = new CardFile(card, "#E82B0601040181C31F0201");
+	this.card.sendApdu(0x00, 0xA4, 0x04, 0x04, new ByteString("E82B0601040181C31F0201", HEX), [0x9000]);
 }
 
 
@@ -550,7 +600,7 @@ SmartCardHSM.prototype.logout = function() {
  * @param {ByteString} newPIN new user PIN value
  */
 SmartCardHSM.prototype.changeUserPIN = function(currentPIN, newPIN) {
-	this.df.sendSecMsgApdu(Card.ALL, 0x00, 0x24, 0x00, 0x81, currentPIN.concat(newPIN), [0x9000]);
+	this.card.sendSecMsgApdu(Card.ALL, 0x00, 0x24, 0x00, 0x81, currentPIN.concat(newPIN), [0x9000]);
 }
 
 
@@ -562,8 +612,8 @@ SmartCardHSM.prototype.changeUserPIN = function(currentPIN, newPIN) {
  * @return the status word SW1/SW2 returned by the device
  */
 SmartCardHSM.prototype.queryUserPINStatus = function() {
-	this.df.sendSecMsgApdu(Card.ALL, 0x00, 0x20, 0x00, 0x81, [0x9000, 0x63C7, 0x63C6, 0x63C5, 0x63C4, 0x63C3, 0x63C2, 0x63C1, 0x6983, 0x6984]);
-	return this.df.SW;
+	this.card.sendSecMsgApdu(Card.ALL, 0x00, 0x20, 0x00, 0x81, 0, [0x9000, 0x63C7, 0x63C6, 0x63C5, 0x63C4, 0x63C3, 0x63C2, 0x63C1, 0x6983, 0x6984]);
+	return this.card.SW;
 }
 
 
@@ -574,7 +624,7 @@ SmartCardHSM.prototype.queryUserPINStatus = function() {
  * @return the enumeration
  */
 SmartCardHSM.prototype.enumerateObjects = function() {
-	var rsp = this.df.sendSecMsgApdu(Card.ALL, 0x80, 0x58, 0x00, 0x00, 65536, [0x9000]);
+	var rsp = this.card.sendSecMsgApdu(Card.ALL, 0x80, 0x58, 0x00, 0x00, 65536, [0x9000]);
 	return rsp;
 }
 
@@ -587,7 +637,7 @@ SmartCardHSM.prototype.enumerateObjects = function() {
  * @return the random bytes
  */
 SmartCardHSM.prototype.generateRandom = function(length) {
-	var rsp = this.df.sendSecMsgApdu(Card.ALL, 0x00, 0x84, 0x00, 0x00, length, [0x9000]);
+	var rsp = this.card.sendSecMsgApdu(Card.ALL, 0x00, 0x84, 0x00, 0x00, length, [0x9000]);
 	return rsp;
 }
 
@@ -602,7 +652,7 @@ SmartCardHSM.prototype.generateRandom = function(length) {
  * @return the signature value
  */
 SmartCardHSM.prototype.sign = function(keyid, algo, data) {
-	var rsp = this.df.sendSecMsgApdu(Card.ALL, 0x80, 0x68, keyid, algo, data, 0x00, [0x9000]);
+	var rsp = this.card.sendSecMsgApdu(Card.ALL, 0x80, 0x68, keyid, algo, data, 0x00, [0x9000]);
 	return rsp;
 }
 
@@ -617,7 +667,7 @@ SmartCardHSM.prototype.sign = function(keyid, algo, data) {
  * @return the plain output
  */
 SmartCardHSM.prototype.decipher = function(keyid, algo, data) {
-	var rsp = this.df.sendSecMsgApdu(Card.ALL, 0x80, 0x62, keyid, algo, data, 0x00, [0x9000]);
+	var rsp = this.card.sendSecMsgApdu(Card.ALL, 0x80, 0x62, keyid, algo, data, 0x00, [0x9000]);
 	return rsp;
 }
 
@@ -756,7 +806,7 @@ function SmartCardHSMCrypto(crypto) {
  */
 SmartCardHSMCrypto.prototype.sign = function(key, mech, message) {
 	if (key instanceof SmartCardHSMKey) {
-		return key.sign(message);
+		return key.sign(mech, message);
 	} else {
 		return this.crypto.sign(key, mech, message);
 	}
@@ -854,13 +904,48 @@ SmartCardHSMKey.prototype.getSize = function() {
 
 /**
  * Sign data using a key in the SmartCard-HSM
- * <p>This method always uses the algorithm associated with the key</p>
+ *
  * @param {ByteString} data to be signed
+ * @param {Number} mech the signing mechanism
  * @type ByteString
  * @return the signature
  */
-SmartCardHSMKey.prototype.sign = function(data) {
-	return this.sc.sign(this.id, 0xA0, data);
+SmartCardHSMKey.prototype.sign = function(mech, data) {
+	if (mech) {
+		switch(mech) {
+		case Crypto.RSA:
+			algo = 0x20;
+			break;
+		case Crypto.RSA_SHA1:
+			algo = 0x31;
+			break;
+		case Crypto.RSA_SHA256:
+			algo = 0x33;
+			break;
+		case Crypto.RSA_PSS_SHA1:
+			algo = 0x41;
+			break;
+		case Crypto.RSA_PSS_SHA256:
+			algo = 0x43;
+			break;
+		case Crypto.ECDSA:
+			algo = 0x70;
+			break;
+		case Crypto.ECDSA_SHA1:
+			algo = 0x71;
+			break;
+		case Crypto.ECDSA_SHA224:
+			algo = 0x72;
+			break;
+		case Crypto.ECDSA_SHA256:
+			algo = 0x73;
+			break;
+		default:
+			throw new GPError("SmartCardHSMKey", GPError.INVALID_DATA, mech, "Unsupported crypto mechanism");
+		}
+	}
+
+	return this.sc.sign(this.id, algo, data);
 }
 
 
