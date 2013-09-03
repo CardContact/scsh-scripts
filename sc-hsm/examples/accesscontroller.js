@@ -11,10 +11,11 @@
  * @fileoverview Simple Physical Access Control Terminal Simulation
  *
  * <p>This simulation shows the use of a SmartCard-HSM card for physical access control. The device authentication key and cv certificate
- *    is used to authenticate the card towards the reader and establish a secure communication channel to read access control data.</p>
- * <p>If a PIN code is entered at the reader, then the code will be presented to the card using a secure communication channel
- *    established with the card resulting from the authentication step. This way the PIN can be verified locally against the card but without
- *    disclosure of the PIN value and with cryptographic proof that the verification was really performed by the card.</p>
+ *    is used to authenticate the card towards the reader and to establish a secure communication channel to read access control data.</p>
+ * <p>If a PIN code is entered at the reader, then the code will be presented to the card using the secure communication channel, 
+ *    thereby protecting the PIN code against eavesdropping at the air interface.
+ *    As the verification response from the card is protected with a message authentication code, the terminal
+ *    can proof that the verification was actually performed by the card.
  * <p>This demo requires at least the 3.7.1574 version of the Smart Card Shell.</p>
  */
  
