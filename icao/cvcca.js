@@ -77,6 +77,15 @@ function CVCCA(crypto, certstore, holderId, parentId, path) {
 
 
 
+CVCCA.prototype.getCrypto = function() {
+	if (this.crypto) {
+		return this.crypto;
+	}
+	return this.certstore.getCrypto()
+}
+
+
+
 /**
  * Returns true if this is a root CA
  *
@@ -190,13 +199,13 @@ CVCCA.prototype.generateRequestPKCS8 = function(car, forceinitial, signinitial) 
 	var nextchr = this.certstore.getNextCHR(this.path, this.countryseq);
 	
 	// Generate key pair
-	this.crypto.generateKeyPair(keyalg, puk, prk);
+	this.getCrypto().generateKeyPair(keyalg, puk, prk);
 
 	// Save private key
 	this.certstore.storePrivateKey(this.path, nextchr, prk);
 	
 	// Generate certificate request
-	var reqGenerator = new EAC2CVRequestGenerator(this.crypto);
+	var reqGenerator = new EAC2CVRequestGenerator(this.getCrypto());
 
 	// Set CPI
 	reqGenerator.setProfileIdentifier(0x00);
@@ -276,7 +285,7 @@ CVCCA.prototype.counterSignRequest = function(request) {
 	var signingTAAlgorithmIdentifier = cacvc.getPublicKeyOID();
 	var prk = this.certstore.getPrivateKey(this.path, car);
 
-	var req = EAC2CVRequestGenerator.signAuthenticatedCVRequest(this.crypto, request.getASN1(), prk, car, signingTAAlgorithmIdentifier);
+	var req = EAC2CVRequestGenerator.signAuthenticatedCVRequest(this.getCrypto(), request.getASN1(), prk, car, signingTAAlgorithmIdentifier);
 	return new CVC(req);
 }
 
@@ -344,8 +353,8 @@ CVCCA.prototype.generateCertificate = function(req, policy) {
 			maxExpDate = cacvc.getCXD();
 		}
 	}
-	
-	var generator = new EAC2CVCertificateGenerator(this.crypto);
+
+	var generator = new EAC2CVCertificateGenerator(this.getCrypto());
 	generator.setCAR(car);
 	generator.setCHR(req.getCHR());
 	var effDate = new Date();
@@ -376,7 +385,6 @@ CVCCA.prototype.generateCertificate = function(req, policy) {
 	generator.setIncludeDomainParameters(policy.includeDomainParameter);
 	generator.setExtensions(policy.extensions);
 	var prk = this.certstore.getPrivateKey(this.path, car);
-	
 	var cvc = generator.generateCVCertificate(prk, signingTAAlgorithmIdentifier);
 	
 	return cvc;
@@ -414,7 +422,7 @@ CVCCA.prototype.importCertificate = function(cert) {
 	if (this.isRootCA() && !this.isOperational()) {
 		this.certstore.storeCertificate(this.path, cert, (c == null));
 	} else {
-		if (!this.certstore.insertCertificate(this.crypto, cert, this.path)) {
+		if (!this.certstore.insertCertificate(this.getCrypto(), cert, this.path)) {
 			throw new GPError("CVCCA", GPError.CRYPTO_FAILED, 0, "Could not validate certificate");
 		}
 	}
@@ -428,7 +436,7 @@ CVCCA.prototype.importCertificate = function(cert) {
  * @param {CVC[]} certs the list of certificates
  */
 CVCCA.prototype.importCertificates = function(certs) {
-	var list = this.certstore.insertCertificates2(this.crypto, certs, true, this.path);
+	var list = this.certstore.insertCertificates2(this.getCrypto(), certs, true, this.path);
 	
 	// Process my own certificates. Should be one at maximum, matching a request
 	for (var i = 0; i < certs.length; i++) {
