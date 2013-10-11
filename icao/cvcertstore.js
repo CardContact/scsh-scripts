@@ -125,7 +125,7 @@ CVCertificateStore.loadXMLFile = function(filename) {
 	}
 	bfr.close();
 	f.close();
-	
+	default xml namespace = "";
 	return new XML(result);
 }
 
@@ -347,6 +347,7 @@ CVCertificateStore.prototype.getTerminalKeyFor = function(cvcaref) {
  * @param {Key} prk the private key
  */
 CVCertificateStore.prototype.storePrivateKey = function(path, chr, prk) {
+	default xml namespace = "";
 	var cfg = this.loadConfig(path);
 	if (cfg == null) {
 		cfg = this.getDefaultConfig(path);
@@ -464,6 +465,7 @@ CVCertificateStore.prototype.deleteRequest = function(path, chr) {
  * @param {Boolean} makeCurrent true if this certificate become the current certificate
  */
 CVCertificateStore.prototype.storeCertificate = function(path, cert, makeCurrent) {
+	default xml namespace = "";
 	var car = cert.getCAR();
 	var chr = cert.getCHR();
 	if (car.equals(chr)) {
@@ -787,6 +789,7 @@ CVCertificateStore.prototype.getDefaultPublicKeyOID = function(path) {
  * @type PublicKeyReference
  */
 CVCertificateStore.prototype.getCurrentCHR = function(path) {
+	default xml namespace = "";
 	var cfg = this.loadConfig(path);
 	if (cfg == null) {
 		return null;
@@ -810,6 +813,7 @@ CVCertificateStore.prototype.getCurrentCHR = function(path) {
  * @type PublicKeyReference
  */
 CVCertificateStore.prototype.getNextCHR = function(path, countryseq) {
+	default xml namespace = "";
 	var cfg = this.loadConfig(path);
 	if (cfg == null) {
 		cfg = this.getDefaultConfig();
@@ -1217,6 +1221,7 @@ CVCertificateStore.prototype.saveConfig = function(path, cfg) {
  * @type XML
  */
 CVCertificateStore.prototype.getDefaultConfig = function() {
+	default xml namespace = "";
 	var defaultCfg = 
 		<CAConfig>
 			<sequence>
