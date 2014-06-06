@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project name="doc" basedir="." default="applyTemplate">
 
-	<property name="jsdoc" location="C:/usr/local/jsdoc/jsdoc.pl"/>
+	<property name="jsdoc" location="jsdoc"/>
 	<property name="build" location="build"/>
 	<property name="doc" location="doc"/>
 	
@@ -11,7 +11,7 @@
 	</target>
 
 
-	<target name="applyTemplate" depends="convertJS">
+	<target name="applyTemplate" depends="convertJS,convertTutorialJS">
 		<apply executable="perl" dir="${doc}" force="true">
 			<arg value="stt.pl" />
 			<fileset dir="." includes="**/*.html"/>
@@ -76,33 +76,33 @@
 
 
 	<target name="jsdoc">
-		<apply executable="perl" addsourcefile="true" dir="${basedir}/icao" parallel="true" relative="true">
-			<arg line="${jsdoc} --directory ${doc}/icao/jsdoc" />
+		<apply executable="jsdoc" addsourcefile="true" dir="${basedir}/icao" parallel="true" relative="true">
+			<arg line="--directory=${doc}/icao/jsdoc" />
 			<!-- Collect the JS-files -->
 			<fileset dir="${basedir}/icao" includes="**/*.js"/>
 		</apply>
-		<apply executable="perl" addsourcefile="true" dir="${basedir}/cardsim" parallel="true" relative="true">
-			<arg line="${jsdoc} --directory ${doc}/cardsim/jsdoc" />
+		<apply executable="jsdoc" addsourcefile="true" dir="${basedir}/cardsim" parallel="true" relative="true">
+			<arg line="--directory=${doc}/cardsim/jsdoc" />
 			<!-- Collect the JS-files -->
 			<fileset dir="${basedir}/cardsim" includes="**/*.js"/>
 		</apply>
-		<apply executable="perl" addsourcefile="true" dir="${basedir}/eID" parallel="true" relative="true">
-			<arg line="${jsdoc} --directory ${doc}/eID/jsdoc" />
+		<apply executable="jsdoc" addsourcefile="true" dir="${basedir}/eID" parallel="true" relative="true">
+			<arg line="--directory=${doc}/eID/jsdoc" />
 			<!-- Collect the JS-files -->
 			<fileset dir="${basedir}/eID" includes="**/*.js"/>
 		</apply>
-		<apply executable="perl" addsourcefile="true" dir="${basedir}/emv" parallel="true" relative="true" verbose="true">
-			<arg line="${jsdoc} --directory '${doc}/emv/jsdoc'" />
+		<apply executable="jsdoc" addsourcefile="true" dir="${basedir}/emv" parallel="true" relative="true" verbose="true">
+			<arg line="--directory='${doc}/emv/jsdoc'" />
 			<!-- Collect the JS-files -->
 			<fileset dir="${basedir}/emv" includes="**/*.js"/>
 		</apply>
-		<apply executable="perl" addsourcefile="true" dir="${basedir}/mifare" parallel="true" relative="true" verbose="true">
-			<arg line="${jsdoc} --directory '${doc}/mifare/jsdoc'" />
+		<apply executable="jsdoc" addsourcefile="true" dir="${basedir}/mifare" parallel="true" relative="true" verbose="true">
+			<arg line="--directory='${doc}/mifare/jsdoc'" />
 			<!-- Collect the JS-files -->
 			<fileset dir="${basedir}/mifare" includes="**/*.js"/>
 		</apply>
-		<apply executable="perl" addsourcefile="true" dir="${basedir}/sc-hsm" parallel="true" relative="true" verbose="true">
-			<arg line="${jsdoc} --directory '${doc}/sc-hsm/jsdoc'" />
+		<apply executable="jsdoc" addsourcefile="true" dir="${basedir}/sc-hsm" parallel="true" relative="true" verbose="true">
+			<arg line="--directory='${doc}/sc-hsm/jsdoc'" />
 			<!-- Collect the JS-files -->
 			<fileset dir="${basedir}/sc-hsm" includes="**/*.js"/>
 		</apply>
@@ -136,6 +136,7 @@
 			<fileset dir="${doc}">
 				<include name="**/*.css"/>
 				<include name="**/*.jpg"/>
+				<include name="**/*.gif"/>
 				<include name="**/*.png"/>
 			</fileset> 
 		</copy>
@@ -152,10 +153,10 @@
 		<property name="bundlename" value="scripts-${DSTAMP}.zip"/>
 		<property name="bundle" location="released/${bundlename}"/>
 
-		<exec executable="pscp" dir="${build}/doc">
-			<arg line="-r * asc@diavola:/var/www/openscdp.org/scripts" />
+		<exec executable="scp" dir="${build}/doc">
+			<arg line="-r . asc@diavola:/var/www/openscdp.org/scripts" />
 		</exec>
-		<exec executable="pscp" dir="${basedir}">
+		<exec executable="scp" dir="${basedir}">
 			<arg line="${bundle} asc@diavola:/var/www/openscdp.org/scripts" />
 		</exec>
 	</target>
