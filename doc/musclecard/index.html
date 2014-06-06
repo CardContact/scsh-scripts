@@ -40,13 +40,10 @@
 <p><b>Please note: The MuscleCard applet is no longer actively maintained. If you are looking for a generic
    JavaCard applet with <a href="http://www.opensc-project.org/opensc/wiki/SmartCardHsm">OpenSC</a> support 
    to store RSA and ECC cryptographic keys and certificates take a look at the 
-   <a href="http://www.cardcontact.de/products/SmartCard-HSM_V1.1.pdf">SmartCard-HSM</a>.</b></p>
+   <a href="http://www.smartcard-hsm.com">SmartCard-HSM</a>.</b></p>
 <p><a href="http://www.musclecard.com/musclecard/index.html">MuscleCard</a> is an open source project hosted
 at the <a href="http://www.linuxnet.com">M.U.S.C.L.E</a> website. It aims to develop a JavaCard applet
 and supporting middleware to perform cryptographic operations like signing and encryption in a smart card.</p>
-<p>The project is still work in progress and the
-<a href="http://web.inf.tu-dresden.de/~ko189283/MuscleCard/MuscleCardArticle.html">article from Karsten Ohme</a>
-gives a good overview of the current architecture.</p>
 <p>The Script Collection contains a set of scripts to load the MuscleCard applet into a JavaCard,
 to create cryptographic keys and examples how to use them. The scripts can be used without any further tools
 installed, a working Global Platform compliant JavaCard should be sufficient.</p>
@@ -54,8 +51,7 @@ installed, a working Global Platform compliant JavaCard should be sufficient.</p
 
 <h2>Getting started</h2>
 <p>First thing you need is a working JavaCard.  The scripts have been tested with
-<a href="http://www.usasmartcard.com">JCOP 3.1, JCOP 4.1</a> and
-<a href="http://store.gemplus.com">Cyberflex 64K cards</a>.</p>
+<a href="http://cardomatic.biz/smartcards.php">JCOP 3.1, JCOP 4.1</a> and Cyberflex 64K cards.</p>
 <p>Before you start, make sure that the card manager applet in the JavaCard has been initialised with
 the Global Platform sample keys. Maybe you want to try the "gp/explore.js" script first and authenticate
 against the card (Expand the "Card Manager" node and right click on "Authenticate"). If that works, then the proper
@@ -127,9 +123,6 @@ to see the progress.</p>
 It seems, that the <a href="http://directory.fedoraproject.org/wiki/CoolKey">Redhat Coolkey Applet</a>
 is a fork of the 0.9.10 version of the orginal code. Coolkey has extended the original code and added new functions,
 but it seems to be very much tailored towards Cyberflex.</p>
-<p>Karsten Ohme also maintains a <a href="http://web.inf.tu-dresden.de/~ko189283/MuscleCard/">fork</a>
- of the 0.9.11 version, but this version seems to have a
-<a href="http://web.inf.tu-dresden.de/~ko189283/MuscleCard/MCardAppletChanges.html">quite different APDU interface</a>.</p>
 
 <h2 id="init">Applet Initialisation</h2>
 <p>After loading, the MuscleCard applet must be initialised. This is an undocumented function, normally provided
