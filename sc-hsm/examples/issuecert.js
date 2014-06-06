@@ -24,7 +24,7 @@ load("../ca/ca.js");
 load("../lib/hsmkeystore.js");
 
 // Some default values
-var userPIN = new ByteString("648218", ASCII);
+var userPIN = new ByteString("648219", ASCII);
 var initializationCode = new ByteString("57621880", ASCII);
 
 
