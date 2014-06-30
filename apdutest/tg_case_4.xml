@@ -85,7 +85,7 @@
 			assert(rsp.length == 250);
 			
 			var infoBlock = this.card.sendApdu(0x00, 0xF0, 0x00, 0x00, 0x00, [0x9000]);
-			print(infoBlock);
+			print(strInfo(infoBlock));
 				
 			]]></Script>
 	</testcase>	
@@ -107,13 +107,16 @@
 			
 			var crypto = new Crypto();			
 			
-			// Case 4 extended - send 4096 bytes, request 4096 bytes
-			var data = crypto.generateRandom(4096);
-			var rsp = this.card.sendApdu(0x00, 0xF4, 0x10, 0x00, data, 65536, [0x9000]);
-			assert(rsp.length == 4096);
+			// Case 4 extended - send this.parameter.maxAPDU bytes, request this.parameter.maxAPDU bytes
+			var data = crypto.generateRandom(this.parameter.maxAPDU);
+			var p1 = data.length >> 8;
+			var p2 = data.length & 0xFF;
+
+			var rsp = this.card.sendApdu(0x00, 0xF4, p1, p2, data, 65536, [0x9000]);
+			assert(rsp.length == this.parameter.maxAPDU);
 
 			var infoBlock = this.card.sendApdu(0x00, 0xF0, 0x00, 0x00, 0x00, [0x9000]);
-			print(infoBlock);
+			print(strInfo(infoBlock));
 				
 			]]></Script>
 	</testcase>	
@@ -163,9 +166,10 @@
 		<Script><![CDATA[
 
 			var crypto = new Crypto();
-			var data = crypto.generateRandom(4096);
-
-			for (var len = 250; len <= data.length; len++) {
+			var data = crypto.generateRandom(this.parameter.maxAPDU);
+			var incr = 1;
+			
+			for (var len = 250; len <= data.length; len += incr) {
 				var p1 = len >> 8;
 				var p2 = len & 0xFF;
 
@@ -173,7 +177,11 @@
 				assert(rsp.length == len);
 
 				var infoBlock = this.card.sendApdu(0x00, 0xF0, 0x00, 0x00, 0x00, [0x9000]);
-				print(infoBlock);
+				print(strInfo(infoBlock));
+
+				if (len > 512) {
+				      incr = 16;
+				}
 			}
 
 			]]></Script>

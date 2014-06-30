@@ -21,12 +21,12 @@
  *  along with OpenSCDP; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
- *  Load APDU test applet into JCOP card
+ *  Load APDU test applet into JCOP/JTOP card
  */
 
 load("gp/tools.js");
 
-var sdAid = new ByteString("A000000003000000", HEX);
+var sdAid = new ByteString("A000000030000000", HEX);
 
 var loadFileAid = new ByteString("E82B0601040181C31F020201", HEX);
 var moduleAid = new ByteString("E82B0601040181C31F0202", HEX);
@@ -53,7 +53,15 @@ card.reset(Card.RESET_COLD);
 
 print("Selecting card manager application...");
 
-print(sd.select());
+try {
+	print(sd.select());
+}
+catch(e) {
+	print(e);
+	var sdAid = new ByteString("A000000151000000", HEX);
+	sd.aid = sdAid;
+	print(sd.select());
+}
 
 GPAuthenticate(card, crypto, masterSENC, masterSMAC);
 

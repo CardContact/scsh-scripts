@@ -82,7 +82,7 @@
 			assert(rsp.length == 250);
 
 			var infoBlock = this.card.sendApdu(0x00, 0xF0, 0x00, 0x00, 0x00, [0x9000]);
-			print(infoBlock);	
+			print(strInfo(infoBlock));
 				
 			]]></Script>
 	</testcase>	
@@ -102,13 +102,16 @@
 		</reference>
 		<Script><![CDATA[
 			
-			// Case 2 extended - request 4096 bytes
-			var rsp = this.card.sendApdu(0x00, 0xF2, 0x10, 0x00, 65536, [0x9000]);
-			assert(rsp.length == 4096);
+			// Case 2 extended - request maxADPU bytes
+			var p1 = this.parameter.maxAPDU >> 8;
+			var p2 = this.parameter.maxAPDU & 0xFF;
+
+			var rsp = this.card.sendApdu(0x00, 0xF2, p1, p2, 65536, [0x9000]);
+			assert(rsp.length == this.parameter.maxAPDU);
 			
 			var infoBlock = this.card.sendApdu(0x00, 0xF0, 0x00, 0x00, 0x00, [0x9000]);
-			print(infoBlock);		
-				
+			print(strInfo(infoBlock));
+
 			]]></Script>
 	</testcase>	
 	
@@ -162,7 +165,7 @@
 				assert(rsp.length == len);
 
 				var infoBlock = this.card.sendApdu(0x00, 0xF0, 0x00, 0x00, 0x00, [0x9000]);
-				print(infoBlock);
+				print(strInfo(infoBlock));
 			}
 
 			]]></Script>
@@ -183,14 +186,20 @@
 		</reference>
 		<Script><![CDATA[
 			
-			for (var len = 250; len <= 4096; len++) {
+			var incr = 1;
+
+			for (var len = 250; len <= this.parameter.maxAPDU; len += incr) {
 				var p1 = len >> 8;
 				var p2 = len & 0xFF;
 				var rsp = this.card.sendApdu(0x00, 0xF2, p1, p2, 0x10000, [0x9000]);
 				assert(rsp.length == len);
 
 				var infoBlock = this.card.sendApdu(0x00, 0xF0, 0x00, 0x00, 0x00, [0x9000]);
-				print(infoBlock);
+				print(strInfo(infoBlock));
+				
+				if (len > 512) {
+					incr = 16;
+				}
 			}
 
 			]]></Script>
