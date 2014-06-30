@@ -35,8 +35,22 @@
 
 			// Select application
 			var rsp = this.card.sendApdu(0x00, 0xA4, 0x04, 0x04, aid, 0x00, [0x9000]);
-			print(new ASN1(rsp));
-			
+
+			var a = new ASN1(rsp);
+			var info = a.find(0x89).value;
+
+			var intf = info.byteAt(0) & 0xF0;
+			var intfname = "Unknown interface type";
+			if (intf == 0) {
+				intfname = "Contact interface";
+			} else if (intf == 8) {
+				intfname = "Contactless Type A";
+			} else if (intf == 7) {
+				intfname = "Contactless Type B";
+			}
+    
+			print(intfname + " with IFSC=" + info.bytes(1,2).toUnsigned() + " IFSD=" + info.bytes(3,2).toUnsigned());
+
 		]]></Script>
 	</setup>
 
@@ -132,5 +146,37 @@
 				
 			]]></Script>
 	</testcase>
+
 	
+	
+	<testcase id="010.CASE4.MAXAPDU">
+		<name>Determine maximum Case 4 APDU length</name>
+		<description>
+			<p>.</p>
+		</description>
+		<requirement>
+			<p></p>
+		</requirement>
+		<reference>
+			<p></p>
+		</reference>
+		<Script><![CDATA[
+
+			var crypto = new Crypto();
+			var data = crypto.generateRandom(4096);
+
+			for (var len = 250; len <= data.length; len++) {
+				var p1 = len >> 8;
+				var p2 = len & 0xFF;
+
+				var rsp = this.card.sendApdu(0x00, 0xF4, p1, p2, data.left(len), 65536, [0x9000]);
+				assert(rsp.length == len);
+
+				var infoBlock = this.card.sendApdu(0x00, 0xF0, 0x00, 0x00, 0x00, [0x9000]);
+				print(infoBlock);
+			}
+
+			]]></Script>
+	</testcase>
+
 </testgroup>
