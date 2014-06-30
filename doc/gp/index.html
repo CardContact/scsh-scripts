@@ -44,15 +44,16 @@
 <p>Scripts for the card manager application on JavaCards are located in the <code>gp</code> directory.</p>
 <p>The following scripts are provided:</p>
 <ul>
-<li><a href="explore.html">explore.js</a> - Create outline view and obtain information from Card Manager application</li>
+<li>explore_jcop.js - Create outline view and obtain information from JCOP Card Manager</li>
+<li>explore_jtop.js - Create outline view and obtain information from JTOP Card Manager</li>
 </ul>
 <p>You can run a script by entering <code>load("gp/&lt;scriptname&gt;")</code>, e.g.</p>
 <pre>
-&gt; load("gp/explore.js");
+&gt; load("gp/explore_jcop.js");
 </pre>
 <p>or by selecting the script in the "File" / "Run Script" dialog.</p>
 <h2>explore.js</h2>
-<p>The script selects the default card manager (AID = A000000003000000) and displays
+<p>The script selects the default card manager (AID = A000000003000000 or A000000151000000) and displays
    informations available through the GET DATA and GET STATUS APDUs.</p>
 <p>An authentication procedure can be started by selecting "Authenticate" from the context
    menu attached to the Card Manager entry. The authentication procedure uses the

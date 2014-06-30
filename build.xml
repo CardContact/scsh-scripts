@@ -11,7 +11,7 @@
 	</target>
 
 
-	<target name="applyTemplate" depends="convertJS,convertTutorialJS">
+	<target name="applyTemplate" depends="">
 		<apply executable="perl" dir="${doc}" force="true">
 			<arg value="stt.pl" />
 			<fileset dir="." includes="**/*.html"/>
@@ -20,58 +20,6 @@
 		<delete>
 			<fileset dir="." includes="**/*.html~" defaultexcludes="false"/>
 		</delete>
-	</target>
-
-
-	<target name="convertJS">
-		<apply executable="perl" addsourcefile="false" dir="${basedir}">
-			<arg value="${doc}/js2html.pl" />
-			<arg value="templatesubdir.dwt" />
-			<!-- Collect the JS-files -->
-			<fileset dir="${basedir}">
-				<include name="**/*.js"/>
-				<exclude name="eID/**"/>
-				<exclude name="emv/**"/>
-				<exclude name="icao/**"/>
-				<exclude name="sc-hsm/**"/>
-				<exclude name="cardsim/**"/>
-				<exclude name="build/**"/>
-				<exclude name="tutorial/**"/>
-				<exclude name="perso/**"/>
-				<exclude name="globaltester/**"/>
-				<exclude name="mifare/**"/>
-				<exclude name="apdutest/**"/>
-				<exclude name=".settings.js"/>
-			</fileset>
-
-			<redirector>
-				<!-- redirect STDIN; fileset collects relative to its dir, but we need -->
-				<!-- relative to basedir -->
-				<inputmapper type="identity"/>
-				<!-- redirect STDOUT to file in dest-dir -->
-				<outputmapper type="glob" from="*.js" to="${doc}/*.html"/>
-			</redirector>
-		</apply>
-	</target>
-
-
-	<target name="convertTutorialJS">
-		<apply executable="perl" addsourcefile="false" dir="${basedir}">
-			<arg value="${doc}/js2html.pl" />
-			<arg value="templatesubsubdir.dwt" />
-			<!-- Collect the JS-files -->
-			<fileset dir="${basedir}">
-				<include name="tutorial/**/*.js"/>
-			</fileset>
-
-			<redirector>
-				<!-- redirect STDIN; fileset collects relative to its dir, but we need -->
-				<!-- relative to basedir -->
-				<inputmapper type="identity"/>
-				<!-- redirect STDOUT to file in dest-dir -->
-				<outputmapper type="glob" from="*.js" to="${doc}/*.html"/>
-			</redirector>
-		</apply>
 	</target>
 
 
@@ -91,20 +39,40 @@
 			<!-- Collect the JS-files -->
 			<fileset dir="${basedir}/eID" includes="**/*.js"/>
 		</apply>
-		<apply executable="jsdoc" addsourcefile="true" dir="${basedir}/emv" parallel="true" relative="true" verbose="true">
+		<apply executable="jsdoc" addsourcefile="true" dir="${basedir}/emv" parallel="true" relative="true">
 			<arg line="--directory='${doc}/emv/jsdoc'" />
 			<!-- Collect the JS-files -->
 			<fileset dir="${basedir}/emv" includes="**/*.js"/>
 		</apply>
-		<apply executable="jsdoc" addsourcefile="true" dir="${basedir}/mifare" parallel="true" relative="true" verbose="true">
+		<apply executable="jsdoc" addsourcefile="true" dir="${basedir}/mifare" parallel="true" relative="true">
 			<arg line="--directory='${doc}/mifare/jsdoc'" />
 			<!-- Collect the JS-files -->
 			<fileset dir="${basedir}/mifare" includes="**/*.js"/>
 		</apply>
-		<apply executable="jsdoc" addsourcefile="true" dir="${basedir}/sc-hsm" parallel="true" relative="true" verbose="true">
+		<apply executable="jsdoc" addsourcefile="true" dir="${basedir}/sc-hsm" parallel="true" relative="true">
 			<arg line="--directory='${doc}/sc-hsm/jsdoc'" />
 			<!-- Collect the JS-files -->
 			<fileset dir="${basedir}/sc-hsm" includes="**/*.js"/>
+		</apply>
+		<apply executable="jsdoc" addsourcefile="true" dir="${basedir}/eGK" parallel="true" relative="true">
+			<arg line="--directory='${doc}/eGK/jsdoc'" />
+			<!-- Collect the JS-files -->
+			<fileset dir="${basedir}/eGK" includes="**/*.js"/>
+		</apply>
+		<apply executable="jsdoc" addsourcefile="true" dir="${basedir}/geldkarte" parallel="true" relative="true">
+			<arg line="--directory='${doc}/geldkarte/jsdoc'" />
+			<!-- Collect the JS-files -->
+			<fileset dir="${basedir}/geldkarte" includes="**/*.js"/>
+		</apply>
+		<apply executable="jsdoc" addsourcefile="true" dir="${basedir}/musclecard" parallel="true" relative="true">
+			<arg line="--directory='${doc}/musclecard/jsdoc'" />
+			<!-- Collect the JS-files -->
+			<fileset dir="${basedir}/musclecard" includes="**/*.js"/>
+		</apply>
+		<apply executable="jsdoc" addsourcefile="true" dir="${basedir}/tutorial" parallel="true" relative="true">
+			<arg line="--directory='${doc}/tutorial/jsdoc'" />
+			<!-- Collect the JS-files -->
+			<fileset dir="${basedir}/tutorial" includes="**/*.js"/>
 		</apply>
 	</target>
 
@@ -149,21 +117,18 @@
 	</target>
 
 
-	<target name="publish" depends="init">
-		<property name="bundlename" value="scripts-${DSTAMP}.zip"/>
-		<property name="bundle" location="released/${bundlename}"/>
-
-		<exec executable="scp" dir="${build}/doc">
+	<target name="publish" depends="init,applyTemplate,jsdoc">
+		<exec executable="scp" dir="${basedir}/doc">
 			<arg line="-r . asc@diavola:/var/www/openscdp.org/scripts" />
-		</exec>
-		<exec executable="scp" dir="${basedir}">
-			<arg line="${bundle} asc@diavola:/var/www/openscdp.org/scripts" />
 		</exec>
 	</target>
 
 
 	<target name="clean">
 		<delete dir="${build}"/>
+		<delete includeemptydirs="true">
+			<fileset dir="${basedir}/doc" includes="**/jsdoc/**"/>
+		</delete>
 	</target>
 
 </project>
