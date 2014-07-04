@@ -250,7 +250,7 @@ function MRTDOutlineCard() {
         this.view.model = this;
         
         // Set a wrapper to receive expand() notifications from the OutlineNode object
-        this.view.expand = function() { var model = this.model; model.expand() };
+        this.view.expandListener = function() { var model = this.model; model.expand() };
 }
 
 
@@ -264,11 +264,11 @@ function MRTDOutlineCard_expand() {
                 
         var view = this.view;
 
-		//
-		// Display ATR
-		//
-		var atrnode = new OutlineATR(this.atr);
-		view.insert(atrnode.view);
+        //
+        // Display ATR
+        //
+        var atrnode = new OutlineATR(this.atr);
+        view.insert(atrnode.view);
 
         //
         // Explore files in MF
