@@ -25,7 +25,7 @@
  */ 
 function SmartCardHSM(card) {
 	this.card = card;
-	this.maxAPDU = 1000;
+	this.maxAPDU = 1000;			// Cyberjack supports 1014 byte APDUs
 //	this.maxAPDU = 255;				// Enable for MicroSD card or set in calling application
 
 	// Check if SmartCard-HSM is already selected
@@ -210,7 +210,8 @@ SmartCardHSM.prototype.updateBinary = function(fid, offset, data) {
 	var offset = 0;
 
 	while (bytesLeft > 0) {
-		var toSend = bytesLeft >= this.maxAPDU ? this.maxAPDU : bytesLeft;
+		// 15 bytes are required for CLA IN P1 P2 Lc(3) T54(4) and T53(4)
+		var toSend = bytesLeft >= this.maxAPDU - 15 ? this.maxAPDU -15 : bytesLeft;
 
 		var t54 = new ASN1(0x54, ByteString.valueOf(offset, 2));
 		var t53 = new ASN1(0x53, data.bytes(offset, toSend));
@@ -244,7 +245,7 @@ SmartCardHSM.prototype.readBinary = function(fid, offset, length) {
 		var t54 = new ASN1(0x54, ByteString.valueOf(offset, 2));
 
 		if (length) {					// Is a length defined ?
-			var le = length > this.maxAPDU ? this.maxAPDU : length;			// Truncate if larger than maximum APDU size ?
+			var le = length > this.maxAPDU - 2 ? this.maxAPDU - 2: length;			// Truncate if larger than maximum APDU size ?
 		} else {
 			var le = this.maxAPDU < 256 ? 0 : 65536;						// Get all with Le=0 in either short or extended APDU mode
 		}
