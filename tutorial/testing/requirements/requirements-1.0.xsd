@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  
+  <!--
+  targetNamespace="http://www.openscdp.org/namespaces/requirements/1.0" 
+  xmlns:tns="http://www.openscdp.org/namespaces/requirements/1.0"
+  -->
+  
+  <xs:element name="requirements">
+    <xs:complexType>
+      <xs:sequence>
+	<xs:element name="name" type="xs:string" minOccurs="1" maxOccurs="1"/>
+	<xs:element name="description" type="descriptionType" minOccurs="1" maxOccurs="1"/>
+	<xs:element name="requirement" type="requirementType" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      
+      <xs:attribute name="id" type="xs:string" use="required"></xs:attribute>
+    </xs:complexType>
+  </xs:element>
+  
+  
+  <xs:complexType name="descriptionType">
+    <xs:sequence>
+      <xs:any processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  
+  
+  <xs:complexType name="requirementType">
+    <xs:sequence>
+      <xs:element name="refines" type="refineType" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="description" type="descriptionType" minOccurs="1" maxOccurs="1"/>
+    </xs:sequence>
+    <xs:attribute name="id" type="xs:string" use="required"/>
+  </xs:complexType>
+
+
+  <xs:complexType name="refineType">
+    <xs:sequence>
+      <xs:element name="refine" minOccurs="0" maxOccurs="unbounded">
+	<xs:complexType>
+	  <xs:attribute name="source" type="xs:string" use="required"/>
+	  <xs:attribute name="id" type="xs:string" use="required"/>
+	</xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>

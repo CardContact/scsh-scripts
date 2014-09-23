@@ -41,4 +41,6 @@ var testRunner = new TestRunner("Example Test-Suite");
 testRunner.addTestProcedureFromXML("tp_example.xml");
 testRunner.addTestGroupFromXML("tg_example.xml", param);
 
+testRunner.setReportDirectory(GPSystem.mapFilename("reports", GPSystem.CWD));
+
 print("Test-Suite loaded...");

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="docreq.xsl" ?>
+<requirements
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="http://www.openscdp.org/schema/requirements-1.0.xsd"
+	id="SPEC_APP">
+	<name>Functional Specification Test Application</name>
+	<description>
+		<p>This functional specification defines the requirements for the test application.</p>
+	</description>
+  
+
+	<requirement id="REQ1">
+		<refines>
+		</refines>
+		<description>
+			<p>The system must process a request and send a positive response</p>
+		</description>
+	</requirement>
+
+	<requirement id="REQ2">
+		<refines>
+		</refines>
+		<description>
+			<p>If the input parameter is out of range, then the system must respond with error -1.</p>
+		</description>
+	</requirement>
+
+	<requirement id="REQ3">
+		<refines>
+			<refine source="SPEC_APP" id="REQ1"/>
+			<refine source="SPEC_APP" id="REQ2"/>
+		</refines>
+		<description>
+			<p>The system must log all activities</p>
+		</description>
+	</requirement>
+
+</requirements>

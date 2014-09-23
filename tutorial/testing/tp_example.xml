@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?xml-stylesheet type="text/xsl" href="doctp.xsl" ?>
+<?xml-stylesheet type="text/xsl" href="doctest.xsl" ?>
 <testprocedure 
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:noNamespaceSchemaLocation="http://www.openscdp.org/schema/testframework-1.0.xsd"
-	id="tp_example" arrayElement="teststep" arrayIndex="id">
+	xsi:noNamespaceSchemaLocation="http://www.openscdp.org/schema/testframework-1.1.xsd"
+		id="tp_example" arrayElement="teststep" arrayIndex="id">
 	<name>Examples on using the test framework</name>
 	<description>
 		<p>This is an example that explains how to write a test procedure using an XML structure.</p>
