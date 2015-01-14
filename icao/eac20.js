@@ -806,7 +806,7 @@ EAC20.prototype.performBAC = function(kenc, kmac) {
  * @param {Number} parameterId the identifier for the PACEInfo and PACEDomainParameterInfo from EF.CardInfo. Use 0 for
  *                             the default.
  * @param {Number} pwdid one of EAC20.ID_MRZ, EAC20.ID_CAN, EAC20.ID_PIN, EAC20.ID_PUK
- * @param {ByteString} pwd the PACE password
+ * @param {ByteString} pwd the PACE password or PACE key
  * @param {ASN1} chat the CHAT data object with tag 7F4C or null
  */
 EAC20.prototype.performPACE = function(parameterId, pwdid, pwd, chat) {
@@ -831,8 +831,8 @@ EAC20.prototype.performPACE = function(parameterId, pwdid, pwd, chat) {
 		domainParameter = PACEDomainParameterInfo.getStandardizedDomainParameter(parameterId);
 	}
 	
-	if (!(pwd instanceof ByteString)) {
-		throw new GPError("EAC20", GPError.INVALID_TYPE, 0, "Argument pwd must be of type ByteString");
+	if (!(pwd instanceof ByteString) && !(pwd instanceof Key)) {
+		throw new GPError("EAC20", GPError.INVALID_TYPE, 0, "Argument pwd must be of type ByteString or Key");
 	}
 	
 	if ((chat != null) && !(chat instanceof ASN1)) {
@@ -841,7 +841,11 @@ EAC20.prototype.performPACE = function(parameterId, pwdid, pwd, chat) {
 
 	
 	var pace = new PACE(this.crypto, paceinfo.protocol, domainParameter, paceinfo.version);
-	pace.setPassword(pwd);
+	if (pwd instanceof(ByteString)) {
+		pace.setPassword(pwd);
+	} else {
+		pace.setPACEKey(pwd);
+	}
 
 	// Manage SE
 	var crt = new ByteBuffer();

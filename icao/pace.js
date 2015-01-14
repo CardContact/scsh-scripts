@@ -285,6 +285,17 @@ PACE.prototype.setPassword = function(pwd) {
 
 
 /**
+ * Set the PACE key.
+ * @param {ByteString} key the PACE key
+ * @return the PACE key.
+ */
+PACE.prototype.setPACEKey = function(key) {
+	this.pacekey = key;
+}
+
+
+
+/**
  * Generate nonce and encrypt using PACE key.
  * @return the encrypted nonce
  * @type ByteString
