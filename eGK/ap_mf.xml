@@ -22,6 +22,8 @@
             <scdp:EF fid="2F01" type="T" format="asn1" name="EF.ATR" />
             <scdp:EF fid="2F03" type="T" format="asn1.cvc" name="EF.C.eGK.AUT_CVC" />
             <scdp:EF fid="2F04" type="T" format="asn1.cvc" name="EF.C.CA_eGK.CS" />
+            <scdp:EF fid="2F06" type="T" format="asn1.cvc" name="EF.C.eGK.AUT_CVC.E256" />
+            <scdp:EF fid="2F07" type="T" format="asn1.cvc" name="EF.C.CA_eGK.CS.E256" />
             <scdp:EF fid="2F00" type="LV" format="asn1.efdir" name="EF.DIR" />
             <scdp:EF fid="2F02" type="T" format="asn1" name="EF.GDO" />
             <scdp:EF fid="2F10" type="LF" format="" name="EF.Version" />

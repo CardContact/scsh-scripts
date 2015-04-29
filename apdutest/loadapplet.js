@@ -26,7 +26,7 @@
 
 load("gp/tools.js");
 
-var sdAid = new ByteString("A000000030000000", HEX);
+var sdAid = new ByteString("A000000003000000", HEX);
 
 var loadFileAid = new ByteString("E82B0601040181C31F020201", HEX);
 var moduleAid = new ByteString("E82B0601040181C31F0202", HEX);
