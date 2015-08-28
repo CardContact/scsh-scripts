@@ -1,17 +1,17 @@
 /**
  *  ---------
  * |.##> <##.|  SmartCard-HSM Support Scripts
- * |#       #|  
+ * |#       #|
  * |#       #|  Copyright (c) 2011-2012 CardContact Software & System Consulting
  * |'##> <##'|  Andreas Schwier, 32429 Minden, Germany (www.cardcontact.de)
- *  --------- 
+ *  ---------
  *
  * Consult your license package for usage terms and conditions.
- * 
+ *
  * @fileoverview SmartCard-HSM Card Service
  */
 
- if (typeof(__ScriptingServer) == "undefined") {
+if (typeof(__ScriptingServer) == "undefined") {
 	load("../../icao/cvc.js");
 	load("../../icao/chipauthentication.js");
 }
@@ -22,7 +22,7 @@
  * @class Class implementing support for SmartCard-HSM access
  * @constructor
  * @param {Card} card the card object
- */ 
+ */
 function SmartCardHSM(card) {
 	this.card = card;
 	this.maxAPDU = 1000;			// Cyberjack supports 1014 byte APDUs
@@ -88,7 +88,7 @@ SmartCardHSM.validateCertificateChain = function(crypto, devAutCert) {
 	// Decode device issuer certificate
 	var dica = new CVC(devAutCert.bytes(cvc.getASN1().size));
 	print("Device Issuer CA      : " + dica);
-	
+
 	// Determine root certificate
 	var srca = SmartCardHSM.rootCerts[dica.getCAR()];
 	print("SmartCard-HSM Root CA : " + srca);
@@ -292,7 +292,7 @@ SmartCardHSM.prototype.deleteFile = function(fid) {
 SmartCardHSM.stripLeadingZeros = function(value) {
 	var i = 0;
 	for (; (i < value.length) && (value.byteAt(i) == 0); i++);
-	
+
 	return value.right(value.length - i);
 }
 
@@ -335,11 +335,11 @@ SmartCardHSM.buildGAKPwithECC = function(innerCAR, algo, chr, dp, outerCAR, priK
 				),
 				new ASN1("CHR", 0x5F20, chr.getBytes())
 			);
-	
+
 	if (typeof(outerCAR) != "undefined") {
 		t.add(new ASN1("OuterCAR", 0x45, outerCAR.getBytes()));
 	}
-	
+
 	if (priKey != undefined) {
 		var d = new ASN1("Private Key", 0x8A, priKey.getComponent(Key.ECC_D));
 		t.get(2).add(d);
@@ -373,7 +373,7 @@ SmartCardHSM.buildGAKPwithRSA = function(innerCAR, algo, chr, keysize, outerCAR)
 				),
 				new ASN1("CHR", 0x5F20, chr.getBytes())
 			);
-	
+
 	if (typeof(outerCAR) != "undefined") {
 		t.add(new ASN1("OuterCAR", 0x45, outerCAR.getBytes()));
 	}
@@ -392,7 +392,7 @@ SmartCardHSM.buildGAKPwithRSA = function(innerCAR, algo, chr, keysize, outerCAR)
  */
 SmartCardHSM.buildPrkDforECC = function(keyid, label, keysize) {
 	var prkd = 	new ASN1(0xA0,
-					new ASN1(ASN1.SEQUENCE, 
+					new ASN1(ASN1.SEQUENCE,
 						new ASN1(ASN1.UTF8String, new ByteString(label, UTF8))
 //						new ASN1(ASN1.BIT_STRING, new ByteString("0780", HEX)),
 //						new ASN1(ASN1.OCTET_STRING, new ByteString("01", HEX))
@@ -418,7 +418,7 @@ SmartCardHSM.buildPrkDforECC = function(keyid, label, keysize) {
 		}
 		prkd.get(2).get(0).add(new ASN1(ASN1.INTEGER, tlvint));
 	}
-	
+
 //	print(prkd);
 	return prkd;
 }
@@ -436,7 +436,7 @@ SmartCardHSM.buildPrkDforECC = function(keyid, label, keysize) {
  */
 SmartCardHSM.buildPrkDforRSA = function(keyid, label, modulussize) {
 	var prkd = 	new ASN1(0x30,
-					new ASN1(ASN1.SEQUENCE, 
+					new ASN1(ASN1.SEQUENCE,
 						new ASN1(ASN1.UTF8String, new ByteString(label, UTF8))
 //						new ASN1(ASN1.BIT_STRING, new ByteString("0780", HEX)),
 //						new ASN1(ASN1.OCTET_STRING, new ByteString("01", HEX))
@@ -499,6 +499,23 @@ SmartCardHSM.prototype.generateAsymmetricKeyPair = function(newkid, signkid, key
 
 
 
+SmartCardHSM.prototype.isInitialized = function() {
+	var sw = this.queryUserPINStatus();
+	if (sw == 0x6984) {		// V1.2: Not initialized / V2.0: Transport PIN
+		var sw = this.queryInitializationCodeStatus();
+		if (sw == 0x6A88) {
+			return false;
+		}
+	} else {
+		if (sw == 0x6A88) {	// V2.0: Not initialized
+			return false;
+		}
+	}
+	return true;
+}
+
+
+
 /**
  * Initialize device and clear all keys and files
  *
@@ -515,7 +532,7 @@ SmartCardHSM.prototype.initDevice = function(options, initialPIN, initialization
 				new ASN1(0x82, initializationCode),
 				new ASN1(0x91, ByteString.valueOf(retryCounterInitial))
 				);
-	
+
 	if (typeof(keyshares) != "undefined") {
 		s.add(new ASN1(0x92, ByteString.valueOf(keyshares)));
 	}
@@ -613,7 +630,20 @@ SmartCardHSM.prototype.changeUserPIN = function(currentPIN, newPIN) {
  * @return the status word SW1/SW2 returned by the device
  */
 SmartCardHSM.prototype.queryUserPINStatus = function() {
-	this.card.sendSecMsgApdu(Card.ALL, 0x00, 0x20, 0x00, 0x81, 0, [0x9000, 0x63C7, 0x63C6, 0x63C5, 0x63C4, 0x63C3, 0x63C2, 0x63C1, 0x6983, 0x6984]);
+	this.card.sendSecMsgApdu(Card.ALL, 0x00, 0x20, 0x00, 0x81, 0);
+	return this.card.SW;
+}
+
+
+
+/**
+ * Request Initialization Code Status
+ *
+ * @type Number
+ * @return the status word SW1/SW2 returned by the device
+ */
+SmartCardHSM.prototype.queryInitializationCodeStatus = function() {
+	this.card.sendSecMsgApdu(Card.ALL, 0x00, 0x20, 0x00, 0x88, 0);
 	return this.card.SW;
 }
 
@@ -685,7 +715,7 @@ SmartCardHSM.prototype.enumerateKeys = function() {
 	this.idmap = [];
 
 	var fobs = this.enumerateObjects();
-	
+
 	// Process keys
 	for (var i = 0; i < fobs.length; i += 2) {
 		if (fobs.byteAt(i) == SmartCardHSM.KEYPREFIX) {
@@ -696,7 +726,7 @@ SmartCardHSM.prototype.enumerateKeys = function() {
 			}
 		}
 	}
-	
+
 	var keylist = [];
 	// Process PKCS#15 private key descriptions
 	for (var i = 0; i < fobs.length; i += 2) {
@@ -714,7 +744,7 @@ SmartCardHSM.prototype.enumerateKeys = function() {
 			}
 		}
 	}
-	
+
 	return keylist;
 }
 
@@ -971,7 +1001,7 @@ SmartCardHSM.test = function() {
 	sc.verifyUserPIN(new ByteString("648219", ASCII));
 	var list = sc.enumerateKeys();
 	print("Keys on device: " + list);
-	
+
 	var crypto = sc.getCrypto();
 	var message = new ByteString("Hello World", ASCII);
 	var key = sc.getKey(list[0]);

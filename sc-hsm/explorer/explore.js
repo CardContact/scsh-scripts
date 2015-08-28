@@ -1,13 +1,13 @@
 /**
  *  ---------
  * |.##> <##.|  SmartCard-HSM Support Scripts
- * |#       #|  
+ * |#       #|
  * |#       #|  Copyright (c) 2011-2012 CardContact Software & System Consulting
  * |'##> <##'|  Andreas Schwier, 32429 Minden, Germany (www.cardcontact.de)
- *  --------- 
+ *  ---------
  *
  * Consult your license package for usage terms and conditions.
- * 
+ *
  * @fileoverview SmartCard-HSM Explorer
  */
 
@@ -16,7 +16,7 @@ load("tools/CardOutlineFactory2.0.js");
 load("../lib/smartcardhsm.js");
 
 
-/** 
+/**
  * SmartCard-HSM Outline that displays all contained EFs
  *
  * @param {Object} factory the factory creating this instance
@@ -25,7 +25,7 @@ load("../lib/smartcardhsm.js");
 function scHSMOutline(factory, instance) {
 	this.factory = factory;
 	this.instance = instance;
-	
+
 	// Create OutlineNode object and register in OutlineDF object
 	var view = new OutlineNode("SmartCard-HSM Applet", true);
 	view.setUserObject(this);
@@ -43,7 +43,7 @@ scHSMOutline.prototype.expandListener = function() {
 	try	{
 		this.factory.schsm = new SmartCardHSM(this.factory.card);
 		var files = this.factory.schsm.enumerateObjects();
-		
+
 		for (var i = 0; i < files.length; i += 2) {
 			var fid = files.bytes(i, 2);
 			var fidstr = fid.toString(HEX);
@@ -96,7 +96,7 @@ function scHSMOutlineEF(factory, df, name, profile) {
 	view.setIcon("document");
 	view.setUserObject(this);
 	this.view = view;
-	
+
 	this.profile = profile;
 }
 
@@ -189,7 +189,7 @@ function OutlineCardActionListener(node, action) {
 		} else {
 			print("PIN entry cancelled");
 		}
-		
+
 		break;
 	}
 }

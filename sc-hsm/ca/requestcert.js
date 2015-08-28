@@ -1,10 +1,10 @@
 /**
  *  ---------
  * |.##> <##.|  SmartCard-HSM Support Scripts
- * |#       #|  
+ * |#       #|
  * |#       #|  Copyright (c) 2011-2012 CardContact Software & System Consulting
  * |'##> <##'|  Andreas Schwier, 32429 Minden, Germany (www.cardcontact.de)
- *  --------- 
+ *  ---------
  *
  * Consult your license package for usage terms and conditions.
  *
@@ -13,7 +13,7 @@
 
 load("../lib/smartcardhsm.js");
 load("../lib/hsmkeystore.js");
- 
+
 // var url = "http://localhost:8080/se/caws";
 var url = "http://devnet.cardcontact.de/se/caws";
 
@@ -131,17 +131,17 @@ CAConnection.prototype.requestCertificate = function(certreq, devicecert, common
 		GPSystem.trace("SOAP call to " + this.url + " failed : " + e);
 		throw new GPError("CAConnection", GPError.DEVICE_ERROR, 0, "RequestCertificate failed with : " + e);
 	}
-	
+
 	this.response = response;
 
 	var certlist = [];
 
 	this.lastReturnCode = response.ReturnCode.toString();
-	
+
 	if (this.lastReturnCode != "ok") {
 		return null;
 	}
-	
+
 	GPSystem.trace("Received certificates:");
 	for each (var c in response.Certificates.Certificate) {
 		var cert = new ByteString(c, BASE64);
@@ -154,7 +154,7 @@ CAConnection.prototype.requestCertificate = function(certreq, devicecert, common
 
 
 
- 
+
 // Use default crypto provider
 var crypto = new Crypto();
 
@@ -167,12 +167,12 @@ card.reset(Card.RESET_COLD);
 var sc = new SmartCardHSM(card);
 
 // Check if device is yet un-initialized
-if (sc.queryUserPINStatus() == 0x6984) {
-	var page = "<html><p><b>Warning:</b></p><br/>" + 
-			   "<p>This is a new device that has never been initialized before.</p><br/>" + 
-			   "<p>If you choose to continue, then the device initialization code will be set to " + initializationCode.toString(HEX) + "</p><br/>" + 
-			   "<p>Please be advised, that this code can not be changed once set. The same code must be used in subsequent re-initialization of the device.</p><br/>" + 
-			   "<p>Press OK to continue or Cancel to abort.</p>" + 
+if (!sc.isInitialized()) {
+	var page = "<html><p><b>Warning:</b></p><br/>" +
+			   "<p>This is a new device that has never been initialized before.</p><br/>" +
+			   "<p>If you choose to continue, then the device initialization code will be set to " + initializationCode.toString(HEX) + "</p><br/>" +
+			   "<p>Please be advised, that this code can not be changed once set. The same code must be used in subsequent re-initialization of the device.</p><br/>" +
+			   "<p>Press OK to continue or Cancel to abort.</p>" +
 			   "</html>";
 	var userAction = Dialog.prompt(page);
 	assert(userAction != null);

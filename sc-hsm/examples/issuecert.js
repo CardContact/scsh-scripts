@@ -1,20 +1,20 @@
 /**
  *  ---------
  * |.##> <##.|  SmartCard-HSM Support Scripts
- * |#       #|  
+ * |#       #|
  * |#       #|  Copyright (c) 2011-2012 CardContact Software & System Consulting
  * |'##> <##'|  Andreas Schwier, 32429 Minden, Germany (www.cardcontact.de)
- *  --------- 
+ *  ---------
  *
  * Consult your license package for usage terms and conditions.
- * 
+ *
  * @fileoverview Script to issue X.509 certificates for keys generated on the SmartCard-HSM
  *
  * <p>This script uses a simple CA located in the ca/ directory.</p>
  * <p>You can change the issueCertificate() calls to create your own test setup.</p>
  *
  */
- 
+
 load("../lib/smartcardhsm.js");
 
 load("tools/eccutils.js");
@@ -47,11 +47,11 @@ function issueCertificate(ca, hsmks, cn, keysizeOrCurve, profile, emailaddress) 
 	}
 	// No request checking so far
 	var publicKey = req.getPublicKey();
-	
+
 	if (typeof(keysizeOrCurve) == "string") {
 		publicKey.setComponent(Key.ECC_CURVE_OID, new ByteString(keysizeOrCurve, OID));
 	}
-	
+
 	var extvalues = { email : emailaddress };
 	print("Issuing certificate for " + cn);
 	var cert = ca.issueCertificate(publicKey, subject, profile, extvalues);
@@ -76,12 +76,12 @@ var sc = new SmartCardHSM(card);
 
 var doinit = true;
 // Check if device is yet un-initialized
-if (sc.queryUserPINStatus() == 0x6984) {
-	var page = "<html><p><b>Warning:</b></p><br/>" + 
-			   "<p>This is a new device that has never been initialized before.</p><br/>" + 
-			   "<p>If you choose to continue, then the device initialization code will be set to " + initializationCode.toString(ASCII) + "</p><br/>" + 
-			   "<p>Please be advised, that this code can not be changed once set. The same code must be used in subsequent re-initialization of the device.</p><br/>" + 
-			   "<p>Press OK to continue or Cancel to abort.</p>" + 
+if (!sc.isInitialized()) {
+	var page = "<html><p><b>Warning:</b></p><br/>" +
+			   "<p>This is a new device that has never been initialized before.</p><br/>" +
+			   "<p>If you choose to continue, then the device initialization code will be set to " + initializationCode.toString(ASCII) + "</p><br/>" +
+			   "<p>Please be advised, that this code can not be changed once set. The same code must be used in subsequent re-initialization of the device.</p><br/>" +
+			   "<p>Press OK to continue or Cancel to abort.</p>" +
 			   "</html>";
 	var userAction = Dialog.prompt(page);
 	assert(userAction != null);
