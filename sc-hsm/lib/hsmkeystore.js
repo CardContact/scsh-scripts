@@ -135,19 +135,20 @@ HSMKeyStore.prototype.deleteKey = function(label) {
 		throw new GPError("HSMKeyStore", GPError.INVALID_DATA, 0, "Could not find a key with label " + label);
 	}
 	
-	try	{
-		var fid = ByteString.valueOf((SmartCardHSM.EECERTIFICATEPREFIX << 8) + kid);
-		this.sc.deleteFile(fid);
+	var fid = ByteString.valueOf((SmartCardHSM.KEYPREFIX << 8) + kid);
+	this.sc.deleteFile(fid);
 
+	try	{
 		var fid = ByteString.valueOf((SmartCardHSM.PRKDPREFIX << 8) + kid);
 		this.sc.deleteFile(fid);
 
-		var fid = ByteString.valueOf((SmartCardHSM.KEYPREFIX << 8) + kid);
+		var fid = ByteString.valueOf((SmartCardHSM.EECERTIFICATEPREFIX << 8) + kid);
 		this.sc.deleteFile(fid);
 	}
 	catch(e) {
 		// Ignore
 	}
+	this.enumerateKeys();
 }
 
 
