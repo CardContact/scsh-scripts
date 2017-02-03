@@ -16,6 +16,7 @@ load("tools/CardOutlineFactory2.0.js");
 load("../lib/smartcardhsm.js");
 
 
+
 /**
  * SmartCard-HSM Outline that displays all contained EFs
  *
@@ -29,9 +30,11 @@ function scHSMOutline(factory, instance) {
 	// Create OutlineNode object and register in OutlineDF object
 	var view = new OutlineNode("SmartCard-HSM Applet", true);
 	view.setUserObject(this);
+	view.setContextMenu([scHSMOutline.VERIFY_PIN]);
 	this.view = view;
 }
 
+scHSMOutline.VERIFY_PIN = "Verify USER.PIN";
 
 
 /**
@@ -75,6 +78,14 @@ scHSMOutline.prototype.collapseListener = function() {
 	var view = this.view;
 	while (view.childs.length > 0) {
 		view.remove(view.childs[0]);
+	}
+}
+
+
+
+scHSMOutline.prototype.actionListener = function(source, action) {
+	if (action == scHSMOutline.VERIFY_PIN) {
+		this.factory.schsm.verifyUserPIN();
 	}
 }
 
@@ -126,10 +137,29 @@ scHSMOutlineEF.prototype.expandListener = function() {
 		view.insert(fcpmodel.view);
 	}
 
-	var bs = this.factory.schsm.readBinary(new ByteString(efdesc.fid, HEX));
+	if (efdesc.fid.substr(0, 2) != "CC") {
+		var bs = this.factory.schsm.readBinary(new ByteString(efdesc.fid, HEX));
 
-	var bindata = this.factory.newDataOutline(bs, efdesc.format);
-	view.insert(bindata.view);
+		var bindata = this.factory.newDataOutline(bs, efdesc.format);
+		view.insert(bindata.view);
+
+		if (efdesc.fid.substr(0, 2) == "C4") {
+			var cio = new PKCS15_PrivateKey(bindata.asn);
+			print("---- EF." + efdesc.fid + " Private Key Information Object ----");
+			print(cio);
+		}
+		if (efdesc.fid.substr(0, 2) == "C8") {
+			print("---- EF." + efdesc.fid + " Certificate Information Object ----");
+			var cio = new PKCS15_Certificate(bindata.asn);
+			print(cio);
+		}
+		if (efdesc.fid.substr(0, 2) == "C9") {
+			print("---- EF." + efdesc.fid + " Data Container Information Object ----");
+			var cio = new PKCS15_DataContainerObject(bindata.asn);
+			print(cio);
+		}
+	}
+
 
 	this.expanded = true;
 }
