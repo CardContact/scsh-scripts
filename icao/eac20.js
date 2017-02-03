@@ -1,10 +1,10 @@
 /**
  *  ---------
  * |.##> <##.|  Open Smart Card Development Platform (www.openscdp.org)
- * |#       #|  
+ * |#       #|
  * |#       #|  Copyright (c) 1999-2009 CardContact Software & System Consulting
  * |'##> <##'|  Andreas Schwier, 32429 Minden, Germany (www.cardcontact.de)
- *  --------- 
+ *  ---------
  *
  *  This file is part of OpenSCDP.
  *
@@ -94,14 +94,14 @@ EAC20.prototype.log = function(str) {
 
 /**
  * Process a list of security infos from EF.CardInfo, EF.CardSecurity or EF.ChipSecurity
- * 
+ *
  * @param {ASN1} si the security info ASN Sequence
  * @param {boolean} fromCardSecurity true if security infos are taken from EF.CardSecurity, EF.ChipSecurity or EF.DG14
  */
 EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
 	this.log("SecurityInfos:");
 	this.log(si);
-	
+
 	var id_PACE = new ByteString("id-PACE", OID);
 	var id_PACE_DH_GM = new ByteString("id-PACE-DH-GM", OID);
 	var id_PACE_ECDH_GM = new ByteString("id-PACE-ECDH-GM", OID);
@@ -120,7 +120,7 @@ EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
 
 		var oid = o.get(0);
 		assert(oid.tag == ASN1.OBJECT_IDENTIFIER);
-		
+
 		if (oid.value.startsWith(id_TA) == id_TA.length) {
 			this.log("TA : " + o);
 		} else if (oid.value.startsWith(id_PACE) == id_PACE.length) {
@@ -129,33 +129,33 @@ EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
 				oid.value.equals(id_PACE_DH_IM) ||
 				oid.value.equals(id_PACE_ECDH_GM)) {
 				this.log("PaceDomainParameterInfo : " + o);
-				
+
 				var pdpi = new PACEDomainParameterInfo(o);
 				this.log(pdpi);
-				
+
 				var id = pdpi.parameterId;
-				
+
 				if (typeof(id) == "undefined") {
 					id = 0;
 				}
-				
+
 				if (!fromCardSecurity && (typeof(this.PACEDPs[id]) != "undefined")) {
 					throw new GPError("EAC20", GPError.INVALID_DATA, 0, "Duplicate parameterId " + id + " for PACEDomainParameter");
 				}
-				
+
 				this.PACEDPs[id] = pdpi;
 			} else {
 				this.log("PaceInfo : " + o);
 
 				var pi = new PACEInfo(o);
 				this.log(pi);
-				
+
 				var id = pi.parameterId;
-				
+
 				if (typeof(id) == "undefined") {
 					id = 0;
 				}
-				
+
 				if (pi.version == 1) {
 					if (!fromCardSecurity && (typeof(this.PACEInfos[id]) != "undefined")) {
 						throw new GPError("EAC20", GPError.INVALID_DATA, 0, "Duplicate parameterId " + id + " for PACEInfo");
@@ -241,7 +241,7 @@ EAC20.prototype.processSecurityInfos = function(si, fromCardSecurity) {
 				this.log(rii);
 
 				var id = rii.keyId;
-				
+
 				if (typeof(id) == "undefined") {
 					this.log("Using default key id 0");
 					id = 0;
@@ -280,7 +280,7 @@ EAC20.prototype.readEFwithFID = function(fid) {
 		bb.append(rsp);
 		offset += rsp.length;
 	} while ((this.card.SW == 0x9000) && (rsp.length > 0));
-	
+
 	return bb.toByteString();
 }
 
@@ -321,7 +321,7 @@ EAC20.prototype.readEFwithSFI = function(sfi) {
 		var fid = ByteString.valueOf(0x0100 + sfi, 2);
 		return this.readEFwithFID(fid);
 	}
-	
+
 	var rsp = this.card.sendSecMsgApdu(Card.ALL, 0x00, 0xB0, 0x80 | sfi, 0x00, this.maxRData, [0x9000]);
 
 	var bb = new ByteBuffer(rsp);
@@ -331,7 +331,7 @@ EAC20.prototype.readEFwithSFI = function(sfi) {
 		bb.append(rsp);
 		offset += rsp.length;
 	} while ((this.card.SW == 0x9000) && (rsp.length > 0));
-	
+
 	return bb.toByteString();
 }
 
@@ -414,7 +414,7 @@ EAC20.prototype.readDG14 = function() {
 	var cibin = this.readEFwithSFI(14);
 	var citlv = new ASN1(cibin);
 	this.log(citlv);
-	
+
 	this.processSecurityInfos(citlv.get(0), true);
 }
 
@@ -447,7 +447,7 @@ EAC20.prototype.readCardAccess = function() {
 	var cibin = this.readEFwithSFI(EAC20.SFI_CardAccess);
 	var citlv = new ASN1(cibin);
 	this.log(citlv);
-	
+
 	this.processSecurityInfos(citlv, false);
 }
 
@@ -483,7 +483,7 @@ EAC20.prototype.readCardSecurity = function() {
 	var cstlv = new ASN1(data);
 
 	this.log(cstlv);
-	
+
 	this.processSecurityInfos(cstlv, true);
 }
 
@@ -497,7 +497,7 @@ EAC20.prototype.readChipSecurity = function() {
 	var cstlv = new ASN1(csbin);
 	this.log("EF.ChipSecurity:");
 	this.log(cstlv);
-	
+
 	var cms = new CMSSignedData(csbin);
 
 	var certs = cms.getSignedDataCertificates();
@@ -574,7 +574,7 @@ EAC20.prototype.getCADomainParameterInfos = function() {
  * Return the key id of the chip authentication key
  *
  * @return the key id
- * @type 
+ * @type
  */
 EAC20.prototype.getCAKeyId = function(privileged) {
 	for (var i in this.CAInfos) {		// Locate first entry in list
@@ -596,7 +596,7 @@ EAC20.prototype.getCAKeyId = function(privileged) {
  *
  * @param {boolean} authOnly return the RI key available after authentication only (to calculate the pseudonym)
  * @return the key id
- * @type 
+ * @type
  */
 EAC20.prototype.getRIKeyId = function(authOnly) {
 	for each (var rii in this.RIInfos) {
@@ -624,7 +624,7 @@ EAC20.decodeDocumentNumber = function(mrz) {
 	} else {						// Three line MRZ
 		if (mrz.charAt(14) == "<") {
 			var sep = mrz.indexOf("<", 15);
-			var docno = mrz.substr(5,9).concat(mrz.substring(15,sep)); 
+			var docno = mrz.substr(5,9).concat(mrz.substring(15,sep));
 		} else {
 			var docno = mrz.substr(5, 10);
 		}
@@ -746,12 +746,12 @@ EAC20.prototype.performBAC = function(kenc, kmac) {
 
 	// EXTERNAL AUTHENTICATE
 	var autresp = this.card.sendApdu(0x00, 0x82, 0x00, 0x00, cryptogram.concat(mac), 0);
-	
+
 	if (this.card.SW != 0x9000) {
 		this.log("Mutual authenticate failed with " + this.card.SW.toString(16) + " \"" + this.card.SWMSG + "\". MRZ correct ?");
 		throw new GPError("EAC20", GPError.CRYPTO_FAILED, 0, "Card did not accept MAC in BAC establishment");
 	}
-	
+
 	cryptogram = autresp.bytes(0, 32);
 	mac = autresp.bytes(32, 8);
 
@@ -815,12 +815,12 @@ EAC20.prototype.performPACE = function(parameterId, pwdid, pwd, chat) {
 	if (typeof(paceinfo) == "undefined") {
 		throw new GPError("EAC20", GPError.INVALID_DATA, 0, "Unknown parameterId " + parameterId + " for PACEInfo");
 	}
-	
+
 	var domainParameter;
-	
+
 	// Used for Chip Authentication
 	this.includeDPinAuthToken = !(paceinfo.version >= 2);
-	
+
 	if ((paceinfo.version == 1) || ((paceinfo.version == 2) && (parameterId > 31))) {
 		var pacedp = this.PACEDPs[parameterId];
 		if (typeof(pacedp) == "undefined") {
@@ -830,16 +830,16 @@ EAC20.prototype.performPACE = function(parameterId, pwdid, pwd, chat) {
 	} else {
 		domainParameter = PACEDomainParameterInfo.getStandardizedDomainParameter(parameterId);
 	}
-	
+
 	if (!(pwd instanceof ByteString) && !(pwd instanceof Key)) {
 		throw new GPError("EAC20", GPError.INVALID_TYPE, 0, "Argument pwd must be of type ByteString or Key");
 	}
-	
+
 	if ((chat != null) && !(chat instanceof ASN1)) {
 		throw new GPError("EAC20", GPError.INVALID_TYPE, 0, "Argument chat must be of type ASN1");
 	}
 
-	
+
 	var pace = new PACE(this.crypto, paceinfo.protocol, domainParameter, paceinfo.version);
 	if (pwd instanceof(ByteString)) {
 		pace.setPassword(pwd);
@@ -902,7 +902,7 @@ EAC20.prototype.performPACE = function(parameterId, pwdid, pwd, chat) {
 
 	this.idPICC = ephemeralPublicKeyICC.value.bytes(1, (ephemeralPublicKeyICC.value.length - 1) >> 1);
 	this.log("ID_PICC : " + this.idPICC);
-	
+
 	pace.performKeyAgreement(ephemeralPublicKeyICC.value);
 
 
@@ -933,7 +933,7 @@ EAC20.prototype.performPACE = function(parameterId, pwdid, pwd, chat) {
 		assert(cardo.tag == 0x87);
 		this.lastCAR = new PublicKeyReference(cardo.value);
 	}
-	
+
 	if (dado.elements > 2) {
 		var cardo = dado.get(2);
 		assert(cardo.tag == 0x88);
@@ -941,12 +941,12 @@ EAC20.prototype.performPACE = function(parameterId, pwdid, pwd, chat) {
 	}
 
 	var sm = null;
-	
+
 	if (pace.verifyAuthenticationToken(authTokenDO.value)) {
 		this.log("Authentication token valid");
 
 		var symalgo = pace.getSymmetricAlgorithm();
-		
+
 		if (symalgo == Key.AES) {
 			sm = new IsoSecureChannel(this.crypto, IsoSecureChannel.SSC_SYNC_ENC_POLICY);
 			sm.setEncKey(pace.kenc);
@@ -990,24 +990,24 @@ EAC20.prototype.getTrustAnchorCAR = function(previous) {
 EAC20.prototype.verifyCertificateChain = function(cvcchain) {
 	for (var i = 0; i < cvcchain.length; i++) {
 		var cvc = cvcchain[i];
-		
+
 		var car = cvc.getCAR().getBytes();
-		
+
 		var pukrefdo = new ASN1(0x83, car);
 		var pukref = pukrefdo.getBytes();
-		
+
 		this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x22, 0x81, 0xB6, pukref, [0x9000]);
-		
+
 		// Extract value of 7F21
 		var tl = new TLVList(cvc.getBytes(), TLV.EMV);
 		var t = tl.index(0);
 		var v = t.getValue();
-		
+
 		this.log("Certificate: ");
 		this.log(new ASN1(v));
 		this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x2A, 0x00, 0xBE, v, [0x9000]);
 	}
-	
+
 	this.terminalCert = cvcchain[cvcchain.length - 1];
 }
 
@@ -1034,7 +1034,7 @@ EAC20.prototype.setIDPICC = function(idPICC) {
  */
 EAC20.prototype.performTerminalAuthentication = function(termkey, auxdata, crypto) {
 	var signatureInput = this.performTerminalAuthenticationSetup(auxdata);
-	
+
 	if (crypto == undefined) {
 		var crypto = this.crypto;
 	}
@@ -1070,9 +1070,9 @@ EAC20.prototype.performTerminalAuthenticationSetup = function(auxdata) {
 	if (typeof(this.cakeyId) != "undefined") {
 		bb.append(new ASN1(0x80, this.terminalCert.getPublicKeyOID()).getBytes());
 	}
-	
+
 	bb.append(new ASN1(0x83, this.terminalCert.getCHR().getBytes()).getBytes());
-	
+
 	if (typeof(this.cakeyId) != "undefined") {
 		if (auxdata) {
 			bb.append(auxdata);
@@ -1086,7 +1086,7 @@ EAC20.prototype.performTerminalAuthenticationSetup = function(auxdata) {
 	this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x22, 0x81, 0xA4, msedata, [0x9000]);
 
 	var challenge = this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO|Card.RENC, 0x00, 0x84, 0x00, 0x00, 8, [0x9000]);
-	
+
 	var bb = new ByteBuffer();
 	bb.append(this.idPICC);
 	bb.append(challenge);
@@ -1142,26 +1142,55 @@ EAC20.prototype.performChipAuthenticationV1 = function(keyid) {
 
 	this.ca.generateEphemeralCAKeyPair();
 
-	var bb = new ByteBuffer();
-	bb.append(new ASN1(0x91, this.ca.getEphemeralPublicKey()).getBytes());
+	if (cainfo.protocol.equals(ChipAuthentication.id_CA_ECDH_3DES_CBC_CBC)) {
+		var bb = new ByteBuffer();
+		bb.append(new ASN1(0x91, this.ca.getEphemeralPublicKey()).getBytes());
 
-	if (typeof(cainfo.keyId) != "undefined") {
-		bb.append(new ByteString("8401", HEX));
-		bb.append(cainfo.keyId);
+		if (typeof(cainfo.keyId) != "undefined") {
+			bb.append(new ByteString("8401", HEX));
+			bb.append(cainfo.keyId);
+		}
+
+		var msedata = bb.toByteString();
+		this.log("Manage SE data:");
+		this.log(msedata);
+		this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x22, 0x41, 0xA6, msedata, [0x9000]);
+
+		this.ca.performKeyAgreement(capuk.publicKey);
+
+		this.log("Create DES based secure channel");
+		var sm = new IsoSecureChannel(this.crypto);
+		sm.setEncKey(this.ca.kenc);
+		sm.setMacKey(this.ca.kmac);
+		sm.setSendSequenceCounter(new ByteString("0000000000000000", HEX));
+	} else {
+		var bb = new ByteBuffer();
+		bb.append(new ASN1(0x80, cainfo.protocol).getBytes());
+
+		if (typeof(cainfo.keyId) != "undefined") {
+			bb.append(new ByteString("8401", HEX));
+			bb.append(cainfo.keyId);
+		}
+
+		var msedata = bb.toByteString();
+		this.log("Manage SE data:");
+		this.log(msedata);
+		this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x22, 0x41, 0xA4, msedata, [0x9000]);
+
+		var ephemeralPublicKeyIfd = this.ca.getEphemeralPublicKey();
+
+		var dado = new ASN1(0x7C, new ASN1(0x80, ephemeralPublicKeyIfd));
+
+		this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO|Card.RENC, 0x00, 0x86, 0x00, 0x00, dado.getBytes(), 0, [0x9000]);
+
+		this.ca.performKeyAgreement(capuk.publicKey);
+
+		this.log("Create AES based secure channel");
+		var sm = new IsoSecureChannel(this.crypto, IsoSecureChannel.SSC_SYNC_ENC_POLICY);
+		sm.setEncKey(this.ca.kenc);
+		sm.setMacKey(this.ca.kmac);
+		sm.setMACSendSequenceCounter(new ByteString("00000000000000000000000000000000", HEX));
 	}
-
-	var msedata = bb.toByteString();
-	this.log("Manage SE data:");
-	this.log(msedata);
-	this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x22, 0x41, 0xA6, msedata, [0x9000]);
-
-	this.ca.performKeyAgreement(capuk.publicKey);
-
-	this.log("Create DES based secure channel");
-	var sm = new IsoSecureChannel(this.crypto);
-	sm.setEncKey(this.ca.kenc);
-	sm.setMacKey(this.ca.kmac);
-	sm.setSendSequenceCounter(new ByteString("0000000000000000", HEX));
 
 	this.card.setCredential(sm);
 	this.sm = sm;
@@ -1218,7 +1247,7 @@ EAC20.prototype.performChipAuthenticationV2 = function() {
 		this.log("Protocol is EF.CardSecurity: " + cainfo.protocol);
 		this.ca.algo = cainfo.protocol;
 	}
-	
+
 	var capuk = this.CAPublicKeys[this.cakeyId];
 	if (typeof(capuk) == "undefined") {
 		throw new GPError("EAC20", GPError.INVALID_DATA, 0, "Unknown keyId " + this.cakeyId + " for ChipAuthenticationPublicKeyInfo");
@@ -1226,23 +1255,23 @@ EAC20.prototype.performChipAuthenticationV2 = function() {
 
 	var bb = new ByteBuffer();
 	bb.append(new ASN1(0x80, cainfo.protocol).getBytes());
-	
+
 	if (typeof(cainfo.keyId) != "undefined") {
 		bb.append(new ByteString("8401", HEX));
 		bb.append(cainfo.keyId);
 	}
-	
+
 	var msedata = bb.toByteString();
 	this.log("Manage SE data:");
 	this.log(msedata);
 	this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x22, 0x41, 0xA4, msedata, [0x9000]);
-	
+
 	var ephemeralPublicKeyIfd = this.ca.getEphemeralPublicKey();
 
 	var dado = new ASN1(0x7C, new ASN1(0x80, ephemeralPublicKeyIfd));
 
 	var dadobin = this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO|Card.RENC, 0x00, 0x86, 0x00, 0x00, dado.getBytes(), 0, [0x9000]);
-	
+
 	this.log(dadobin);
 
 	var dado = new ASN1(dadobin);
@@ -1281,7 +1310,7 @@ EAC20.prototype.performChipAuthenticationV2 = function() {
 	} else {
 		this.log("Authentication token invalid");
 	}
-	
+
 	return result;
 }
 
@@ -1331,27 +1360,27 @@ EAC20.prototype.performChipAuthentication = function(keyid) {
 EAC20.prototype.performRestrictedIdentification = function(keyId, sectorPublicKey, sectorPublicKeyIndex) {
 	var bb = new ByteBuffer();
 	bb.append(new ASN1(0x80, new ByteString("id-RI-ECDH-SHA-256", OID)).getBytes());
-	
+
 	bb.append(new ByteString("8401", HEX));
 	bb.append(keyId);
-	
+
 	var msedata = bb.toByteString();
 	this.log("Manage SE data:");
 	this.log(msedata);
 	this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO, 0x00, 0x22, 0x41, 0xA4, msedata, [0x9000]);
-	
+
 	var tag = 0xA0;
 	if (sectorPublicKeyIndex) {
 		tag = 0xA0 + (sectorPublicKeyIndex << 1);
 	}
-	
+
 	// ToDo change to sectorPublicKey.value
 	var dado = new ASN1(0x7C, new ASN1(tag, sectorPublicKey.bytes(5)));
 
 	this.log("GA Input: " + dado.getBytes());
-	
+
 	var dadobin = this.card.sendSecMsgApdu(Card.CPRO|Card.CENC|Card.RPRO|Card.RENC, 0x00, 0x86, 0x00, 0x00, dado.getBytes(), 0, [0x9000]);
-	
+
 	this.log(dadobin);
 
 	var dado = new ASN1(dadobin);

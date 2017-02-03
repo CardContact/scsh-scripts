@@ -1,10 +1,10 @@
 /**
  *  ---------
  * |.##> <##.|  Open Smart Card Development Platform (www.openscdp.org)
- * |#       #|  
+ * |#       #|
  * |#       #|  Copyright (c) 1999-2009 CardContact Software & System Consulting
  * |'##> <##'|  Andreas Schwier, 32429 Minden, Germany (www.cardcontact.de)
- *  --------- 
+ *  ---------
  *
  *  This file is part of OpenSCDP.
  *
@@ -63,6 +63,7 @@ privChipAuthenticationInfo.keyId = 17;
 
 var chipAuthenticationInfoDG14 = new ChipAuthenticationInfo();
 chipAuthenticationInfoDG14.protocol = new ByteString("id-CA-ECDH-3DES-CBC-CBC", OID);
+// chipAuthenticationInfoDG14.protocol = new ByteString("id-CA-ECDH-AES-CBC-CMAC-128", OID);
 chipAuthenticationInfoDG14.version = 1;
 
 var chipAuthenticationDomainParameterInfo = new ChipAuthenticationDomainParameterInfo();
@@ -280,19 +281,19 @@ eIDSimulation.prototype.createFileSystem = function() {
 	this.mf.addObject(cvcst);
 	this.mf.addMeta("currentDate", { currentDate: currentDate} );
 
-	var pacemrz = new AuthenticationObject("PACE_MRZ", AuthenticationObject.TYPE_PACE, 1, 
+	var pacemrz = new AuthenticationObject("PACE_MRZ", AuthenticationObject.TYPE_PACE, 1,
 									eac.hashMRZ(mrz));
 	pacemrz.initialretrycounter = 0;
 	this.mf.addObject(pacemrz);
 
-	var pacecan = new AuthenticationObject("PACE_CAN", AuthenticationObject.TYPE_PACE, 2, 
+	var pacecan = new AuthenticationObject("PACE_CAN", AuthenticationObject.TYPE_PACE, 2,
 									new ByteString("500540", ASCII));
 	pacecan.initialretrycounter = 0;
 	pacecan.allowResetRetryCounter = true;
 	pacecan.allowResetValue = true;
 	this.mf.addObject(pacecan);
 
-	var pacepin = new AuthenticationObject("PACE_PIN", AuthenticationObject.TYPE_PACE, 3, 
+	var pacepin = new AuthenticationObject("PACE_PIN", AuthenticationObject.TYPE_PACE, 3,
 									new ByteString("55555", ASCII));
 	pacepin.isTransport = true;
 	pacepin.allowActivate = true;
@@ -303,7 +304,7 @@ eIDSimulation.prototype.createFileSystem = function() {
 	pacepin.unsuspendAuthenticationObject = pacecan;
 	this.mf.addObject(pacepin);
 
-	var pacepuk = new AuthenticationObject("PACE_PUK", AuthenticationObject.TYPE_PACE, 4, 
+	var pacepuk = new AuthenticationObject("PACE_PUK", AuthenticationObject.TYPE_PACE, 4,
 									new ByteString("87654321", ASCII));
 	pacecan.initialretrycounter = 0;
 	this.mf.addObject(pacepuk);
@@ -316,14 +317,14 @@ eIDSimulation.prototype.createFileSystem = function() {
 
 	this.mf.addMeta("efCVCA", efCVCA);
 
-	var com = (new ASN1(0x60, 
+	var com = (new ASN1(0x60,
 					new ASN1(0x5F01, new ByteString("0107", ASCII)),
 					new ASN1(0x5F36, new ByteString("040000", ASCII)),
 					new ASN1(0x5C, new ByteString("6175637664", HEX))
 				)).getBytes();
 	var dg1 = (new ASN1(0x61, new ASN1(0x5F1F, new ByteString(mrz, ASCII)))).getBytes();
 	print(dg1);
-	
+
 	var dFePass = 		new DF(FCP.newDF(null, new ByteString("A0000002471001", HEX)),
 							new TransparentEF(FCP.newTransparentEF("011E", 0x1E, 100),		// EF.COM
 								com),
@@ -343,7 +344,7 @@ eIDSimulation.prototype.createFileSystem = function() {
 						);
 
 	dFePass.addMeta("accessController", new ePassAccessController());
-	
+
 	dFePass.addMeta("KENC", eac.calculateBACKey(mrz, 1));
 	dFePass.addMeta("KMAC", eac.calculateBACKey(mrz, 2));
 
@@ -440,7 +441,7 @@ eIDSimulation.prototype.createFileSystem = function() {
 eIDSimulation.prototype.initialize = function() {
 	this.fileSelector = new FileSelector(this.mf);
 	this.commandInterpreter = new eIDCommandInterpreter(this.fileSelector);
-	
+
 }
 
 
@@ -451,12 +452,12 @@ eIDSimulation.prototype.initialize = function() {
  * @param {ByteString} capdu the command APDU
  * @type ByteString
  * @return the response APDU
- */ 
+ */
 eIDSimulation.prototype.processAPDU = function(capdu) {
 	print("Command APDU : " + capdu);
 
 	var apdu;
-	
+
 	try	{
 		apdu = new APDU(capdu);
 	}
@@ -473,7 +474,7 @@ eIDSimulation.prototype.processAPDU = function(capdu) {
 	}
 
 	this.commandInterpreter.processAPDU(apdu);
-	
+
 	var rapdu = apdu.getResponseAPDU();
 	print("Response APDU: " + rapdu);
 	return rapdu;

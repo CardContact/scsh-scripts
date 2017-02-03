@@ -1,10 +1,10 @@
 /**
  *  ---------
  * |.##> <##.|  Open Smart Card Development Platform (www.openscdp.org)
- * |#       #|  
+ * |#       #|
  * |#       #|  Copyright (c) 1999-2009 CardContact Software & System Consulting
  * |'##> <##'|  Andreas Schwier, 32429 Minden, Germany (www.cardcontact.de)
- *  --------- 
+ *  ---------
  *
  *  This file is part of OpenSCDP.
  *
@@ -163,7 +163,7 @@ eIDCommandInterpreter.prototype.performPACE = function(apdu) {
 		if (!apdu.isChained()) {
 			throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "Command must be chained");
 		}
-		
+
 		var se = this.fileSelector.getSecurityEnvironment().VEXK;
 
 		if (!se.t.AT) {
@@ -229,11 +229,11 @@ eIDCommandInterpreter.prototype.performPACE = function(apdu) {
 
 			if ((this.lastINS != APDU.INS_GENERAL_AUTHENTICATE) || !this.pace.hasNonce())
 				throw new GPError("EACSIM", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "Invalid sequence. First GA missing");
-			
+
 			if (this.pace.hasMapping())
 				throw new GPError("EACSIM", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "Invalid sequence. Steps was already performed");
 
-			if (a.value.byteAt(0) != 0x04) 
+			if (a.value.byteAt(0) != 0x04)
 				throw new GPError("EACSIM", GPError.INVALID_DATA, APDU.SW_INVDATA, "Public key does not start with '04'");
 
 			var mappingData = this.pace.getMappingData();
@@ -244,13 +244,13 @@ eIDCommandInterpreter.prototype.performPACE = function(apdu) {
 		case 0x83:
 			if (!apdu.isChained())
 				throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "Command must be chained");
-			
+
 			if ((this.lastINS != APDU.INS_GENERAL_AUTHENTICATE) || (!this.pace.hasMapping()))
 				throw new GPError("EACSIM", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "Invalid sequence. Second GA missing");
-			
-			if (a.value.byteAt(0) != 0x04) 
+
+			if (a.value.byteAt(0) != 0x04)
 				throw new GPError("EACSIM", GPError.INVALID_DATA, APDU.SW_INVDATA, "Public key does not start with '04'");
-			
+
 			var ephKey = this.pace.getEphemeralPublicKey();
 			response.add(new ASN1(0x84, ephKey));
 
@@ -262,7 +262,7 @@ eIDCommandInterpreter.prototype.performPACE = function(apdu) {
 		case 0x85:
 			if (apdu.isChained())
 				throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_LASTCMDEXPECTED, "Last PACE command must not be chained");
-			
+
 			if (this.lastINS != APDU.INS_GENERAL_AUTHENTICATE)
 				throw new GPError("EACSIM", GPError.INVALID_DATA, APDU.SW_CONDOFUSENOTSAT, "Invalid sequence. Second GA missing");
 
@@ -331,7 +331,7 @@ eIDCommandInterpreter.prototype.determinePINStatus = function(apdu) {
 	if (!keyref) {
 		return;
 	}
-	
+
 	var paceao = this.fileSelector.getObject(AuthenticationObject.TYPE_PACE, keyref.value.toUnsigned());
 	if (!paceao) {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_RDNOTFOUND, "PACE password not found");
@@ -452,24 +452,34 @@ eIDCommandInterpreter.prototype.performChipAuthenticationV2 = function(apdu) {
 	var idIFD = a.get(0).value.bytes(1);		// Skip '04' and extract public key
 	idIFD = idIFD.left(idIFD.length >> 1);
 
-	if (!idIFD.equals(this.idIFD)) {
-		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_INVDATA, "Terminal public key does not match key signed in terminal authentication");
+	var cav1aes = false;
+	if (typeof(this.idIFD) != "undefined") {
+		if (!idIFD.equals(this.idIFD)) {
+			throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_INVDATA, "Terminal public key does not match key signed in terminal authentication");
+		}
+	} else {
+		this.idIFD = idIFD;			// Chip Authentication V1 with AES
+		cav1aes = true;
 	}
 
 	var ca = new ChipAuthentication(this.crypto, chipAuthenticationInfo.protocol, chipAuthenticationPublicKey);
 
 	ca.setKeyPair(chipAuthenticationPrivateKey, chipAuthenticationPublicKey);
 
-	var nonce = this.crypto.generateRandom(8);
+	if (cav1aes) {
+		ca.performKeyAgreement(a.get(0).value);
+	} else {
+		var nonce = this.crypto.generateRandom(8);
 
-	ca.performKeyAgreement(a.get(0).value, nonce);
-	var token = ca.calculateAuthenticationToken();
+		ca.performKeyAgreement(a.get(0).value, nonce);
+		var token = ca.calculateAuthenticationToken();
 
-	response.add(new ASN1(0x81, nonce));
-	response.add(new ASN1(0x82, token));
+		response.add(new ASN1(0x81, nonce));
+		response.add(new ASN1(0x82, token));
 
-	apdu.setRData(response.getBytes());
-	
+		apdu.setRData(response.getBytes());
+	}
+
 	if (ca.algo.equals(ChipAuthentication.id_CA_ECDH_3DES_CBC_CBC)) {
 //		print("DES");
 		var sm = new SecureChannel(this.crypto);
@@ -536,11 +546,11 @@ eIDCommandInterpreter.prototype.verifyCertificate = function(apdu) {
 	if (apdu.isChained()) {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CHAINNOTSUPPORTED, "Chaining not supported in PSO VERIFY CERTIFICATE");
 	}
-	
+
 	if (!apdu.hasCData()) {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_INVDATA, "Command data expected in PSO VERIFY CERTIFICATE");
 	}
-	
+
 	if ((apdu.getP1() != 0x00) || (apdu.getP2() != 0xBE)) {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_INCP1P2, "Invalid P1 or P2");
 	}
@@ -587,7 +597,7 @@ eIDCommandInterpreter.prototype.verifyCertificate = function(apdu) {
 	var anchor = rc.anchor;
 //	print(anchor);
 //	print(rc.level);
-	
+
 	switch(rc.level) {
 		case 0:
 			anchor.validateCertificateIssuedByCVCA(this.crypto, cvc, this);
@@ -783,7 +793,7 @@ eIDCommandInterpreter.prototype.performRestrictedIdentification = function(apdu)
 
 	var a = new ASN1(apdu.getCData());
 	var rido = a.get(0);
-	
+
 	var response = new ASN1(0x7C);
 
 	var pk = new ASN1(0x7F49, rido.value);
@@ -846,15 +856,15 @@ eIDCommandInterpreter.prototype.getChallenge = function(apdu) {
 	if (apdu.isChained()) {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CHAINNOTSUPPORTED, "Chaining not supported in GET CHALLENGE");
 	}
-	
+
 	if (apdu.hasCData()) {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_INVDATA, "Command data not expected in GET CHALLENGE");
 	}
-	
+
 	var l = apdu.getNe();
 	this.challenge = this.crypto.generateRandom(l);
 	apdu.setRData(this.challenge);
-	
+
 	apdu.setSW(APDU.SW_OK);
 }
 
@@ -873,7 +883,7 @@ eIDCommandInterpreter.prototype.externalAuthenticateForBAC = function(apdu) {
 	if (apdu.isChained()) {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_CHAINNOTSUPPORTED, "Chaining not supported in EXTERNAL AUTHENTICATE");
 	}
-	
+
 	if (!apdu.hasCData()) {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_WRONGLENGTH, "Command requires C-data");
 	}
@@ -982,7 +992,7 @@ eIDCommandInterpreter.prototype.verifyAuxiliaryData = function(apdu) {
 	}
 	oid = oid.bytes(2);
 
-	if (!oid.equals(new ByteString("id-DateOfExpiry", OID)) && 
+	if (!oid.equals(new ByteString("id-DateOfExpiry", OID)) &&
 		!oid.equals(new ByteString("id-CommunityID", OID)) &&
 		!oid.equals(new ByteString("id-DateOfBirth", OID))) {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_INVDATA, "Unknown object identifier in C-Data");
@@ -998,7 +1008,7 @@ eIDCommandInterpreter.prototype.verifyAuxiliaryData = function(apdu) {
 	if (!ad) {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_RDNOTFOUND, "No auxiliary data found in security environment");
 	}
-	
+
 	var refdata;
 	for (var i = 0; i < ad.elements; i++) {
 		var ade = ad.get(i);
@@ -1016,7 +1026,7 @@ eIDCommandInterpreter.prototype.verifyAuxiliaryData = function(apdu) {
 //	print("RefData: " + refdata.toString(ASCII));
 
 	var ac = this.fileSelector.getMeta("accessController");
-	
+
 	if (oid.equals(new ByteString("id-CommunityID", OID))) {
 		if (ac && !ac.checkRight(this, apdu, 1)) {
 			throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_SECSTATNOTSAT, "Community ID Verification not allowed");
@@ -1209,7 +1219,7 @@ eIDCommandInterpreter.prototype.terminateKey = function(apdu) {
 	if (!key.useAuthenticationObject.isTerminated) {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_REFDATANOTUSABLE, "Authentication object is not terminated");
 	}
-	
+
 	key.terminate();
 	apdu.setSW(APDU.SW_OK);
 }
@@ -1297,7 +1307,7 @@ eIDCommandInterpreter.prototype.generateAsymmetricKeyPair = function(apdu) {
 	keyobj.privateKey = new Key();
 	keyobj.privateKey.setType(Key.PRIVATE);
 	keyobj.isTerminated = false;
-	
+
 	this.crypto.generateKeyPair(Crypto.EC, puk, keyobj.privateKey);
 
 	var encpuk = PACE.encodePublicKey("ecdsa-plain-signatures", puk, true);
@@ -1342,7 +1352,7 @@ eIDCommandInterpreter.prototype.computeDigitalSignature = function(apdu) {
 	if (keyobj.isTerminated) {
 		throw new GPError("CommandInterpreter", GPError.INVALID_DATA, APDU.SW_REFDATANOTUSABLE, "Key is terminated");
 	}
-	
+
 	var signature = this.crypto.sign(keyobj.privateKey, Crypto.ECDSA, apdu.getCData());
 
 	apdu.setRData(ECCUtils.unwrapSignature(signature), keyobj.privateKey.getComponent(Key.ECC_P).length);
