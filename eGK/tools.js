@@ -97,14 +97,14 @@ eGKDataOutline.prototype.decorate = function(format) {
 
 	var view = this.view;
 	var data = this.data;
-	
+
 	if (!format) {
 		return;
 	}
 
 	if (((format.substr(0, 4) == "asn1") || (format.substr(0, 7) == "tlvlist")) && (data.length >= 2)) {
                 var total = data.length;
-                
+
                 while(total >= 2) {
                 	try	{
 	                        var asn = new ASN1(data);
@@ -113,12 +113,12 @@ eGKDataOutline.prototype.decorate = function(format) {
 	                	print("Error in TLV structure: " + e);
 	                	return;
 	                }
-	                
+
                         this.asn = asn;
                         this.asn1DecoratorHook(format);
                         view.insert(asn);
                         total -= asn.size;
-                        
+
                         if (format.substr(0, 4) == "asn") {
                                 break;
                         }
@@ -128,37 +128,12 @@ eGKDataOutline.prototype.decorate = function(format) {
                                 break;
                         }
                 }
-                        
+
                 if (total > 0) {
                         var sparecontent = new OutlineNode(total + " spare bytes");
                         view.insert(sparecontent);
                 }
         } else if (format.substr(0, 3) == "xml") {
-/*
-// ---------
-		if (format.substr(4, 3) == "vd1") {
-	        	var filename = "C:/workspace/scdp4j/eGK/vd/UC_AllgemeineVersicherungsdatenXMLcard2-s.xml.V3.0.gzVDGVD.bin";
-		} else if (format.substr(4, 3) == "lz1") {
-	        	var filename = "C:/workspace/scdp4j/eGK/vd/UC_geschuetzteVersichertendatenXMLcard2-s.xml.V3.0.gz.bin";
-		} else {
-	        	var filename = "C:/workspace/scdp4j/eGK/vd/UC_PersoenlicheVersichertendatenXMLcard2-s.xml.V3.0.gz.bin";
-		}
-
-		var f = new java.io.FileInputStream(filename);
-		var flen = f.available();
-
-		var bs = java.lang.reflect.Array.newInstance(java.lang.Byte.TYPE, flen);
-		var len = f.read(bs);
-
-		print("Len = " + len);
-		print(bs);
-
-		var bb = new ByteBuffer(bs);
-		data = bb.toByteString();
-
-		print(data);
-// ---------
-*/
 		if (format.substr(4, 3) == "vd1") {
 			if (data.length < 8) {
 				print("Invalid header in EF.VD");
@@ -204,7 +179,7 @@ eGKDataOutline.prototype.decorate = function(format) {
 				var x = GPXML.parse(subs);
 				xmltree(x, this.view);
 			}
-			
+
 		} else {
 			if (data.length < 2) {
 				print("Invalid header in EF.PD or EF.GVD");
@@ -216,7 +191,7 @@ eGKDataOutline.prototype.decorate = function(format) {
 				print("Length field out of range");
 				return;
 			}
-			
+
 			var subs = data.bytes(2, len);
 			if (subs.left(2).toString(HEX) != "1F8B") {
 				print("Invalid zip header");
@@ -225,7 +200,28 @@ eGKDataOutline.prototype.decorate = function(format) {
 			var x = GPXML.parse(subs);
 			xmltree(x, this.view);
 		}
-        }
+	} else if (format.substr(0, 8) == "statusvd") {
+		var tpending = (data.byteAt(0) != 0x30);
+
+		var n = new OutlineNode((tpending ? "" : "No ") + "Transaction pending");
+		view.insert(n);
+
+		var tstamp = data.bytes(1, 4).toString(ASCII) + "-" + data.bytes(5, 2).toString(ASCII) + "-" + data.bytes(7, 2).toString(ASCII) + " " +
+			     data.bytes(9, 2).toString(ASCII) + ":" + data.bytes(11, 2).toString(ASCII) + ":" + data.bytes(13, 2).toString(ASCII);
+
+		var n = new OutlineNode("Data from : " + tstamp);
+		view.insert(n);
+
+		var version = data.bytes(15, 5).toString(HEX);
+
+		var n = new OutlineNode("XML Version : " + version);
+		view.insert(n);
+
+		var version = data.bytes(20, 5).toString(HEX);
+
+		var n = new OutlineNode("Obj Version : " + version);
+		view.insert(n);
+	}
 }
 
 
@@ -251,30 +247,30 @@ function readRootCVC(filename) {
 	filename = GPSystem.mapFilename(filename);
 	// Open stream
 	var f = new java.io.FileInputStream(filename);
-	
+
 	// Determine file size
 	var flen = f.available();
 
 	// Allocate native byte array
 	var bs = java.lang.reflect.Array.newInstance(java.lang.Byte.TYPE, flen);
-	
+
 	// Read into byte array
 	var len = f.read(bs);
 
 	// Allocate JavaScript ByteBuffer from native/wrapped byte array
 	var bb = new ByteBuffer(bs);
-	
+
 	// Convert to JavaScript ByteString
 	var data = bb.toByteString();
 
 	print(data);
 	var tlv = new ASN1(data);
 	print(tlv);
-	
+
 	var b = tlv.get(1).value.bytes(1);
 	var tlv = new ASN1(b);
 	print(tlv);
 	print("PUK = " + tlv.get(0).value.toString(HEX));
-	
+
 	return data;
 }
