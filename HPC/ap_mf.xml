@@ -20,12 +20,17 @@
     <scdp:DataStructure>
         <scdp:FileStructure arrayElement="EF" arrayIndex="#">
             <scdp:EF fid="0030" type="LV" format="tlvlist.arr" name="EF.ARR" />
+            <scdp:EF fid="011C" type="T" format="asn1" name="EF.CardAccess" />
             <scdp:EF fid="2F01" type="T" format="asn1" name="EF.ATR" />
             <scdp:EF fid="2F00" type="LV" format="asn1.efdir" name="EF.DIR" />
             <scdp:EF fid="2F02" type="T" format="asn1" name="EF.GDO" />
-            <scdp:EF fid="2F03" type="T" format="asn1.cvc" name="EF.CVC.HPC.AUT" />
-            <scdp:EF fid="2F04" type="T" format="asn1.cvc" name="EF.CVC.CA_HPC.CS" />
-        </scdp:FileStructure>    
-    </scdp:DataStructure>   
+            <scdp:EF fid="2F11" type="T" format="asn1" name="EF.Version2" />
+            <scdp:EF fid="2F04" type="T" format="asn1.cvc" name="EF.C.CA_HPC.CS.R2048" />
+            <scdp:EF fid="2F07" type="T" format="asn1.cvc" name="EF.C.CA_HPC.CS.E256" />
+            <scdp:EF fid="2F03" type="T" format="asn1.cvc" name="EF.C.HPC.AUTR_CVC.R2048" />
+            <scdp:EF fid="2F06" type="T" format="asn1.cvc" name="EF.C.HPC.AUTR_CVC.E256" />
+            <scdp:EF fid="2F09" type="T" format="asn1.cvc" name="EF.C.HPC.AUTD_SUK_CVC.E256" />
+        </scdp:FileStructure>
+    </scdp:DataStructure>
 </gp:ApplicationProfile>
 

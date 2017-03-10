@@ -1,10 +1,10 @@
 /*
  *  ---------
  * |.##> <##.|  Open Smart Card Development Platform (www.openscdp.org)
- * |#       #|  
+ * |#       #|
  * |#       #|  Copyright (c) 1999-2006 CardContact Software & System Consulting
  * |'##> <##'|  Andreas Schwier, 32429 Minden, Germany (www.cardcontact.de)
- *  --------- 
+ *  ---------
  *
  *  This file is part of OpenSCDP.
  *
@@ -25,7 +25,8 @@
  */
 
 
-load("tools/CardOutlineFactory.js");
+load("tools/CardOutlineFactory2.0.js");
+load("tools/p15classes.js");
 
 // Create crypto object
 var crypto = new Crypto();
@@ -38,8 +39,9 @@ af.addApplicationProfile("ap_mf.xml");
 af.addApplicationProfile("ap_hpa.xml");
 af.addApplicationProfile("ap_qes.xml");
 af.addApplicationProfile("ap_esign.xml");
-af.addApplicationProfile("ap_ciaesign.xml");
-        
+af.addApplicationProfile("ap_cia.xml");
+af.addApplicationProfile("ap_auto.xml");
+
 // Create ec-card card object
 var card = new Card(_scsh3.reader, "cp_hpc.xml");
 

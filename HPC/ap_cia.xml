@@ -22,10 +22,10 @@
             <scdp:EF fid="0030" type="LV" format="tlvlist.arr" name="EF.ARR" />
             <scdp:EF fid="5032" type="T" format="asn1.ciainfo" name="EF.CIAInfo" />
             <scdp:EF fid="5031" type="T" format="asn1.od" name="EF.OD" />
-            <scdp:EF fid="5034" type="T" format="asn1.aod" name="EF.AOD" />
-            <scdp:EF fid="5035" type="T" format="asn1.prkd" name="EF.PrKD" />
-            <scdp:EF fid="5038" type="T" format="asn1.cd" name="EF.CD" />
-        </scdp:FileStructure>    
-    </scdp:DataStructure>   
+            <scdp:EF fid="5034" type="T" format="tlvlist.aod" name="EF.AOD" />
+            <scdp:EF fid="5035" type="T" format="tlvlist.prkd" name="EF.PrKD" />
+            <scdp:EF fid="5038" type="T" format="tlvlist.cd" name="EF.CD" />
+        </scdp:FileStructure>
+    </scdp:DataStructure>
 </gp:ApplicationProfile>
 

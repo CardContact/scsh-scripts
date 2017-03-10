@@ -19,11 +19,13 @@
     <ConflictRules arrayElement="" arrayIndex=""></ConflictRules>
     <LoadFileInstances arrayElement="" arrayIndex=""></LoadFileInstances>
     <ApplicationInstances arrayElement="ApplicationInstance" arrayIndex="AID">
-        <ApplicationInstance Label="MF"                         AID="3F00"                                                                  ProfileID="2B0601040181C31F10040101" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
-        <ApplicationInstance Label="DF.HPA"                AID="D27600004002"                                              ProfileID="2B0601040181C31F10040201" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
-        <ApplicationInstance Label="DF.QES"                AID="D27600006601"                                              ProfileID="2B0601040181C31F10040301" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
-        <ApplicationInstance Label="DF.ESIGN"            AID="A000000167455349474E"                            ProfileID="2B0601040181C31F10040401" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
-        <ApplicationInstance Label="DF.CIA.ESIGN"    AID="E828BD080FA000000167455349474E"    ProfileID="2B0601040181C31F10040501" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
+        <ApplicationInstance Label="MF"           AID="3F00"                           ProfileID="2B0601040181C31F10040101" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
+        <ApplicationInstance Label="DF.HPA"       AID="D27600014602"                   ProfileID="2B0601040181C31F10040201" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
+        <ApplicationInstance Label="DF.QES"       AID="D27600006601"                   ProfileID="2B0601040181C31F10040301" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
+        <ApplicationInstance Label="DF.CIA.QES"   AID="E828BD080FD27600006601"         ProfileID="2B0601040181C31F10040501" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
+        <ApplicationInstance Label="DF.ESIGN"     AID="A000000167455349474E"           ProfileID="2B0601040181C31F10040401" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
+        <ApplicationInstance Label="DF.CIA.ESIGN" AID="E828BD080FA000000167455349474E" ProfileID="2B0601040181C31F10040501" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
+        <ApplicationInstance Label="DF.AUTO"      AID="D27600014603"                   ProfileID="2B0601040181C31F10040601" LifeCycle="SELECTABLE" LoadFileID=""></ApplicationInstance>
     </ApplicationInstances>
     <CardInfo>
         <ResourcesAvailable Unit="byte" RAM="2048" EEPROM="10000" Flash="0"/>
