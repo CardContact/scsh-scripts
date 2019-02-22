@@ -1,10 +1,10 @@
 /*
  *  ---------
  * |.##> <##.|  Open Smart Card Development Platform (www.openscdp.org)
- * |#       #|  
+ * |#       #|
  * |#       #|  Copyright (c) 1999-2006 CardContact Software & System Consulting
  * |'##> <##'|  Andreas Schwier, 32429 Minden, Germany (www.cardcontact.de)
- *  --------- 
+ *  ---------
  *
  *  This file is part of OpenSCDP.
  *
@@ -28,7 +28,7 @@ print("eGK Explorer");
 print("============");
 
 // Load CardOutlineFactory to display card tree
-load("tools/CardOutlineFactory.js");
+load("tools/CardOutlineFactory2.0.js");
 
 // Load special classes to display XML encoded fields
 load("tools.js");
@@ -52,7 +52,7 @@ af.addApplicationProfile("ap_zuzahlung.xml");
 af.addApplicationProfile("ap_esign.xml");
 af.addApplicationProfile("ap_ciaesign.xml");
 af.addApplicationProfile("ap_qes.xml");
-        
+
 // Create ec-card card object
 var card = new Card(_scsh3.reader, "cp_egk.xml");
 

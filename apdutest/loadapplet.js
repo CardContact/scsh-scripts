@@ -1,10 +1,10 @@
 /*
  *  ---------
  * |.##> <##.|  Open Smart Card Development Platform (www.openscdp.org)
- * |#       #|  
+ * |#       #|
  * |#       #|  Copyright (c) 1999-2011 CardContact Software & System Consulting
  * |'##> <##'|  Andreas Schwier, 32429 Minden, Germany (www.cardcontact.de)
- *  --------- 
+ *  ---------
  *
  *  This file is part of OpenSCDP.
  *
@@ -26,7 +26,7 @@
 
 load("gp/tools.js");
 
-var sdAid = new ByteString("A000000003000000", HEX);
+var sdAid = new ByteString("A000000151000000", HEX);
 
 var loadFileAid = new ByteString("E82B0601040181C31F020201", HEX);
 var moduleAid = new ByteString("E82B0601040181C31F0202", HEX);
@@ -48,7 +48,7 @@ var sd = new GPSecurityDomain("profiles/ap_sample.xml");
 sd.aid = sdAid;
 sd.card = card;
 
-//Reset the card 
+//Reset the card
 card.reset(Card.RESET_COLD);
 
 print("Selecting card manager application...");

@@ -26,7 +26,7 @@
 
 load("explore-core.js");
 
-var card = new Card(_scsh3.reader, "../profiles/cp_jcop41.xml");
+var card = new Card(_scsh3.reader, "../profiles/cp_jcop3.xml");
 
 var crypto = new Crypto();
 
