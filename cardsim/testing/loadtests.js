@@ -1,10 +1,10 @@
 /**
  *  ---------
  * |.##> <##.|  Open Smart Card Development Platform (www.openscdp.org)
- * |#       #|  
+ * |#       #|
  * |#       #|  Copyright (c) 1999-2008 CardContact Software & System Consulting
  * |'##> <##'|  Andreas Schwier, 32429 Minden, Germany (www.cardcontact.de)
- *  --------- 
+ *  ---------
  *
  *  This file is part of OpenSCDP.
  *
@@ -52,7 +52,6 @@ testRunner.addTestGroupFromXML("tg_readbinary_sw.xml", param);
 testRunner.addTestGroupFromXML("tg_updatebinary_even_ins.xml", param);
 testRunner.addTestGroupFromXML("tg_updatebinary_odd_ins.xml", param);
 testRunner.addTestGroupFromXML("tg_updatebinary_sw.xml", param);
-testRunner.addTestGroupFromXML("tg_readrecord_even_ins.xml", param);
 testRunner.addTestGroupFromXML("tg_secmsg.xml", param);
 
 print("Test-Suite loaded...");
