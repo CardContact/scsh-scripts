@@ -1,22 +1,85 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gp:ApplicationProfile xmlns="http://namespaces.globalplatform.org/systems-profiles/1.1.0"
-     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://namespaces.globalplatform.org/systems-profiles/1.1.0 http://namespaces.globalplatform.org/systems-profiles/1.1.0/GP.systems.profiles.1.1.0.ApplicationProfile.xsd" 
-    xmlns:gp="http://namespaces.globalplatform.org/systems-profiles/1.1.0"
-    xmlns:scdp="http://www.openscdp.org/namespaces/gp/systems-profiles/1.0.0"
-    UniqueID="2B0601040181C31F10050201" ProfileVersion="1.0.0">
-    <gp:Description>JCOP Card Manager Application Profile</gp:Description>
-    <gp:Revisions arrayElement="Revision" arrayIndex="#">
-        <gp:Revision Version="1.0.0" Date="2006-07-24" Time="12:00:00" By="www.CardContact.de" Digest=""></gp:Revision>
-    </gp:Revisions>
-    <gp:ConflictRules arrayElement="" arrayIndex=""></gp:ConflictRules>
-    <gp:ApplicationInfo Version="1.0.0" Type="GP" Subtype="CM" Owner="GP" Developer="CardContact" Provider="GP" Domain="GP" VolatileDataSpaceMin="1000" NonVolatileDataSpaceMin="2000">
-        <gp:Privileges/>
-        <gp:LifeCycles arrayElement="LifeCycle" arrayIndex="#">
-            <gp:LifeCycle Name=""/>
-            <gp:LifeCycle Name=""/>
-            <gp:LifeCycle Name=""/>
-        </gp:LifeCycles>
-    </gp:ApplicationInfo>
+		       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		       xsi:schemaLocation="http://namespaces.globalplatform.org/systems-profiles/1.1.0 http://namespaces.globalplatform.org/systems-profiles/1.1.0/GP.systems.profiles.1.1.0.ApplicationProfile.xsd"
+		       xmlns:gp="http://namespaces.globalplatform.org/systems-profiles/1.1.0"
+		       xmlns:scdp="http://www.openscdp.org/namespaces/gp/systems-profiles/1.0.0"
+		       UniqueID="2B0601040181C31F10050201" ProfileVersion="1.0.0">
+	<gp:Description>JCOP Card Manager Application Profile</gp:Description>
+	<gp:Revisions arrayElement="Revision" arrayIndex="#">
+		<gp:Revision Version="1.0.0" Date="2006-07-24" Time="12:00:00" By="www.CardContact.de" Digest=""></gp:Revision>
+	</gp:Revisions>
+	<gp:ConflictRules arrayElement="" arrayIndex=""></gp:ConflictRules>
+	<gp:ApplicationInfo Version="1.0.0" Type="GP" Subtype="CM" Owner="GP" Developer="CardContact" Provider="GP" Domain="GP" VolatileDataSpaceMin="1000" NonVolatileDataSpaceMin="2000">
+		<gp:Privileges/>
+		<gp:LifeCycles arrayElement="LifeCycle" arrayIndex="#">
+			<gp:LifeCycle Name=""/>
+			<gp:LifeCycle Name=""/>
+			<gp:LifeCycle Name=""/>
+		</gp:LifeCycles>
+	</gp:ApplicationInfo>
+
+	<gp:Key Name="K_ENC" ProfileID="2B0601040181C31F100301" External="true"/>
+	<gp:Key Name="K_MAC" ProfileID="2B0601040181C31F100302" External="true"/>
+	<gp:Key Name="K_DEK" ProfileID="2B0601040181C31F100303" External="true"/>
+
+	<gp:SecureChannel SecureChannel="SCP02">
+		<gp:OpenSecureChannel Param="level">
+			<gp:Script><![CDATA[
+
+				var scp02 = this.secureChannel;
+
+				scp02.initializeUpdate(0x00, 0x00);
+
+				var derivationPostfix = scp02.sequenceCounter.concat(new ByteString("000000000000000000000000", HEX));
+
+				// Derive S-ENC session key
+				var derivationPrefix = new ByteString("0182", HEX);
+				var derivationParam = derivationPrefix.concat(derivationPostfix);
+
+				GPSystem.trace("Input to session S-ENC derivation: " + derivationParam);
+
+				var sessionSENC = new Key();
+				this.crypto.deriveKey(this.key.K_ENC, Crypto.DES_CBC, derivationParam, sessionSENC);
+
+				// Derive S-MAC session key
+
+				var derivationPrefix = new ByteString("0101", HEX);
+				var derivationParam = derivationPrefix.concat(derivationPostfix);
+
+				GPSystem.trace("Input to session S-MAC derivation: " + derivationParam);
+
+				var sessionSMAC = new Key();
+				this.crypto.deriveKey(this.key.K_MAC, Crypto.DES_CBC, derivationParam, sessionSMAC);
+
+				// Derive DEK session key
+
+				var derivationPrefix = new ByteString("0181", HEX);
+				var derivationParam = derivationPrefix.concat(derivationPostfix);
+
+				GPSystem.trace("Input to session DEK derivation: " + derivationParam);
+
+				var sessionDEK = new Key();
+				this.crypto.deriveKey(this.key.K_DEK, Crypto.DES_CBC, derivationParam, sessionDEK);
+
+				scp02.setEncKey(sessionSENC);
+				scp02.setMacKey(sessionSMAC);
+				scp02.setDekKey(sessionDEK);
+
+				scp02.externalAuthenticate(level);
+
+				]]></gp:Script>
+		</gp:OpenSecureChannel>
+	</gp:SecureChannel>
+
+	<gp:ScriptFragment Name="AUTHENTICATE" StartLifeCycle="one" EndLifeCycle="two">
+		<gp:Script><![CDATA[
+			GPSystem.trace("AUTHENTICATE script started");
+
+			this.select();
+			this.openSecureChannel(1);		// 00-Plain, 01-Mac, 03-Mac+Enc
+
+			]]></gp:Script>
+	</gp:ScriptFragment>
 </gp:ApplicationProfile>
 

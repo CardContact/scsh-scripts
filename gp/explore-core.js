@@ -24,8 +24,7 @@
  *  Global Platform Card Explorer
  */
 
-load("tools.js");
-load("tools/CardOutlineFactory.js");
+load("tools/CardOutlineFactory2.0.js");
 
 if (typeof(masterSENC) == "undefined")
 	masterSENC = new Key("kp_jcop_default_s-enc.xml");
@@ -218,8 +217,7 @@ OutlineCardManager.prototype.authenticate = function() {
 		return;
 	}
 
-	GPAuthenticate(this.application.card, this.application.crypto, masterSENC, masterSMAC);
-
+	this.application.run("AUTHENTICATE");
 	this.authenticated = true;
 
 	var filter = new ByteString("4F00", HEX);

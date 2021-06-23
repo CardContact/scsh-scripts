@@ -24,46 +24,35 @@
  *  Load APDU test applet into JCOP/JTOP card
  */
 
-load("gp/tools.js");
+// Crypto object
+var crypto = new Crypto();
 
-var sdAid = new ByteString("A000000151000000", HEX);
+// Create application factory that holds all application profiles
+var af = new ApplicationFactory(crypto);
 
-var loadFileAid = new ByteString("E82B0601040181C31F020201", HEX);
-var moduleAid = new ByteString("E82B0601040181C31F0202", HEX);
-var applAid = new ByteString("E82B0601040181C31F0202", HEX);
-
-// Generate default keys
-var masterSENC = new Key("gp/kp_jcop_default_s-enc.xml");
-var masterSMAC = new Key("gp/kp_jcop_default_s-mac.xml");
+af.addApplicationProfile("gp/ap_jcop_cardmanager.xml");
+af.addKeyProfile("gp/kp_jcop_default_s-enc.xml");
+af.addKeyProfile("gp/kp_jcop_default_s-mac.xml");
+af.addKeyProfile("gp/kp_jcop_default_dek.xml");
 
 // Card object
 var card = new Card(_scsh3.reader);
 
-// Crypto object
-var crypto = new Crypto();
-
-
-// Define a security domain (profiles does not matter so far)
-var sd = new GPSecurityDomain("profiles/ap_sample.xml");
-sd.aid = sdAid;
-sd.card = card;
-
 //Reset the card
 card.reset(Card.RESET_COLD);
 
-print("Selecting card manager application...");
+var sdAid = new ByteString("A000000151000000", HEX);
+var uniqueId = new ByteString("2B0601040181C31F10050201", HEX);
 
-try {
-	print(sd.select());
-}
-catch(e) {
-	print(e);
-	var sdAid = new ByteString("A000000151000000", HEX);
-	sd.aid = sdAid;
-	print(sd.select());
-}
+var sd = this.af.getApplicationInstance(new Object(), sdAid, card, uniqueId);
 
-GPAuthenticate(card, crypto, masterSENC, masterSMAC);
+print("Authenticate...");
+print(sd.select());
+sd.run("AUTHENTICATE");
+
+var loadFileAid = new ByteString("E82B0601040181C31F020201", HEX);
+var moduleAid = new ByteString("E82B0601040181C31F0202", HEX);
+var applAid = new ByteString("E82B0601040181C31F0202", HEX);
 
 print("Delete old applet instance...");
 sd.deleteAID(applAid, [0x9000, 0x6A88, 0x6A80] );
