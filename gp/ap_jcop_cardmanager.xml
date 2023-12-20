@@ -23,50 +23,113 @@
 	<gp:Key Name="K_MAC" ProfileID="2B0601040181C31F100302" External="true"/>
 	<gp:Key Name="K_DEK" ProfileID="2B0601040181C31F100303" External="true"/>
 
+	<gp:Function Name="deriveKey" Param="crypto, key, ddc, size, context">
+		<gp:Description />
+		<gp:Script><![CDATA[
+
+			var dd = new ByteBuffer();
+			var os = size;
+			var iter = 1;
+			while (os > 0) {
+				var dp = new ByteBuffer();
+				dp.append(ByteString.valueOf(ddc, 12));
+				dp.append(0);
+				dp.append(ByteString.valueOf(size << 3, 2));
+				dp.append(ByteString.valueOf(iter));
+				dp.append(context);
+
+				var mac = crypto.sign(key, Crypto.AES_CMAC, dp.toByteString());
+
+				dd.append(mac.left(os > mac.length ? mac.length : os));
+				os -= mac.length;
+				iter++;
+			}
+			return dd.toByteString();
+
+           ]]></gp:Script>
+
+	</gp:Function>
+
+
 	<gp:SecureChannel SecureChannel="SCP02">
 		<gp:OpenSecureChannel Param="level">
 			<gp:Script><![CDATA[
 
-				var scp02 = this.secureChannel;
+				var scp = this.secureChannel;
 
-				scp02.initializeUpdate(0x00, 0x00);
+				scp.initializeUpdate(0x00, 0x00);
 
-				var derivationPostfix = scp02.sequenceCounter.concat(new ByteString("000000000000000000000000", HEX));
+				if (scp instanceof GPScp02) {
+					var derivationPostfix = scp.sequenceCounter.concat(new ByteString("000000000000000000000000", HEX));
 
-				// Derive S-ENC session key
-				var derivationPrefix = new ByteString("0182", HEX);
-				var derivationParam = derivationPrefix.concat(derivationPostfix);
+					// Derive S-ENC session key
+					var derivationPrefix = new ByteString("0182", HEX);
+					var derivationParam = derivationPrefix.concat(derivationPostfix);
 
-				GPSystem.trace("Input to session S-ENC derivation: " + derivationParam);
+					GPSystem.trace("Input to session S-ENC derivation: " + derivationParam);
 
-				var sessionSENC = new Key();
-				this.crypto.deriveKey(this.key.K_ENC, Crypto.DES_CBC, derivationParam, sessionSENC);
+					var sessionSENC = new Key();
+					this.crypto.deriveKey(this.key.K_ENC, Crypto.DES_CBC, derivationParam, sessionSENC);
 
-				// Derive S-MAC session key
+					// Derive S-MAC session key
 
-				var derivationPrefix = new ByteString("0101", HEX);
-				var derivationParam = derivationPrefix.concat(derivationPostfix);
+					var derivationPrefix = new ByteString("0101", HEX);
+					var derivationParam = derivationPrefix.concat(derivationPostfix);
 
-				GPSystem.trace("Input to session S-MAC derivation: " + derivationParam);
+					GPSystem.trace("Input to session S-MAC derivation: " + derivationParam);
 
-				var sessionSMAC = new Key();
-				this.crypto.deriveKey(this.key.K_MAC, Crypto.DES_CBC, derivationParam, sessionSMAC);
+					var sessionSMAC = new Key();
+					this.crypto.deriveKey(this.key.K_MAC, Crypto.DES_CBC, derivationParam, sessionSMAC);
 
-				// Derive DEK session key
+					// Derive DEK session key
 
-				var derivationPrefix = new ByteString("0181", HEX);
-				var derivationParam = derivationPrefix.concat(derivationPostfix);
+					var derivationPrefix = new ByteString("0181", HEX);
+					var derivationParam = derivationPrefix.concat(derivationPostfix);
 
-				GPSystem.trace("Input to session DEK derivation: " + derivationParam);
+					GPSystem.trace("Input to session DEK derivation: " + derivationParam);
 
-				var sessionDEK = new Key();
-				this.crypto.deriveKey(this.key.K_DEK, Crypto.DES_CBC, derivationParam, sessionDEK);
+					var sessionDEK = new Key();
+					this.crypto.deriveKey(this.key.K_DEK, Crypto.DES_CBC, derivationParam, sessionDEK);
 
-				scp02.setEncKey(sessionSENC);
-				scp02.setMacKey(sessionSMAC);
-				scp02.setDekKey(sessionDEK);
+					scp.setEncKey(sessionSENC);
+					scp.setMacKey(sessionSMAC);
+					scp.setDekKey(sessionDEK);
+				} else {
+					print("SCP03");
 
-				scp02.externalAuthenticate(level);
+					var context = (scp.hostChallenge).concat(scp.cardChallenge);
+
+					// Derive S-ENC
+					var k = new Key();
+					k.setComponent(Key.AES, this.key.K_ENC.getComponent(Key.DES));
+					var val = this.deriveKey(this.crypto, k, 4, 16, context);
+
+					var sessionSENC = new Key();
+					sessionSENC.setComponent(Key.AES, val);
+
+					// Derive S-MAC
+					var k = new Key();
+					k.setComponent(Key.AES, this.key.K_MAC.getComponent(Key.DES));
+					var val = this.deriveKey(this.crypto, k, 6, 16, context);
+
+					var sessionSMAC = new Key();
+					sessionSMAC.setComponent(Key.AES, val);
+
+					// Derive S-RMAC
+					var k = new Key();
+					k.setComponent(Key.AES, this.key.K_MAC.getComponent(Key.DES));
+					var val = this.deriveKey(this.crypto, k, 7, 16, context);
+
+					var sessionSRMAC = new Key();
+					sessionSRMAC.setComponent(Key.AES, val);
+
+					scp.setEncKey(sessionSENC);
+					scp.setMacKey(sessionSMAC);
+					scp.setResponseMacKey(sessionSRMAC);
+				}
+
+				print("Level " + level);
+				scp.externalAuthenticate(level);
 
 				]]></gp:Script>
 		</gp:OpenSecureChannel>
@@ -78,6 +141,160 @@
 
 			this.select();
 			this.openSecureChannel(1);		// 00-Plain, 01-Mac, 03-Mac+Enc
+
+			]]></gp:Script>
+	</gp:ScriptFragment>
+
+	<gp:ScriptFragment Name="IDENTIFY" StartLifeCycle="one" EndLifeCycle="two">
+		<gp:Script><![CDATA[
+			GPSystem.trace("IDENTIFY script started");
+
+			this.select();
+			this.openSecureChannel(1);		// 00-Plain, 01-Mac, 03-Mac+Enc
+
+			var iddata = this.sendApdu(0x80, 0xCA, 0x00, 0xFE, new ByteString("DF28", HEX), 0);
+
+			if (this.card.SW == 0x9000) {
+				print("IDENTIFY returns:");
+				print(iddata);
+
+				try	{
+					var a = new ASN1(0x30, (new ASN1(iddata)).get(0).value);
+					var a = new ASN1(a.getBytes());
+
+//				print(a);
+
+					var epromid = a.find(0x01).value;
+					print("EEPROM ID          " + epromid.toString(HEX));
+					var configid = epromid.bytes(1,3).toString(HEX);
+					print("  Configuration ID " + configid);
+					var backgroundid = epromid.bytes(4,8);
+					print("  Background ID    " + backgroundid.toString(HEX));
+					print("Patch ID           " + a.find(0x02).value.toString(HEX));
+					var pbid = a.find(0x03).value;
+					if (pbid.length == 16) {
+						print("Platform build ID  " + pbid.toString(ASCII));
+						print("Custom mask ID     " + a.find(0x04).value.toString(HEX));
+						var moc = a.find(0x05).value.byteAt(0);
+						switch(moc) {
+						case 0x30:
+							print("No match-on-card (MOC)");
+							break;
+						case 0x31:
+							print("Neurotechnology (MOC)");
+							break;
+						case 0x33:
+							print("Neurotechnology and Morpho (MOC)");
+							break;
+						case 0x37:
+							print("Neurotechnology, Morpho and ID 3 (MOC)");
+							break;
+						default:
+							print("Unknown MOC id");
+							break;
+						}
+					} else {
+						print("Platform build ID  " + pbid.bytes(0, 16).toString(ASCII) + "-" + pbid.bytes(16, 8).toString(HEX));
+						print("FIPS Mode          " + a.find(0x05).value.toString(HEX));
+						print("Pre-perso state    " + a.find(0x07).value.toString(HEX));
+						print("ROM ID             " + a.find(0x08).value.toString(HEX));
+					}
+
+					var mods = a.find(0x06);
+					if (mods) {
+						if (mods.length == 2) {
+							var mods = mods.value.toUnsigned();
+
+							print("JCOP 4 Modules:");
+							if (mods & 0x01) {
+								print(" eGov accelerator module");
+							}
+							if (mods & 0x02) {
+								print(" Secure Box module");
+							}
+							if (mods & 0x04) {
+								print(" RSA key generation module");
+							}
+							if (mods & 0x08) {
+								print(" Config module");
+							}
+							if (mods & 0x10) {
+								print(" ECC module");
+							}
+							if (mods & 0x20) {
+								print(" FIPS module");
+							}
+							if (mods & 0x40) {
+								print(" Korean Seed module");
+							}
+							if (mods & 0x80) {
+								print(" Opacity module");
+							}
+							if (mods & 0x100) {
+								print(" PACE IM module");
+							}
+						} else if (mods.length == 4) {
+							var mods = mods.value.toUnsigned();
+
+							print("JCOP 4.5 Modules:");
+							if (mods & 0x01) {
+								print(" OS updater module");
+							}
+							if (mods & 0x02) {
+								print(" Secure Box module");
+							}
+							if (mods & 0x04) {
+								print(" RSA key generation module");
+							}
+							if (mods & 0x08) {
+								print(" Config module");
+							}
+							if (mods & 0x10) {
+								print(" ECC module");
+							}
+							if (mods & 0x20) {
+								print(" FIPS module");
+							}
+							if (mods & 0x40) {
+								print(" Korean Seed module");
+							}
+							if (mods & 0x80) {
+								print(" Opacity module");
+							}
+							if (mods & 0x100) {
+								print(" Executable Load File Upgrade Module");
+							}
+							if (mods & 0x200) {
+								print(" Time module");
+							}
+							if (mods & 0x400) {
+								print(" PACE IM module");
+							}
+							if (mods & 0x800) {
+								print(" IoT Base");
+							}
+							if (mods & 0x1000) {
+								print(" IoT Extended");
+							}
+							if (mods & 0x1000) {
+								print(" IoT Extended");
+							}
+							if (mods & 0x2000) {
+								print(" RFU");
+							}
+							if (mods & 0x4000) {
+								print(" RSA module");
+							}
+							if (mods & 0x8000) {
+								print(" eGov accelerator module");
+							}
+						}
+					}
+				}
+				catch(e) {
+					print(e);
+				}
+			}
 
 			]]></gp:Script>
 	</gp:ScriptFragment>

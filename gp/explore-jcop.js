@@ -37,6 +37,9 @@ var of = new GPCardOutlineFactory();
 var af = new ApplicationFactory(crypto);
 
 af.addApplicationProfile("ap_jcop_cardmanager.xml");
+af.addKeyProfile("kp_jcop_default_s-enc.xml");
+af.addKeyProfile("kp_jcop_default_s-mac.xml");
+af.addKeyProfile("kp_jcop_default_dek.xml");
 
 var aidlist = null;
 

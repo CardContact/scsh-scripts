@@ -26,27 +26,23 @@
 
 load("tools/CardOutlineFactory2.0.js");
 
-if (typeof(masterSENC) == "undefined")
-	masterSENC = new Key("kp_jcop_default_s-enc.xml");
-
-if (typeof(masterSMAC) == "undefined")
-	masterSMAC = new Key("kp_jcop_default_s-mac.xml");
 
 
 //
 // CTOR - Outline node for data object retrievable with GET_DATA
 //
-function JCOPOutlineDataObject(factory, df, id, name, format) {
+function JCOPOutlineDataObject(factory, df, idtype, id, name, format) {
 	if (arguments.length == 0)
 		return;
 
 	this.factory = factory;
 	this.df = df;
+	this.idtype = idtype;
 	this.id = id;
 	this.format = format;
 
 	// Create OutlineNode object and register in OutlineEF object
-	print(name + "(" + id.toString(16) + ")");
+	// print(name + "(" + id.toString(16) + ")");
 	var view = new OutlineNode(name + "(" + id.toString(16) + ")", true);
 	view.setIcon("document");
 	view.setUserObject(this);
@@ -64,17 +60,21 @@ JCOPOutlineDataObject.prototype.expandListener = function() {
 
 	var view = this.view;
 
-	var card = this.df.card;
-
-	if (this.id == 0x46) {
-		var id = ByteString.valueOf(this.id, 2);
+	if (this.idtype == 0) {
+		var bs = this.df.sendApdu(0x00, 0xCA, this.id >> 8, this.id & 0xFF, 0);
+	} else if (this.idtype == 4) {
+		var bs = this.df.sendApdu(0x80, 0xCA, 0x00, 0xFE, ByteString.valueOf(this.id, 2), 0);
 	} else {
-		var id = ByteString.valueOf(this.id);
+		if (this.id == 0x46) {
+			var id = ByteString.valueOf(this.id, 2);
+		} else {
+			var id = ByteString.valueOf(this.id);
+		}
+		var bs = this.df.sendApdu(0x80, 0xCA, 0xFF, 0x01, id, 0);
 	}
-	var bs = card.sendApdu(0x80, 0xCA, 0xFF, 0x01, id, 0);
 
-	if (card.SW != 0x9000) {
-		print("Error getting object: " + card.SWMSG);
+	if (this.df.card.SW != 0x9000) {
+		print("Error getting object: " + this.df.card.SWMSG);
 	} else {
 		var bindata = this.factory.newDataOutline(bs, this.format);
 		view.insert(bindata.view);
@@ -125,77 +125,91 @@ OutlineCardManager.prototype.expandListener = function() {
 			view.insert(fcpmodel.view);
 		}
 
-		var d = this.factory.newOutlineDataObject(this, 0x42, "Issuer Identification Number", "");
+		var d = new JCOPOutlineDataObject(this.factory, this.application, 0, 0x42, "Issuer Identification Number", "");
 		view.insert(d.view);
 
-		var d = this.factory.newOutlineDataObject(this, 0x45, "Card Image Number", "");
+		var d = new JCOPOutlineDataObject(this.factory, this.application, 0, 0x45, "Card Image Number", "");
 		view.insert(d.view);
 
-		var d = this.factory.newOutlineDataObject(this, 0x46, "Pre-issuance Data (JCOP)", "");
+		var d = new JCOPOutlineDataObject(this.factory, this.application, 0, 0x66, "Card Data", "asn1");
 		view.insert(d.view);
 
-		var d = this.factory.newOutlineDataObject(this, 0x66, "Card Data", "asn1");
+		var d = new JCOPOutlineDataObject(this.factory, this.application, 0, 0xE0, "Key Information Template", "tlvlist");
 		view.insert(d.view);
 
-		var d = this.factory.newOutlineDataObject(this, 0x67, "Card Module Capabilities (JCOP)", "");
+		var d = new JCOPOutlineDataObject(this.factory, this.application, 0, 0xC1, "Sequence Counter of the default Key Version Number", "");
 		view.insert(d.view);
 
-		var d = this.factory.newOutlineDataObject(this, 0xE0, "Key Information Template", "tlvlist");
+		var d = new JCOPOutlineDataObject(this.factory, this.application, 0, 0xC2, "Confirmation Counter", "");
 		view.insert(d.view);
 
-		var d = this.factory.newOutlineDataObject(this, 0xC1, "Sequence Counter of the default Key Version Number", "");
-		view.insert(d.view);
+		print(this.card.profile.CardManufacturerProduct.Name);
+		if (this.card.profile.CardManufacturerProduct.Name.startsWith("JCOP")) {
+			var d = new JCOPOutlineDataObject(this.factory, this.application, 0, 0x46, "Pre-issuance Data (JCOP)", "");
+			view.insert(d.view);
 
-		var d = this.factory.newOutlineDataObject(this, 0xC2, "Confirmation Counter", "");
-		view.insert(d.view);
+			var d = new JCOPOutlineDataObject(this.factory, this.application, 0, 0x67, "Card Module Capabilities (JCOP)", "");
+			view.insert(d.view);
 
-		var d = this.factory.newOutlineDataObject(this, 0x9F7F, "Card Production Life Cycle (JCOP)", "");
-		view.insert(d.view);
+			var d = new JCOPOutlineDataObject(this.factory, this.application, 0, 0x9F7F, "Card Production Life Cycle (JCOP)", "");
+			view.insert(d.view);
+		}
+
+		if (this.card.profile.CardManufacturerProduct.Name.startsWith("JCOP 4")) {
+			var d = new JCOPOutlineDataObject(this.factory, this.application, 4, 0xDF25, "Platform ID (JCOP 4)", "asn1");
+			view.insert(d.view);
+
+			var d = new JCOPOutlineDataObject(this.factory, this.application, 4, 0xDF25, "Available memory (JCOP 4)", "asn1");
+			view.insert(d.view);
+
+			var d = new JCOPOutlineDataObject(this.factory, this.application, 0, 0xFF21, "Extended card resources (JCOP 4)", "asn1");
+			view.insert(d.view);
+		}
 
 		if (this.card.profile.CardManufacturerProduct.Name == "JCOP 3 SECID P60 CS (OSB)") {
-			var d = new JCOPOutlineDataObject(this.factory, this, 0x88, "FIPS compliance (JCOP)", "");
+			var d = new JCOPOutlineDataObject(this.factory, this.application, 1, 0x88, "FIPS compliance (JCOP)", "");
 			view.insert(d.view);
 
-			var d = new JCOPOutlineDataObject(this.factory, this, 0x8C, "Max RSA key size (JCOP)", "");
+			var d = new JCOPOutlineDataObject(this.factory, this.application, 1, 0x8C, "Max RSA key size (JCOP)", "");
 			view.insert(d.view);
 
-			var d = new JCOPOutlineDataObject(this.factory, this, 0x97, "Secure Channel Protocol (JCOP)", "");
+			var d = new JCOPOutlineDataObject(this.factory, this.application, 1, 0x97, "Secure Channel Protocol (JCOP)", "");
 			view.insert(d.view);
 
-			var d = new JCOPOutlineDataObject(this.factory, this, 0xA3, "Biometrics options (JCOP)", "");
+			var d = new JCOPOutlineDataObject(this.factory, this.application, 1, 0xA3, "Biometrics options (JCOP)", "");
 			view.insert(d.view);
 
-			var d = new JCOPOutlineDataObject(this.factory, this, 0xA5, "GET DATA accepted on CL interface (JCOP)", "");
+			var d = new JCOPOutlineDataObject(this.factory, this.application, 1, 0xA5, "GET DATA accepted on CL interface (JCOP)", "");
 			view.insert(d.view);
 
-			var d = new JCOPOutlineDataObject(this.factory, this, 0xAA, "Max ECC key size (JCOP)", "");
+			var d = new JCOPOutlineDataObject(this.factory, this.application, 1, 0xAA, "Max ECC key size (JCOP)", "");
 			view.insert(d.view);
 
-			var d = new JCOPOutlineDataObject(this.factory, this, 0xAD, "JC API secure RNG source (JCOP)", "");
+			var d = new JCOPOutlineDataObject(this.factory, this.application, 1, 0xAD, "JC API secure RNG source (JCOP)", "");
 			view.insert(d.view);
 
-			var d = new JCOPOutlineDataObject(this.factory, this, 0xB1, "Fast personalization (JCOP)", "");
+			var d = new JCOPOutlineDataObject(this.factory, this.application, 1, 0xB1, "Fast personalization (JCOP)", "");
 			view.insert(d.view);
 
-			var d = new JCOPOutlineDataObject(this.factory, this, 0xB9, "Available memory (JCOP)", "");
+			var d = new JCOPOutlineDataObject(this.factory, this.application, 1, 0xB9, "Available memory (JCOP)", "");
 			view.insert(d.view);
 
-			var d = new JCOPOutlineDataObject(this.factory, this, 0x8A, "IO EMV compliance (JCOP)", "");
+			var d = new JCOPOutlineDataObject(this.factory, this.application, 1, 0x8A, "IO EMV compliance (JCOP)", "");
 			view.insert(d.view);
 
-			var d = new JCOPOutlineDataObject(this.factory, this, 0x9C, "IO protocol support (JCOP)", "");
+			var d = new JCOPOutlineDataObject(this.factory, this.application, 1, 0x9C, "IO protocol support (JCOP)", "");
 			view.insert(d.view);
 
-			var d = new JCOPOutlineDataObject(this.factory, this, 0xAC, "IO WWT values (JCOP)", "");
+			var d = new JCOPOutlineDataObject(this.factory, this.application, 1, 0xAC, "IO WWT values (JCOP)", "");
 			view.insert(d.view);
 
-			var d = new JCOPOutlineDataObject(this.factory, this, 0xB0, "IO contactless interface parameters (JCOP)", "");
+			var d = new JCOPOutlineDataObject(this.factory, this.application, 1, 0xB0, "IO contactless interface parameters (JCOP)", "");
 			view.insert(d.view);
 
-			var d = new JCOPOutlineDataObject(this.factory, this, 0xBB, "IO ATS (JCOP)", "");
+			var d = new JCOPOutlineDataObject(this.factory, this.application, 1, 0xBB, "IO ATS (JCOP)", "");
 			view.insert(d.view);
 
-			var d = new JCOPOutlineDataObject(this.factory, this, 0xC6, "IO ATQA (JCOP)", "");
+			var d = new JCOPOutlineDataObject(this.factory, this.application, 1, 0xC6, "IO ATQA (JCOP)", "");
 			view.insert(d.view);
 		}
 	}
@@ -217,7 +231,7 @@ OutlineCardManager.prototype.authenticate = function() {
 		return;
 	}
 
-	this.application.run("AUTHENTICATE");
+	this.application.run("IDENTIFY");
 	this.authenticated = true;
 
 	var filter = new ByteString("4F00", HEX);
@@ -327,6 +341,43 @@ function priv2string(priv) {
 
 
 
+function nameForAID(aid) {
+	var name = nameForAID.table[aid.toString(HEX)];
+	if (typeof(name) == "undefined") {
+		return "";
+	}
+	return " (" + name + ")";
+}
+
+nameForAID.table = {
+	"A000000151000000": "Card Manager",
+	"A0000001515350": "SSD Creation Package",
+	"A000000151535041": "SSD Creation Package Applet",
+	"A0000000620202": "javacardx.biometry",
+	"A0000000620204": "javacardx.biometry1toN",
+
+	"D276000085304A434F9000": "Mifare Plus EV1 Package",
+	"D276000085304A434F900001": "Mifare Plus EV1 Applet",
+	"D276000085304A434F9001": "Mifare DESFire EV1 Package",
+	"D276000085304A434F900101": "Mifare DESFire EV1 Applet",
+
+	"A00000016443446F634C697465": "Athena CDoclite Package",
+
+	"E82B0601040181C31F0201": "SmartCard-HSM",
+	"E82B0601040181C31F027F01": "de.cardcontact.smartcardhsm.applet",
+	"E82B0601040181C31F027F0101": "de.cardcontact.smartcardhsm.applet.HSM",
+
+	"E82B0601040181C31F027F04": "de.cardcontact.smartcardhsm.biomock",
+	"E82B0601040181C31F027F0401": "de.cardcontact.smartcardhsm.biomock.BioMock1",
+	"E82B0601040181C31F027F0402": "de.cardcontact.smartcardhsm.biomock.BioMock2",
+
+	"E82B0601040181C31F027F09": "org.openscdp.javacard",
+	"E82B0601040181C31F027F0901": "org.openscdp.javacard.APDUTest",
+	"E82B0601040181C31F0202": "APDUTest"
+
+}
+
+
 //
 // Create an outline for AID identified objects managed by the card manager
 //
@@ -352,7 +403,7 @@ function OutlineModuleList(cm, name, desc, type, deletable) {
 		var lcs = desc.byteAt(offset++);
 		var priv = desc.byteAt(offset++);
 
-		var name = aid.toString(16) + " " + lcs2string(type, lcs) + " " + priv2string(priv);
+		var name = aid.toString(16) + nameForAID(aid) + " " + lcs2string(type, lcs) + " " + priv2string(priv);
 		var n = new OutlineModuleListEntry(cm, name, aid, deletable);
 
 		view.insert(n.view);
@@ -364,7 +415,7 @@ function OutlineModuleList(cm, name, desc, type, deletable) {
 				aid = desc.bytes(offset, lenaid);
 				offset += lenaid;
 
-				var m = new OutlineNode("Module " + aid.toString(16));
+				var m = new OutlineNode(aid.toString(16) + nameForAID(aid));
 				n.view.insert(m);
 			}
 		}
