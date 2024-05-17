@@ -1,10 +1,10 @@
 /**
  *  ---------
  * |.##> <##.|  Open Smart Card Development Platform (www.openscdp.org)
- * |#       #|  
+ * |#       #|
  * |#       #|  Copyright (c) 1999-2010 CardContact Software & System Consulting
  * |'##> <##'|  Andreas Schwier, 32429 Minden, Germany (www.cardcontact.de)
- *  --------- 
+ *  ---------
  *
  *  This file is part of OpenSCDP.
  *
@@ -20,7 +20,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with OpenSCDP; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
- * 
+ *
  * @fileoverview Tool to decode and browse CMS objects
  */
 
@@ -41,6 +41,7 @@ function BlackListExplorer() {
 // Some static strings
 BlackListExplorer.FILESTR = "Open File...";
 BlackListExplorer.DUMPSTR = "Dump";
+BlackListExplorer.DUMPIDS = "Dump RevIDs";
 BlackListExplorer.REMOVESTR = "Remove";
 
 
@@ -54,19 +55,19 @@ BlackListExplorer.REMOVESTR = "Remove";
 BlackListExplorer.loadBinaryFile = function(filename) {
 	// Open stream
 	var f = new java.io.FileInputStream(filename);
-	
+
 	// Determine file size
 	var flen = f.available();
 
 	// Allocate native byte array
 	var bs = java.lang.reflect.Array.newInstance(java.lang.Byte.TYPE, flen);
-	
+
 	// Read into byte array
 	var len = f.read(bs);
 
 	// Allocate JavaScript ByteBuffer from native/wrapped byte array
 	var bb = new ByteBuffer(bs);
-	
+
 	// Convert to JavaScript ByteString
 	var data = bb.toByteString();
 
@@ -92,51 +93,89 @@ BlackListExplorer.dumpCMS = function(cms) {
  *
  */
 BlackListExplorer.prototype.selectFile = function() {
-	var filename = _scsh3.lastcvc;
+	var filename = _scsh3.lastcms;
 	if (!filename) {
 		filename = "";
 	}
-	
+
 	var select = Dialog.prompt("Select file", filename, null, "*.bin");
-	
+
 	if (select != null) {
 		_scsh3.setProperty("lastcms", select.replace(/\\/g, "/"));
-		
+
 		var bin = BlackListExplorer.loadBinaryFile(select);
-		
+
 		var cms = new CMSSignedData(bin);
-		
+
 		var fn = new OutlineNode(select);
 		fn.cms = cms;
 		fn.cms.bin = bin;
-		fn.setContextMenu([BlackListExplorer.DUMPSTR, BlackListExplorer.REMOVESTR]);
+		fn.setContextMenu([BlackListExplorer.DUMPSTR, BlackListExplorer.DUMPIDS, BlackListExplorer.REMOVESTR ]);
 		fn.setUserObject(this);
-		
+
 		this.node.insert(fn);
 
 		// Add all the certificates
 		var certs = cms.getSignedDataCertificates();
 		var signerCertsNode = new OutlineNode("Number of signer certificates: " + certs.length);
-				
+
 		for (i = 0; i < certs.length; i++) {
 			var cert = certs[i];
 			var certNode = new OutlineNode(cert.getSubjectDNString());
 			certNode.insert(new ASN1(cert.getBytes()));
 			signerCertsNode.insert(certNode);
 		}
-		
+
 		fn.insert(signerCertsNode);
 		fn.insert(new OutlineNode("Content type OID: " + cms.getEContentType().toString(OID)));
 		// fn.insert(new ASN1(bin));
-		
+
 		var content = new ASN1(cms.getSignedContent());
 		var contentNode = new OutlineNode("Signed content");
 		contentNode.insert(content);
-		
+
 		fn.insert(contentNode);
-		
-		BlackListExplorer.dumpCMS(cms);
 	}
+}
+
+
+
+BlackListExplorer.prototype.dumpIDS = function(cms) {
+
+	var id = new ByteString("049DFDFC117C2D0879EE13A9C9B2F058909D66C5EE428D5699ED6F755ADB858A618C988C47D92FF3BE793DE9C56DB8F44C352282A5B2F15DAA38B526B6A8397C7D", HEX);
+	while (id.length > 0) {
+		var ofs = cms.bin.find(id);
+		if (ofs >= 0) {
+			print("Found " + id.toString(HEX) + " [" + id.length + "] at " + ofs);
+			print(cms.bin.bytes(ofs & ~15, 512));
+			break;
+		}
+		id = id.left(id.length - 1);
+	}
+
+	var sofs = ofs;
+
+//	var id = new ByteString("049DFDFC117C2D0879EE13A9C9B2F058909D66C5EE428D5699ED6F755ADB858A618C988C47D92FF3BE793DE9C56DB8F44C352282A5B2F15DAA38B526B6A8397C7D", HEX);
+	var id = new ByteString("38B526B6A8397C7D", HEX);
+	while (id.length > 0) {
+		var ofs = cms.bin.find(id);
+		if (ofs >= 0) {
+			print("Found " + id.toString(HEX) + " [" + id.length + "] at " + ofs);
+			print(cms.bin.bytes(ofs & ~15, 256));
+			break;
+		}
+		id = id.left(id.length - 1);
+	}
+
+
+	var content = new ASN1(cms.getSignedContent());
+	var list = content.get(4).get(0).get(1);
+	print("Elements " + list.elements);
+	for (var i = 0; i < list.elements; i++) {
+		var r = list.get(i);
+		print(r.value.toString(HEX));
+	}
+
 }
 
 
@@ -146,7 +185,7 @@ BlackListExplorer.prototype.selectFile = function() {
  *
  * @param {OutlineNode} source the object to which the context menu is associated
  * @param {String} action the action selected from the context menu
- */  
+ */
 BlackListExplorer.prototype.actionListener = function(source, action) {
 
 	switch(action) {
@@ -155,6 +194,9 @@ BlackListExplorer.prototype.actionListener = function(source, action) {
 		break;
 	case BlackListExplorer.DUMPSTR:
 		BlackListExplorer.dumpCMS(source.cms);
+		break;
+	case BlackListExplorer.DUMPIDS:
+		this.dumpIDS(source.cms);
 		break;
 	case BlackListExplorer.REMOVESTR:
 		source.remove();
