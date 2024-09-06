@@ -1,10 +1,10 @@
 /**
  *  ---------
  * |.##> <##.|  Open Smart Card Development Platform (www.openscdp.org)
- * |#       #|  
+ * |#       #|
  * |#       #|  Copyright (c) 1999-2009 CardContact Software & System Consulting
  * |'##> <##'|  Andreas Schwier, 32429 Minden, Germany (www.cardcontact.de)
- *  --------- 
+ *  ---------
  *
  *  This file is part of OpenSCDP.
  *
@@ -28,9 +28,9 @@
 
 /**
  * EMV class constructor
- * @class This class implements functions for the EMV tansaction process 
+ * @class This class implements functions for the EMV tansaction process
  * @constructor
- * @param {object} card the card object 
+ * @param {object} card the card object
  * @param {object} crypto the crypto object
  */
 function EMV(card, crypto) {
@@ -111,7 +111,7 @@ EMV.prototype.log = function(msg) {
 /**
  * Return cardDE
  *
- * @return the cardDE array 
+ * @return the cardDE array
  * @type Array
  */
 EMV.prototype.getCardDataElements = function() {
@@ -168,18 +168,18 @@ EMV.prototype.createDOL = function(dol) {
 		if ((b & 0x1F) == 0x1F) {
 			var tag = dol.left(2).toUnsigned();
 			var length = dol.byteAt(2);
-			var	dol = dol.bytes(3);	//Remove Tag and Length Byte
+			var dol = dol.bytes(3);	//Remove Tag and Length Byte
 		} else {
 			var tag = dol.left(1).toUnsigned();
 			var length = dol.byteAt(1);
-			var dol = dol.bytes(2);   //Remove Tag and Length Byte 
+			var dol = dol.bytes(2);   //Remove Tag and Length Byte
 		}
 		this.log("Tag: " + tag.toString(HEX));
 		var addDolenc = this.terminalDE[tag];
 		if (typeof(addDolenc) != "undefined") {
 			// ToDo: Padding
-			assert(length == addDolenc.length);
-			dolenc.append(addDolenc);
+			assert(length <= addDolenc.length);
+			dolenc.append(addDolenc.left(length));
 		}
 	}
 	dolenc = dolenc.toByteString();
@@ -204,7 +204,7 @@ EMV.prototype.getProcessingOptions = function(pdol) {
 		var pdol = new ByteString("8300", HEX);							// OTHER
 		//var pdol = new ByteString("830B0000000000000000000000", HEX);	// VISA
 		//var pdol = new ByteString("830B2028C00276160200000000", HEX);	// VISA mit generate ac support
-		//var pdol = new ByteString("830B2028C00276150200000000", HEX);	
+		//var pdol = new ByteString("830B2028C00276150200000000", HEX);
 	}
 	var data = this.card.sendApdu(0x80, 0xA8, 0x00, 0x00, pdol, 0, [0x9000]);
 
@@ -239,7 +239,7 @@ EMV.prototype.selectPSE = function(contactless) {
 	var tl = new TLVList(fci, TLV.EMV);
 	var t = tl.index(0);
 	if (t.getTag() != EMV.FCI) {
-		throw new GPError("EMV", GPError.INVALID_DATA, t.getTAG(), "FCI does not contain tag 6F");
+		throw new GPError("EMV", GPError.INVALID_DATA, t.getTag(), "FCI does not contain tag 6F");
 	}
 
 	var tl = new TLVList(t.getValue(), TLV.EMV);
@@ -262,7 +262,7 @@ EMV.prototype.selectPSE = function(contactless) {
 		// Decode FCI Issuer Discretionary Data
 		t = tl.index(0);
 		if (t.getTag() != EMV.FCI_ISSUER_DISCRETIONARY_DATA) {
-			throw new GPError("EMV", GPError.INVALID_DATA, t.getTAG(), "FCI does not contain FCI Issuer Discretionary Data (BF0C)");
+			throw new GPError("EMV", GPError.INVALID_DATA, t.getTag(), "FCI does not contain FCI Issuer Discretionary Data (BF0C)");
 		}
 
 		tl = new TLVList(t.getValue(), TLV.EMV);
@@ -272,7 +272,7 @@ EMV.prototype.selectPSE = function(contactless) {
 		for (var i = 0; i < tl.length; i++) {
 			t = tl.index(i);
 			if (t.getTag() != EMV.DIRECTORY_ENTRY) {
-				throw new GPError("EMV", GPError.INVALID_DATA, t.getTAG(), "FCI Issuer Discretionary Data does not contain a valid entry with tag 61");
+				throw new GPError("EMV", GPError.INVALID_DATA, t.getTag(), "FCI Issuer Discretionary Data does not contain a valid entry with tag 61");
 			}
 			this.log("Payment System Directory Entry:");
 			this.log(t.getValue());
@@ -283,13 +283,13 @@ EMV.prototype.selectPSE = function(contactless) {
 		t = tl.index(0);
 
 		if (t.getTag() != EMV.DFNAME) {
-			throw new GPError("EMV", GPError.INVALID_DATA, t.getTAG(), "PSE DDF FCI Template does not contain tag 84");
+			throw new GPError("EMV", GPError.INVALID_DATA, t.getTag(), "PSE DDF FCI Template does not contain tag 84");
 		}
 
 		// Decode FCI Proprietary Template
 		t = tl.index(1);
 		if (t.getTag() != EMV.FCI_ISSUER) {
-			throw new GPError("EMV", GPError.INVALID_DATA, t.getTAG(), "PSE DDF FCI Template does not contain tag A5");
+			throw new GPError("EMV", GPError.INVALID_DATA, t.getTag(), "PSE DDF FCI Template does not contain tag A5");
 		}
 
 		var tl = new TLVList(t.getValue(), TLV.EMV);
@@ -297,7 +297,7 @@ EMV.prototype.selectPSE = function(contactless) {
 		// Decode SFI of the Directory Elementary File
 		t = tl.index(0);
 		if (t.getTag() != EMV.SFI) {
-			throw new GPError("EMV", GPError.INVALID_DATA, t.getTAG(), "PSE DDF FCI Proprietary Template does not contain tag 88");
+			throw new GPError("EMV", GPError.INVALID_DATA, t.getTag(), "PSE DDF FCI Proprietary Template does not contain tag 88");
 		}
 
 		var sfi = t.getValue();
@@ -319,14 +319,14 @@ EMV.prototype.selectPSE = function(contactless) {
 
 				var t = tl.index(0);
 				if (t.getTag() != EMV.TEMPLATE) {
-					throw new GPError("EMV", GPError.INVALID_DATA, t.getTAG(), "PSE DDF FCI Proprietary Template does not contain tag 88");
+					throw new GPError("EMV", GPError.INVALID_DATA, t.getTag(), "PSE DDF FCI Proprietary Template does not contain tag 88");
 				}
 
 				var tl = new TLVList(t.getValue(), TLV.EMV);
 				for (var i = 0; i < tl.length; i++) {
 					var t = tl.index(i);
 					if (t.getTag() != 0x61) {
-						throw new GPError("EMV", GPError.INVALID_DATA, t.getTAG(), "Payment System Directory Entry must use tag 61");
+						throw new GPError("EMV", GPError.INVALID_DATA, t.getTag(), "Payment System Directory Entry must use tag 61");
 					}
 
 					this.log("Payment System Directory Entry:");
@@ -437,7 +437,7 @@ EMV.prototype.tryAID = function() {
 		var le = EMV.AIDLIST[i];
 		var aid = new ByteString(le.aid, HEX);
 		var fci = this.select(aid, true);
-		
+
 		if (fci.length > 0) {
 			this.cardDE[EMV.AID] = aid;
 			this.decodeFCI(fci);
@@ -525,7 +525,7 @@ EMV.prototype.readApplData = function() {
 	// Must be a multiple of 4
 	assert((afl.length & 0x03) == 0);
 
-	// Collect input to data authentication	
+	// Collect input to data authentication
 	var da = new ByteBuffer();
 
 	while(afl.length > 0) {
@@ -546,7 +546,7 @@ EMV.prototype.readApplData = function() {
 			var t = tl.index(0);
 			assert(t.getTag() == EMV.TEMPLATE);
 
-			// Add data authentication input			
+			// Add data authentication input
 			if (dar > 0) {
 				if (sfi <= 10) {	// Only value
 					da.append(t.getValue());
@@ -605,7 +605,7 @@ EMV.prototype.generateAC = function() {
 	var iccDynamicNumber = card.sendApdu(0x00, 0x84, 0x00, 0x00, 0x00);
 	var DataAuthCode = this.cardDE[0x9F45];
 
-	var Data = authorisedAmount.concat(secondaryAmount).concat(tvr).concat(transCurrencyCode).concat(transDate).concat(transType).concat(unpredictableNumber).concat(iccDynamicNumber).concat(DataAuthCode); 
+	var Data = authorisedAmount.concat(secondaryAmount).concat(tvr).concat(transCurrencyCode).concat(transDate).concat(transType).concat(unpredictableNumber).concat(iccDynamicNumber).concat(DataAuthCode);
 
 	var generateAC = card.sendApdu(0x80, 0xAE, p1, 0x00, Data, 0x00);
 }
