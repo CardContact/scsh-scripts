@@ -36,18 +36,22 @@ print("--->8------>8------>8------>8------>8------>8------>8------>8------>8----
 try	{
 	var a = new ASN1(record);
 	print(a);
+	print("EF_NOTEPAD Kodierung unauffällig");
 }
 catch(e) {
 	print("EF_NOTEPAD fehlerhaft: " + e);
 
-	var body = record.bytes(2);
-	var a = new ASN1(record.byteAt(0), record.bytes(2));
-	var a = new ASN1(a.getBytes());
-	print(a);
+	if (record.byteAt(1) == record.length - 2) {
+		var body = record.bytes(2);
+		var a = new ASN1(record.byteAt(0), record.bytes(2));
+		var a = new ASN1(a.getBytes());
+		print(a);
 
-	var str = Dialog.prompt("Reparatur versuchen ?");
-	if (str != null) {
-		record = a.getBytes();
-		ef_notepad.updateRecord(1, record);
+		var str = Dialog.prompt("Reparatur versuchen ?");
+		if (str != null) {
+			record = a.getBytes();
+			ef_notepad.updateRecord(1, record);
+			print("EF_NOTEPAD aktualisiert");
+		}
 	}
 }
