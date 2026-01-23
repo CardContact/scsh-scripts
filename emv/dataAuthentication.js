@@ -177,6 +177,11 @@ DataAuthentication.prototype.retrieveIssuerPublicKey = function() {
  * @param {Key} key the Issuer Public Key
 */
 DataAuthentication.prototype.verifySSAD = function(issuerPublicKeyModulus) {
+	var SSAD = this.emv.cardDE[0x93];
+	if (typeof(SSAD) == "undefined") {
+		print("<-----------------------------SDA is not supported on this card------------------------------>\n");
+		return;
+	}
 	var issuerPublicKeyModulus =  issuerPublicKeyModulus;
 	var key = new Key();
 	key.setType(Key.PUBLIC);
